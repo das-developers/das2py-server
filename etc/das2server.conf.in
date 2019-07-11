@@ -1,0 +1,157 @@
+# Site name.  Many das2 servers can be located at the same site
+SITE_NAME = "My Data Source Site"
+
+# The default path prefix for sources on this server.  Like the SITE_NAME, 
+# this prefix does not need to be unique to this server. This value will be 
+# prepended to any automatically generated path URI's
+SITE_PATHURI = "tag:das2.org,2017:/MY_SITE"
+
+# Server ID, short lowercase string used to distinguish directories and files
+# created by this server.  This is useful when multiple das2 serving hosts
+# share the same diskspace (presumably by NFS) but need to keep thier config
+# file separate.
+SERVER_ID = "%(SERVER_ID)s"
+
+# You can use replacement characters to obscure the address a bit, for 
+# example:
+#
+#   &#45;  '-'
+#   @#46;  '.'
+#   &#64;  '@'
+#   &#117; 'u'
+#
+CONTACT_EMAIL = "update&#45;das2server&#46;conf&#64;nowhere&#45;ed&#117;"
+
+# A contact page for the person responsible for the server
+CONTACT_URL  = "https://update-das2server.conf.nowhere.edu/~someone/"
+
+
+# The top location of any dsdf files
+DSDF_ROOT = "%(SERVER_DATA)s"
+
+# if using authentication, the name of the group and users files
+USER_PASSWD = "%(SERVER_ETC)s/passwd"
+USER_GROUP  = "%(SERVER_ETC)s/group"
+
+# The module path for loading utilities and handles, there can be
+# more than one entry, seperate them via os.pathsep characters, i.e.
+# usually a ':' but use '\' on windows
+MODULE_PATH = ["%(INST_HOST_LIB)s", "%(INST_EXT_LIB)s"]
+
+# The directory for binaries that don't have an explicit path
+BIN_PATH = ["%(SERVER_BIN)s", "%(INST_NAT_BIN)s"]
+
+# A directory to set for loading shared objects
+LIB_PATH = ["%(INST_NAT_LIB)s", ]
+
+# Where to put log files.  You should probably pick an alternate location
+LOG_PATH = "/tmp"
+
+# The URL to the das2_srvcgi_logrdr program.  If this value doesn't
+# contain '//' then it is assumed to be relative to the path to the 
+# parent of the das2_srvcgi_main script.  If '//' is present it is 
+# assumed to be an absolute link
+VIEW_LOG_URL = "log"
+
+# The URL to the das2_srvcgi_main program.  If this value doesn't
+# contain '//' then it is assumed to be relative to the path to the 
+# parent of the das2_srvcgi_log script.  If '//' is present it is 
+# assumed to be an absolute link
+MAIN_SRV_URL = "server"
+
+
+# Restricting the das2_srvcgi_logrdr program to only allow local LAN
+# traffic is part of your Apache setup.  The line below is not an access
+# control mechanisim.  This merely prevents the das2_srvcgi_main from
+# sending links to the log program that can't be viewed at the client's
+# IP address. 
+# VIEW_LOG_ALLOW = your.site.edu
+
+# A sample dataset to use when testing the front page.  Pick your favorite
+# dataset to highlight.
+#SAMPLE_DSDF = survey.dsdf
+#SAMPLE_START = 2013-10-09T15:00
+#SAMPLE_END = 2013-10-19T20:00
+
+# Ignore Redirects in DSDF files, useful for testing new servers
+IGNORE_REDIRECT = false
+
+# Path to various resource files, such as style sheets, logos, etc
+# Should contain das2server.xsl, and a logo.*.
+RESOURCE_PATH = "%(SERVER_RES)s"
+
+# Old 2.2 support.  Prior to das 2.3 there was no concept of a central catalog
+# thus servers could only find each other via peers lists.  To support older
+# clients provide a list of you other servers here.
+PEERS_FILE = "%(SERVER_ETC)s/das2peers.ini"
+
+# Program used to upconverting Das1 streams.  Only used by the U. Iowa group
+DAS1_TO_DAS2 = "das2_from_das1"
+
+# The absolute filesystem path to the data cache, only used if caching has 
+# been enabled in one or more DSDF files.
+CACHE_ROOT = "%(SERVER_CACHE)s"
+
+# Set the default stream reducer. DSDFs can override this setting for individal
+# datasets using the 'reducer=' directive.
+D2S_REDUCER = "das2_bin_avgsec"
+
+# Set the default cache reader.  DSDFs can override this setting for individual
+# datasets using the 'cacheReader=' directive.
+D2S_CACHE_RDR = "das2_cache_rdr"
+
+# If you are serving QStreams as well as Das2 streams, put the name of your
+# default QStream reducer here.
+#QDS_REDUCER = qds_bin_avgsec
+#QDS_CACHE_RDR = qds_cache_rdr
+
+
+# Set default TEXT converters, at preset datasources can override this setting,
+# that option is rarely used.
+D2S_TO_UTF8 = das2_ascii
+#QDS_TO_UTF8 = qds_ascii
+
+# Auto-authentication, this is used to setup test servers that can download
+# data from all streams for testing without authentication.  This uses the
+# remote IP address, so no host names here.  Network ranges have not been
+# implemented, so list full host IP addresses.  This has not been tested with
+# IPv6 at this time.
+# TEST_FROM = 192.168.0.10 192.168.0.11
+#
+# WARNING:  Clients with the IP addresses listed below will never be
+#           asked to athenticate *any* dataset.
+#TEST_FROM = 
+
+
+# PNG Image generator script, will be provided the following command line
+# arguments (with value examples):  
+#
+# server=http://emfisis.physics.uiowa.edu/das/das2Srever
+# dataset=rbsp/RBSP-B/HFR_spectra.dsdf
+# start_time=2013-03-01
+# end_time=2013-03-02
+# image=HFR_spectra_34578.png
+# params='KEEP-SPIKES Bu'
+#
+# Others can be added if it's useful.  
+
+#PNG_MAKER = autoplot_url2png.py
+
+# Das2 CGI scripts can record jobs to be preformed later, such as building
+# data caches.  Since many CGI instances may be running at a single time a
+# distributed work queue broker is used to handling the task queue.  By 
+# default redis is the only broker supported.  If you don't want to allow
+# background tasks, or das2_svr_arbiter is not running then comment out the
+# setting below.
+
+WORK_QUEUE_BROKER = redis
+
+# This is the information needed to connect to the work queue broker listed
+# above.  Connection parameters are separated by colons, for redis the 
+# connection parameters are:
+#
+#    host : port : database_num   
+#
+
+WORK_QUEUE_CONN = localhost:6379:0
+

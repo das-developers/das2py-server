@@ -1,0 +1,236 @@
+#!/usr/bin/env python
+"""Replacement for htpasswd"""
+# Original author: Eli Carter (https://gist.github.com/eculver/1420227)
+# Modified by: C. Piker for use as a das2 server password file handler
+
+import os
+import sys
+import random
+import getpass
+import codecs
+from optparse import OptionParser
+from os.path import join as pjoin
+
+g_sConfPath = REPLACED_ON_BUILD
+
+# We need a crypt module, but Windows doesn't have one by default.  Try to find
+# one, and tell the user if we can't.
+try:
+	import crypt
+except ImportError:
+	try:
+		import fcrypt as crypt
+	except ImportError:
+		sys.stderr.write("Cannot find a crypt module.  "
+						 "Possibly http://carey.geek.nz/code/python-fcrypt/\n")
+		sys.exit(1)
+
+
+perr = sys.stderr.write
+
+##############################################################################
+# Get my config file, boiler plate that has to be re-included in each script
+# since the location of the modules can be configured in the config file
+
+def getConf():
+	
+	if not os.path.isfile(g_sConfPath):
+		if os.path.isfile(g_sConfPath + ".example"):
+			perr(u"Move\n   %s.example\nto\n   %s\nand configure your site\n"%(
+				  g_sConfPath, g_sConfPath))
+		else:
+			perr(u"%s is missing\n"%g_sConfPath)
+			
+		return None
+
+	# Yes, the Das2 server config files can contain unicode characters
+	fIn = codecs.open(g_sConfPath, 'rb', encoding='utf-8')
+	
+	dConf = {}
+	nLine = 0
+	for sLine in fIn:
+		nLine += 1
+		iComment = sLine.find('#')
+		if iComment > -1:
+			sLine = sLine[:iComment]
+	
+		sLine = sLine.strip()
+		if len(sLine) == 0:
+			continue
+		
+		iEquals = sLine.find('=')
+		if iEquals < 1 or iEquals > len(sLine) - 2:
+			preLoadError(u"Error in %s line %d"%(g_sConfPath, nLine))
+			fIn.close()
+			return None
+		
+		sKey = sLine[:iEquals].strip()
+		sVal = sLine[iEquals + 1:].strip(' \t\v\r\n\'"')
+		dConf[sKey] = sVal
+	
+	fIn.close()
+	
+	# As a finial step, inclued a reference to the config file itself
+	dConf['__file__'] = g_sConfPath
+	
+	return dConf
+	
+##############################################################################
+# Update sys.path, boiler plate code that has to be re-included in each script
+# since config file can change module path
+
+def setModulePath(dConf):
+	if not dConf.has_key('MODULE_PATH'):
+		perr(u"Set MODULE_PATH = /dir/containing/das2server_python_module")
+		return False	
+	
+	lDirs = dConf['MODULE_PATH'].split(os.pathsep)
+	for sDir in lDirs:
+		if os.path.isdir(sDir):
+				if sDir not in sys.path:
+					sys.path.insert(0, sDir)
+		
+	return True
+
+
+##############################################################################
+def salt():
+	"""Returns a string of 2 randome letters"""
+	letters = 'abcdefghijklmnopqrstuvwxyz' \
+			  'ABCDEFGHIJKLMNOPQRSTUVWXYZ' \
+			  '0123456789/.'
+	return random.choice(letters) + random.choice(letters)
+
+
+##############################################################################
+class HtpasswdFile:
+	"""A class for manipulating htpasswd files."""
+
+	def __init__(self, filename, create=False):
+		self.entries = []
+		self.filename = filename
+		if not create:
+			if os.path.exists(self.filename):
+				self.load()
+			else:
+				raise Exception("%s does not exist" % self.filename)
+
+	def load(self):
+		"""Read the htpasswd file into memory."""
+		lines = open(self.filename, 'r').readlines()
+		self.entries = []
+		for line in lines:
+			username, pwhash = line.split(':')
+			entry = [username, pwhash.rstrip()]
+			self.entries.append(entry)
+
+	def save(self):
+		"""Write the htpasswd file to disk"""
+		open(self.filename, 'w').writelines(["%s:%s\n" % (entry[0], entry[1])
+											 for entry in self.entries])
+
+	def update(self, username, password):
+		"""Replace the entry for the given user, or add it if new."""
+		pwhash = crypt.crypt(password, salt())
+		matching_entries = [entry for entry in self.entries
+							if entry[0] == username]
+		if matching_entries:
+			matching_entries[0][1] = pwhash
+		else:
+			self.entries.append([username, pwhash])
+
+	def delete(self, username):
+		"""Remove the entry for the given user."""
+		self.entries = [entry for entry in self.entries if entry[0] != username]
+
+
+##############################################################################
+def main(argv):
+	"""%prog [-c] [-b] username [password]
+	Create or update the das2 server passwd file
+	"""
+	
+	sUsage = """%%prog [-c] [-b] username [password]
+Create or update the das2 server password file whose located is defined in
+%s."""%g_sConfPath
+	
+	# For now, we only care about the use cases that affect tests/functional.py
+	parser = OptionParser(usage=sUsage)
+	parser.add_option('-b', action='store_true', dest='batch', default=False,
+		help='Batch mode; password is passed on the command line IN THE CLEAR.'
+		)
+	parser.add_option('-c', action='store_true', dest='create', default=False,
+		help='Create a new htpasswd file, overwriting any existing file.')
+	parser.add_option('-D', action='store_true', dest='delete_user',
+		default=False, help='Remove the given user from the password file.')
+
+	(options, lArgs) = parser.parse_args(argv[1:])
+	 
+	 
+	dConf = getConf()
+	if dConf == None:
+		return 17
+		
+	# Set the system path
+	if not setModulePath(dConf):
+		return 18
+		
+	# Load the util module
+	try:
+		mTmp = __import__('das2server', globals(), locals(), ['util'], 0)
+	except ImportError, e:
+		perr(u"Error importing module 'das2server'\r\n: %s"%(str(e)))
+		return 19
+	try:
+		U = mTmp.util
+	except AttributeError:
+		perr(u'No module named das2server.util under %s'%dConf['MODULE_PATH'])
+		return 20
+	
+	if not dConf.has_key('USER_PASSWD'):
+		perr(u'Indicate location of the das2 password file via '+\
+		      u'USER_PASSWD = in %s\n'%g_sConfPath)
+		return 21
+	else:
+		sFileName = dConf['USER_PASSWD']
+		
+	if not options.create and not os.path.isfile(sFileName):
+		perr(u"Password file %s dosen't exist, re-run with -c to create it\n"%sFileName)
+		return 22
+		
+	if not options.batch:
+		sPasswd = getpass.getpass("das2 password> ")
+	else:
+		if lArgs < 2:
+			perr('In batch mode but password not supplied\n')
+			return 23
+		sPasswd = lArgs[1]
+
+	# Non-option arguments
+	if len(lArgs) < 1:
+		perr("Username not provided\n")
+		return 24
+		
+	username = lArgs[0]
+	
+	if options.delete_user:
+		if len(lArgs) != 1:
+			perr("Extraneous parameters after the username\n")
+			return 25
+			
+		sPasswd = None
+	
+
+	passwdfile = HtpasswdFile(sFileName, create=options.create)
+
+	if options.delete_user:
+		passwdfile.delete(username)
+	else:
+		passwdfile.update(username, sPasswd)
+
+	passwdfile.save()
+	return 0
+
+##############################################################################
+if __name__ == '__main__':
+	main(sys.argv)

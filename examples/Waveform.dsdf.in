@@ -1,0 +1,82 @@
+; This is a DSDF file.  DSDF files define data sources.  A data source is 
+; simply a program that the server can invoke to produce data over a given
+; parameter range in a usable format such as a Das2 stream or a QStream.  Since
+; the Das2 system is defined in terms of interfaces between programs, it does
+; not matter what computer language is used to create your data producers.
+; As long as they write a usable stream to standard output they will plug
+; into the overall server.
+;
+; Programs provided with the server may operate on your data stream before
+; it's provided to the end client.  For example, the program das2_bin_avgsec
+; reads a Das2 stream on it's input and produces an output stream with 
+; reduced time resolution.  Another program, das2_psd calculates the power
+; spectral density of an input Das2 stream and writes the transformed stream
+; to it's standard output.  Multiple manipulations may be chained together,
+; but they all start with a your data reader programs, not data files.
+;
+; The following example DSDF and it's associated reader provide wideband
+; low-frequency electric field waveforms collected by Voyager 1 while
+; crossing Jupiter's bow-shock in the solar wind.
+
+
+; All Data sources must have a one-line description
+
+description = 'Uncalibrated Voyager 1 PWS Wideband waveforms (Sample Dataset)'
+
+
+; Summaries are optional, but encouraged.  The example below demonstrates
+; multi-line strings
+
+summary = 'Raw Voyager PWS 4-bit waveform values.  Without correlating '+$
+          'information it is not possible to calibrate these data into '+$
+          'physical units as an on board automated gain control system '+$
+          'adjusted input attenuation to keep signals within a measurable '+$
+          'sensitivity range.  In addition, the PWS instrument had no '+$
+			 'mechanism for transmitting these gain settings to the spacecraft '+$
+			 'computer.'
+
+
+; Any Bourne shell compatible command may be used below.  The server will 
+; automatically add up to three arguments on the command line after 
+; the reader, they are, in order:  START_TIME  STOP_TIME  EXTRA_PARAMETERS
+; The first two are always given, the third is only provided if supplied
+; by the end-user client program (such as Autoplot)
+
+reader = 'env PYTHONPATH=%(INST_HOST_LIB)s:%(INST_EXT_LIB)s %(PWD)s/examples/example_waveform.py %(PWD)s/examples'
+
+
+; The default reducer simply outputs bin averages, which are not suitable
+; for waveform data.  Here we tell the server that it should not pipe the
+; output of this reader through a reducer program.
+
+reducer = not_reducible
+
+
+; This reader produces data as a das2Stream.  QStreams may also be used
+; but these are not understood by das2_cache_rdr and das2_psd
+
+das2Stream = 1
+
+
+; Technical contacts should know how to fix software or data issues with this
+; data source.  All data sources must provide a technical contact email.
+
+techContact = 'Your Name <your.name@yourplace.edu>'
+
+
+; Scientific Contact, these are not required but highly encouraged.
+
+sciContact = 'Bill Kurth <william-kurth@uiowa.edu.'
+
+
+; Currently this is not used by the Das2 server
+
+validRange = '1979-03-01T12:26:11 to 1979-03-01T12:29:24 UTC'
+
+
+; Autoplot will display example ranges in a drop-down menu when loading 
+; data.  Up to 100 examples may be listed (00 through 99)
+; For this small dataset we are just taking the whole range as the
+; example.
+
+exampleRange_00 = '1979-03-01T12:26:11 to 1979-03-01T12:29:24 UTC'

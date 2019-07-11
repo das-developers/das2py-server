@@ -1,0 +1,397 @@
+#!/usr/bin/env python
+
+import os
+import re
+import cgi
+import sys
+import os.path
+from os.path import join as pjoin
+
+import cgitb; cgitb.enable()
+
+g_sConfPath = REPLACED_ON_BUILD
+
+
+# $URL: https://saturn.physics.uiowa.edu/svn/das2/servers/devel/pyserver/scripts/das2_srvcgi_logrdr.in $
+# $Revision: 10913 $
+
+
+DAYS="(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)"
+MONTHS="(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
+TIME="\d\d:\d\d:\d\d"
+PREFIX=re.compile("\[(%s %s [ \d]\d) (%s) (\d{4}) (\d+)\s+\d+\](.+)"%(DAYS,MONTHS,TIME))
+
+#PREFIX=re.compile("\[(%s %s \d\d?) (%s) (\d{4}) (\d+) .+\](.+)"%(DAYS,MONTHS,TIME)); 
+
+
+##############################################################################
+# Cut down version of error handling for use before the module path is loaded
+
+def preLoadError(uOut):
+	"""Cut down error handling for use before the util modules are loaded,
+	script must exit afte calling this or multiple HTTP headers will be 
+	emitted.
+	"""
+	
+	sType = 'InternalServerError'
+	
+	bClientIsBrowser = False
+	if os.environ.has_key("HTTP_USER_AGENT"):
+		
+		sAgent = os.environ['HTTP_USER_AGENT'].lower()
+	
+		for sTest in _g_BrowserAgent:
+			if sAgent.find(sTest) != -1:
+				bClientIsBrowser = True
+				break	
+	sys.stdout.write("Status: 500 Internal Server Error\r\n")
+	
+	if bClientIsBrowser:
+		sys.stdout.write("Content-Type: text/plain; charset=utf-8\r\n\r\n")
+		
+		sys.stdout.write(uOut.encode('utf-8'))
+	else:
+		sys.stdout.write("Content-Type: text/vnd.das2.das2stream\r\n\r\n")
+
+		uOut = uOut.replace(u'\n', u'\n\r').replace(u'"', u"'")
+		uOut = u'<exception type="%s" message="%s" />\n'%(sType, uOut)
+		sOut = uOut.encode('utf-8')
+		sys.stdout.write("[00]%06d"%len(sOut))
+		sys.stdout.write(sOut)
+
+
+##############################################################################
+# Update sys.path, boiler plate code that has to be re-included in each script
+# since config file can change module path
+
+def setModulePath(dConf):
+	if not dConf.has_key('MODULE_PATH'):
+		preLoadError(u"Set MODULE_PATH = /dir/containing/das2server_python_module")
+		return False	
+	
+	lDirs = dConf['MODULE_PATH'].split(os.pathsep)
+	for sDir in lDirs:
+		if os.path.isdir(sDir):
+				if sDir not in sys.path:
+					sys.path.insert(0, sDir)
+		
+	return True
+
+
+##############################################################################
+# Entry point for script
+##############################################################################
+def main():
+	form = cgi.FieldStorage()
+
+	if form.has_key("type"):
+		type=form["type"].value
+	else:
+		type="das2"
+	
+	#pout = sys.stdout.write
+	#pout("Content-Type: text/plain; charset=utf-8\r\n\r\n")
+	
+	# Find out the log directory location
+	dConf = getConf(g_sConfPath)
+	if dConf == None:
+		return 13
+		
+		
+	# Set the system path
+	if not setModulePath(dConf):
+		return 18
+		
+	# Load the util module
+	try:
+		mTmp = __import__('das2server', globals(), locals(), ['util'], 0)
+	except ImportError, e:
+		preLoadError(u"Error importing module 'das2server'\r\n: %s"%(str(e)))
+		return 19
+	try:
+		U = mTmp.util
+	except AttributeError:
+		preLoadError(u'No module named das2server.util under %s'%dConf['MODULE_PATH'])
+		return 20
+	
+	if not dConf.has_key('LOG_PATH'):
+		error(u"Can't locate das2 service log files, set the LOG_PATH "+\
+		       u"value in %s."%(g_sConfPath))
+		return 13
+
+	
+	sViewLogUrl = U.io.getScriptUrl()
+	sMainSrvUrl = 'server'
+	if 'MAIN_SRV_URL' in dConf:
+		sMainSrvUrl = dConf['MAIN_SRV_URL']
+
+	# TODO: filter type content
+
+	if form.has_key("ip"):
+		ip=form["ip"].value
+	else:
+		ip=os.environ["REMOTE_ADDR"]
+
+	if form.has_key('action'):
+		if form['action'].value == 'deleteAll':
+			deleteAll(dConf['LOG_PATH'], type,ip)
+			
+			if form.has_key("ip"):
+				sViewLogUrl += '?ip=' + ip
+			print 'Status: 302'
+			print 'Location: '+sViewLogUrl
+			print
+			return 0
+			
+
+	dRequests = {}
+	try:
+		processFile(pjoin(dConf['LOG_PATH'], "%s.%s_0.log"%(type, ip)), dRequests)
+	except:
+		pass
+	try:
+		processFile(pjoin(dConf['LOG_PATH'], "%s.%s_1.log" % (type, ip)), dRequests)
+	except:
+		pass
+	try:
+		processFile(pjoin(dConf['LOG_PATH'], "%s.%s_2.log" % (type, ip)), dRequests)
+	except:
+		pass
+		
+	dReplace = {'log-script':sViewLogUrl, 'main-script':sMainSrvUrl,
+	            'server-sig':os.getenv('SERVER_SIGNATURE')}
+	
+	# Get replacement parameters for HTML text output
+	if dConf.has_key('SITE_NAME'):
+		dReplace['site-id'] = dConf['SITE_NAME']
+	else:
+		dReplace['site-id'] = "Set SITE_NAME in %s"%dConf['__file__']
+
+	if dConf.has_key('SERVER_ID'):
+		dReplace['server-id'] = dConf['SERVER_ID'].upper()
+	else:
+		dReplace['server-id'] = "{Set SERVER_ID in %s}"%dConf['__file__']
+	
+
+	if dConf.has_key('STYLE_SHEET'):
+		dReplace['css-link'] = "%s/resource/%s"%(sMainSrvUrl, dConf['STYLE_SHEET'])
+	else:
+		dReplace['css-link'] = "%s/resource/das2server.css"%sMainSrvUrl
+		
+	if dConf.has_key('CONTACT_EMAIL'):
+		dReplace['contact-email'] = dConf['CONTACT_EMAIL']
+	else:
+		dReplace['contact-email'] = "update&#45;das2server&#46;conf&#64;nowhere&#45;ed&#117;"
+
+	if dConf.has_key('CONTACT_url'):
+		dReplace['contact-url'] = dConf['CONTACT_URL']
+	else:
+		dReplace['contact-url'] = "https://update-das2server.conf.nowhere.edu/~someone/"
+	
+	sys.stdout.write("Content-Type: text/html; charset=utf-8\r\n")
+	sys.stdout.write("Cache-Control: no-cache\r\n\r\n")
+	
+	print """<html>
+<head>
+   <title>%(site-id)s</title>
+   <link rel="stylesheet" type="text/css" media="screen" href="%(css-link)s" />
+</head>
+<body>
+<div class="header">
+	<div class="hdr_left">
+		<img src="%(main-script)s/resource/logo.png" alt="%(server-id)s" width="70" height="70" >
+	</div> 
+	<div class="hdr_center">
+	%(server-id)s, a Das 2.3 Server
+	<h1>%(site-id)s</h1>
+	</div>
+	<div class="hdr_right">
+		<a href="http://das2.org">
+		<img src="%(main-script)s/resource/das2logo_rv.png" alt="Das2" width="80" height="80">
+		</a>
+	</div>
+	<br> <br>
+</div>
+"""%dReplace
+		
+	
+	print '<div class="navlinks"> &nbsp; <b>Actions:</b>'
+	print '  <a href="%(main-script)s">%(server-id)s top</a>'%dReplace
+	for k in sorted(dRequests.keys(), key=lambda s: s[3:]):
+		print '<a href="#%s">View %s</a>'%(k,k)
+	print '<a class="caution" href="?action=deleteAll">Delete All</a>'
+	print '</div>'
+	
+	if len(dRequests.keys()) > 0:
+		for key in sorted(dRequests.keys(), key=lambda s: s[3:]):
+			oneDay(ip,key,dRequests[key])
+	else:
+		print '''
+	<div class="day">
+		<div class="dayheader">
+		  Request logs are empty for IP %(ip)s
+	   </div>
+	</div>
+'''%{'ip':ip}
+	
+		
+	print """
+<div class="footer">
+  	<address>
+		<a href="%(contact-url)s"> %(contact-email)s </a> 
+	</address>
+  <div>More information about das2 can be found at:
+  <a href="http://das2.org/">http://das2.org/</a>.</div>
+  <div>%(server-sig)s</div>
+</div>"""%dReplace
+
+	print """
+</body>
+</html>
+"""%dReplace
+	
+	return 0
+
+##############################################################################
+# gather configuration data 
+##############################################################################
+def error(uText):
+	pout = sys.stdout.write
+	pout("Content-Type: text/plain; charset=utf-8\r\n\r\n")
+	pout(uText.encode('utf-8'))
+	
+
+def getConf(sConfFile):
+	"""Simple config file reader, maybe too simple
+	"""
+	
+	if not os.path.isfile(sConfFile):
+		if os.path.isfile(sConfFile + ".example"):
+			error(u"Move\n     %s.example\nto\n     %s\n and configure your site"%(
+			      sConfFile, sConfFile))
+		else:
+			error(u"%s is missing\n"%sConfFile)
+			
+		return None
+
+	fIn = file(sConfFile, 'rb')
+	
+	dConf = {}
+	nLine = 0
+	for sLine in fIn:
+		nLine += 1
+		
+		# Really need to covert to a reg-ex parser, but this will do in the
+		# short term.  Remove any text after a # character only if it occurs
+		# before any '=' characters 
+		
+		iComment = sLine.find('#')
+		iEquals = sLine.find('=')
+		
+		if (iComment > -1) and ((iEquals == -1) or (iEquals > iComment)):
+			sLine = sLine[:iComment]
+	
+		sLine = sLine.strip()
+		if len(sLine) == 0:
+			continue
+		
+		iEquals = sLine.find('=')
+		if iEquals < 1 or iEquals > len(sLine) - 2:
+			error(u"Error in %s line %d"%(sConfFile, nLine))
+			fIn.close()
+			return None
+		
+		sKey = sLine[:iEquals].strip()
+		sVal = sLine[iEquals + 1:].strip(' \t\v\r\n\'"')
+		dConf[sKey] = sVal
+
+	
+	fIn.close()
+	return dConf
+
+
+##############################################################################
+# Read one file
+##############################################################################
+def deleteAll(sLogDir, type,ip):
+	files=[
+		pjoin(sLogDir, '%s.%s_0.log'%(type,ip)),
+		pjoin(sLogDir, '%s.%s_1.log'%(type,ip)),
+		pjoin(sLogDir, '%s.%s_2.log'%(type,ip)),
+	]
+	
+	fOut = file("%s/das2.%s_loghndlr.log"%(sLogDir, ip), "wb")
+	fOut.write("Removing %s"%files)
+	fOut.close()
+
+	for f in files:
+		if os.path.exists(f):
+			os.remove(f)
+
+##############################################################################
+# Read one file
+##############################################################################
+def processFile(file, dRequests):
+	fd = open(file, "r")
+	for line in fd:
+		m = PREFIX.match(line)
+		if m == None:
+			continue
+		key1 = "%s %s"%(m.group(1),m.group(3))
+		key2 = "%s %s"%(m.group(2),m.group(4))
+		if dRequests.has_key(key1):
+			day=dRequests[key1]
+			if day.has_key(key2):
+				day[key2].append(m.group(5))
+			else:
+				day[key2] = [m.group(5)]
+		else:
+			dRequests[key1] = {key2: [m.group(5)]}
+
+##############################################################################
+# Output one day
+##############################################################################
+
+def oneDay(ip,title,day):
+
+	print '''
+	<div class="day">
+		<div class="dayheader">
+		  <a name="%(date)s">Request log for IP %(ip)s for %(date)s</a>
+	   </div>
+'''%{'date':title,'ip':ip}
+	
+	for key in sorted(day.keys()):
+		oneRequest(key,day[key])
+		
+	print '''
+	</div>
+'''
+
+##############################################################################
+# Output one request section
+##############################################################################
+def oneRequest(title,info):
+
+	print '''
+	<div class="request">
+		<h3>%(time)s</h3>
+		<pre class="request">
+'''%{'time':title}
+
+	for line in info:
+		print  line.replace('&','&amp;')
+		
+	print '''
+		</pre>
+	</div>
+'''
+
+##############################################################################
+##############################################################################
+
+##############################################################################
+# Start script execution
+##############################################################################
+if __name__ == "__main__":
+	sys.exit( main() )

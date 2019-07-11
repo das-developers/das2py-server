@@ -1,0 +1,627 @@
+#!/usr/bin/env python
+
+import sys
+import os
+import os.path
+import optparse
+import time
+import codecs
+import socket
+import pwd
+
+g_sConfPath = REPLACED_ON_BUILD
+
+perr = sys.stderr.write
+
+das2 = None  # Namespace anchor for das2 module, loaded afte sys.path is set
+             # via the config file
+
+##############################################################################
+# A generic version reporting block
+
+def stripSVNkey(s):
+	if s.find(':') == -1:
+		return s.strip(" $") + ": unknown"
+	else:
+		return s.strip(' $')
+
+g_sRev = stripSVNkey("$Rev: 8605 $")
+g_sURL = stripSVNkey("$URL: https://saturn.physics.uiowa.edu/svn/das2/servers/stable/pyserver/scripts/das2_srv_arbiter.in $")
+g_sWho = stripSVNkey("$LastChangedBy: cwp $")
+g_sWhen = stripSVNkey("$LastChangedDate: 2015-03-27 20:26:55 -0500 (Fri, 27 Mar 2015) $")
+
+##############################################################################
+# Get my config file, boiler plate that has to be re-included in each script
+# since the location of the modules can be configured in the config file
+
+def getConf():
+	
+	if not os.path.isfile(g_sConfPath):
+		if os.path.isfile(g_sConfPath + ".example"):
+			perr(u"Move\n   %s.example\nto\n   %s\nand configure your site\n"%(
+				  g_sConfPath, g_sConfPath))
+		else:
+			perr(u"%s is missing\n"%g_sConfPath)
+			
+		return None
+
+	# Yes, the Das2 server config files can contain unicode characters
+	fIn = codecs.open(g_sConfPath, 'rb', encoding='utf-8')
+	
+	dConf = {}
+	nLine = 0
+	for sLine in fIn:
+		nLine += 1
+		iComment = sLine.find('#')
+		if iComment > -1:
+			sLine = sLine[:iComment]
+	
+		sLine = sLine.strip()
+		if len(sLine) == 0:
+			continue
+		
+		iEquals = sLine.find('=')
+		if iEquals < 1 or iEquals > len(sLine) - 2:
+			preLoadError(u"Error in %s line %d"%(g_sConfPath, nLine))
+			fIn.close()
+			return None
+		
+		sKey = sLine[:iEquals].strip()
+		sVal = sLine[iEquals + 1:].strip(' \t\v\r\n\'"')
+		dConf[sKey] = sVal
+	
+	fIn.close()
+	
+	# As a finial step, inclued a reference to the config file itself
+	dConf['__file__'] = g_sConfPath
+	
+	return dConf
+	
+##############################################################################
+# Update sys.path, boiler plate code that has to be re-included in each script
+# since config file can change module path
+
+def setModulePath(dConf):
+	if not dConf.has_key('MODULE_PATH'):
+		perr(u"Set MODULE_PATH = /dir/containing/das2server_python_module")
+		return False	
+	
+	lDirs = dConf['MODULE_PATH'].split(os.pathsep)
+	for sDir in lDirs:
+		if os.path.isdir(sDir):
+				if sDir not in sys.path:
+					sys.path.insert(0, sDir)
+		
+	return True
+
+
+##############################################################################
+def makeTask(sTask, lArgs):
+	"""Making generic job enteries, does not parse lArgs"""
+	
+	lReq = ['']*7
+	lReq += lArgs
+	
+	lReq[1] = 'das2_srv_todo'
+	lReq[2] = socket.gethostname()
+	if sys.platform.lower().startswith('win'):
+		lReq[5] = os.environ['USERNAME']
+	else:
+		lReq[5] = pwd.getpwuid( os.getuid() )[4]
+	
+	rTime = time.time()
+	nMilli = int( (rTime - int(rTime))*1000 )
+	t = time.gmtime(rTime)
+	lReq[0] ='%s.%03d'%('%04d-%02d-%02dT%02d:%02d:%02d'%tuple(t[:6]),nMilli)
+	lReq[6] = "TASK_%s"%sTask.upper()
+	
+	return '|'.join(lReq)
+
+##############################################################################
+# Job Templates
+
+class JobTemplate(object):
+	def __init__(self):
+		self.sName = None
+		self.sSummary = None
+		self.sDesc = None
+		self.lArgs = []
+		self.dHelp = {}
+		self.lExamples = []
+	
+	def validate(self):
+		pass
+	
+	def args(self):
+		return self.lArgs
+
+	def summary(self, sArg=None):
+		if sArg == None:
+			return self.sSummary
+		else:
+			return self.dHelp[sArg.lower()]
+			
+	def description(self):
+		return self.sDesc
+		
+	def examples(self):
+		return self.lExamples
+		
+	def name(self):
+		return self.sName
+		
+	def args(self):
+		return self.lArgs
+	
+	def getTask(self, lArgs):
+		"""Returns a task string from the arguments list, or raises ValueError
+		"""
+		pass
+	
+
+class CacheJob(JobTemplate):
+	def __init__(self):
+		JobTemplate.__init__(self)
+		
+		self.sName = "cache"
+		self.sSummary = "generate pre-reduced dataset cache blocks"
+		
+		self.lArgs = ['dataset','begin','end', 'level']
+		self.dHelp = {
+			'dataset':'The name of the dataset to cache',
+			'begin':'The starting time point of data to cache', 
+			'end':'The ending time point of data to cache',
+			'level':"The cache resolution level index from the dataset's DSDF"
+		}
+		self.sDesc = \
+"""   Das2 PyServers are able to build a multi-resolution data cache.  Data
+   are reduced in the time domain using the reducer specified in a dataset's
+   DSDF file.  The default reducer just averages all measurements in a time
+   bin and then moves on to the next time bin and repeats the process.  This
+   job type is used to trigger creation of a series of cache blocks covering
+   all times from BEGIN to END at a specified resolution LEVEL.
+   
+   See Section 4 of the Das2 PyServer User's Reference for more information.
+"""
+		self.lExamples = [
+			("Build a cache of Juno MAG data at cache level 2 over a 4 day range",
+			 "juno/fgm/MagComponetsSCSE 2014-01-01 2014-01-05 2")
+		]
+
+	def getTask(self, lArgs):
+		if len(lArgs) != 4:
+			raise ValueError("Expected 4 arguments for CACHE jobs\n")
+			
+		if len(lArgs[0].strip()) == 0 < lArgs[0][0] == '/':
+			raise ValueError("in 'dataset' argument '%s'"%lArgs[0])
+		
+		try:
+			dt = das2.dastime.DasTime(lArgs[1].strip())
+		except ValueError, e:
+			raise ValueError("in 'begin' argument, %s\n"%str(e))
+		
+		try:
+			dt = das2.dastime.DasTime(lArgs[2].strip())
+		except ValueError, e:
+			perr("in 'end' argument, %s\n"%str(e))
+			
+		return makeTask('CACHE', lArgs)
+
+##############################################################################
+
+g_dTemplates = {
+	'cache': CacheJob()
+}
+
+##############################################################################
+def _keyAndSumFmt(lKeys, sSep, nLineLen=80):
+	n1stCol = 5
+	for sKey in lKeys: 
+		n1stCol = max(n1stCol, len(sKey))
+	
+	n2ndCol = nLineLen - n1stCol - len(sSep)
+	
+	sFmt = "%%-%ds%s%%-%ds"%(n1stCol, sSep, n2ndCol)
+	return (n1stCol, n2ndCol, sFmt)
+	
+
+def prnJobHelp(sProg, sJob):
+	
+	tplt = g_dTemplates[sJob]
+	
+	print "Task:    %s"%tplt.name().upper()
+	print "Summary: %s"%tplt.summary()
+	print 
+	
+	lArgs = tplt.args()
+	(n1stCol, n2ndCol, sFmt) = _keyAndSumFmt(lArgs, " - ", 71)
+	
+	print "Parameters:"
+	for i in xrange(0, len(lArgs)):
+		sInfo = sFmt%(lArgs[i], tplt.summary(lArgs[i]))
+		print "%4d) %s"%(i+1, sInfo)
+	
+	print 
+	print "Description:"
+	print tplt.description()
+	
+	lEx = tplt.examples()
+	if len(lEx) > 0:
+		if len(lEx) > 1:
+			print "Examples:"
+		else:
+			print "Example:"
+			
+		for i in xrange(0, len(lEx)):
+			print "   %s:"%lEx[i][0]
+			print
+			print "      %s %s %s"%(sProg, tplt.name(), lEx[i][1])
+		
+	print
+
+##############################################################################
+# Print the various queue types.  Started as a general function but since I
+# have to be python 2.6 compatible and there is on OrderedDict in 2.6, it 
+# looks like having different functions simplifies the code at the expense of
+# length.
+
+
+def _prnList(lColWidths, lHeaders, llOutputs, sList):
+	
+	if len(llOutputs) == 0:
+		perr("%s list contains no tasks\n"%sList)
+		return 0
+	
+	lFmt = ["%%-%ds"%n for n in lColWidths]
+	lSep = ["-"*n for n in lColWidths]
+	sFmt = " ".join(lFmt)
+	
+	print sFmt%tuple(lHeaders)
+	print " ".join(lSep)
+	
+	for lOutput in llOutputs:
+		print sFmt%tuple(lOutput)
+
+
+def prnTodoQueue(broker):
+	
+	lKeys = broker.keys('das2_todo')
+		
+	llOutputs = []
+	lHeaders = ['Submitted On', 'Entered By', 'Job Type']
+	lColWidths = [len(s) for s in lHeaders]
+	
+	if len(lKeys) > 0:
+		for sKey in lKeys:
+			lEntries = broker.lrange(sKey, 0, -1)
+			
+			for sTask in lEntries:
+				lTask = sTask.split('|')
+				
+				nJobArgs = len(lTask) - 7
+				while len(lColWidths) < nJobArgs+3:
+					lHeaders.append('Param %d'%(len(lColWidths) - 3 + 1))
+					lColWidths.append(len(lHeaders[-1]))
+				
+				lOutput = [lTask[0], lTask[1], 
+				           lTask[6].lower().replace('task_','') ]
+				lOutput += lTask[7:]
+				
+				for i in xrange(0, len(lOutput)):
+					if len(lOutput[i]) > lColWidths[i]:
+						lColWidths[i] = len(lOutput[i])
+				
+				llOutputs.append(lOutput)
+	
+	_prnList(lColWidths, lHeaders, llOutputs, 'das2_todo')	
+	return 0
+	
+def prnWorkingQueues(broker):
+	
+	lKeys = broker.keys('das2_working_*')
+		
+	llOutputs = []
+	lHeaders = ['Submitted On', 'Entered By', 'Job Type', 'Started On', 
+	            'Progress']
+	lColWidths = [len(s) for s in lHeaders]
+	
+	nFixedHdrs = len(lHeaders)
+	
+	if len(lKeys) > 0:
+		for sKey in lKeys:
+			lEntries = broker.lrange(sKey, 0, -1)
+			
+			for sTask in lEntries:
+				lTask = sTask.split('|')
+				
+				nJobArgs = (len(lTask) - 7) - 3
+				
+				while len(lColWidths) < nJobArgs+nFixedHdrs:
+					iPos = 7 + len(lColWidths) - 5
+					lHeaders.insert(iPos, 'Param %d'%(len(lColWidths) - nFixedHdrs + 1))
+					lColWidths.insert(iPos, len(lHeaders[-1]))
+				
+				lOutput = [lTask[0], lTask[1], lTask[-3], lTask[-1],
+				           lTask[6].lower().replace('task_','') ]
+				lOutput += lTask[7:-3]
+				
+				for i in xrange(0, len(lOutput)):
+					if len(lOutput[i]) > lColWidths[i]:
+						lColWidths[i] = len(lOutput[i])
+				
+				llOutputs.append(lOutput)
+	
+	_prnList(lColWidths, lHeaders, llOutputs, 'das2_working_*')
+	return 0
+
+
+
+def prnDoneQueue(broker):
+	
+	lKeys = broker.keys('das2_finished')
+		
+	llOutputs = []
+	lHeaders = ['Status','Submitted On', 'Entered By', 'Job Type', 'Finished On']
+	lColWidths = [len(s) for s in lHeaders]
+	
+	nFixedHdrs = len(lHeaders)
+	
+	if len(lKeys) > 0:
+		for sKey in lKeys:
+			lEntries = broker.lrange(sKey, 0, -1)
+			
+			for sTask in lEntries:
+				lTask = sTask.split('|')
+				
+				nJobArgs = len(lTask) - (7 + 4)
+				
+				while len(lColWidths) < nJobArgs+nFixedHdrs:
+					iPos = 7 + len(lColWidths) - 5
+					nParamNo = len(lColWidths) - nFixedHdrs + 1
+					sHdr = 'Param %d'%nParamNo
+					lHeaders.insert(iPos, sHdr)
+					lColWidths.append(iPos, len(sHdr))
+				
+				if lTask[-1] == '0':
+					sStatus = "OKAY"
+				else:
+					sStatus = "ERROR"%lTask[-1]
+				
+				lOutput = [sStatus, lTask[0], lTask[1], lTask[-2],
+				           lTask[6].lower().replace('task_','') ]
+				lOutput += lTask[7:-4]
+				
+				for i in xrange(0, len(lOutput)):
+					if len(lOutput[i]) > lColWidths[i]:
+						lColWidths[i] = len(lOutput[i])
+				
+				llOutputs.append(lOutput)
+	
+	_prnList(lColWidths, lHeaders, llOutputs, 'das2_finished')
+	return 0
+
+
+##############################################################################
+	
+class StderrLog(object):
+	def write(self, sThing):
+		sys.stderr.write("%s\n"%sThing)
+		
+
+##############################################################################
+# The program need way better help than the default OptionParser can provide
+
+class MyOptParse(optparse.OptionParser):
+	def print_help(self, file=None):
+		if file == None:
+			file = sys.stdout
+	
+		file.write("""
+NAME:
+   das2_srv_todo - Inject tasks into a Das2 PyServer work queue
+
+SYNOPSIS:
+   das2_srv_todo [options] help TASK
+   das2_srv_todo [options] TASK ARG1 ARG2 ARG3 ...
+
+DESCRIPTION:
+   das2_srv_todo adds tasks of type TASK to the the redis server hosting a Das2
+   PyServer work queue.  The default implementation of the server uses a ReDis
+   server (http://redis.io/) to host the queue.  Using Redis allows multiple
+   processes may insert tasks at the same time without corrupting the task 
+   queue.  Tasks within the queue are represented as simple strings with pipe,
+   '|', delimited fields.  This program appends new strings to the 'das2_todo'
+   list within the Redis server.  The companion program das2_srv_arbiter
+   handles retreiving task strings from the list and running the requested
+   processing jobs.  Task strings are moved off of the das2_todo list as they
+   are finished.
+""")
+
+		file.write("""
+OPTIONS:
+   --version   Show the program's version information and exit
+               	
+   -h, --help  Print this general help message and exit
+	
+   -c FILE, --config=FILE
+               Use FILE as the Das2 Server conifguration instead of the 
+               compiled in default.
+
+   -g, --generic
+               Do not parse the task arguments.  Instead prepend 'TASK_' to
+               the task name, combine the task name and all the given arguments
+               using pipe, '|', character, then prepend the general job
+               information arguments and push the task string onto the work 
+               list.  Generic tasks are not verified before queuing.
+
+   -t, --list-todo
+               List all tasks waiting for processing in the Das2 PyServer's 
+               queue and return.  Task arguments are ignored.
+
+   -w, --list-working
+               List all tasks currently in process on the Das2 PyServer's
+               queue and return.  Task arguments are ignored.
+
+   -d, --list-done
+               List all tasks on the finished list in the Das2 PyServer's
+               queue and return.  Task arguments are ignored.
+""")
+
+		file.write("""
+TASKS:
+   The following task types are understood by das2_srv_todo and will be 
+   verified before insertion into the server's todo queue:
+	
+""")
+
+		lTasks = g_dTemplates.keys()
+		lTasks.sort()
+		for sTask in lTasks:
+			file.write("      '%s' - %s\n"%(sTask, g_dTemplates[sTask].sSummary))
+		
+		if len(lTasks) == 1:
+			file.write("\n          (no other task types supported at this time)\n")
+		
+		file.write("""
+   Type: 
+
+      das2_srv_todo TASK help
+	
+   To get more information on each type of TASK.  In addition generic tasks
+   may be inserted into the queue using the -g option above.
+""")
+
+		file.write("""
+FILES:
+   Each Das2 PyServer is defined by a single configuration file.  By default
+   the configuration data for this program are taken from:
+	
+      %s
+		
+SEE ALSO:
+   das2_srv_arbiter, das2_cache_rdr, qstream_cache_rdr, and the 'Das2 PyServer
+   Reference Guide' at http://das2.org/PyServer-RG.pdf .
+"""%g_sConfPath)
+	
+		#End print_help
+
+##############################################################################
+def main(argv):
+	global das2
+	
+	sUsage="das2_srv_todo [options] [help] [TASK ARG1 ARG2 ARG3 ...]"
+	
+	sProg = "das2_srv_todo"
+
+	# Would use argparse here, but it's only avaliable in python 2.7 and up
+	psr = MyOptParse(
+		prog=sProg, usage=sUsage, 
+		version=" \n".join( [g_sRev, g_sWho, g_sWhen, g_sURL] )
+	)
+	
+	psr.add_option('-c', '--config', dest="sConfig", default=g_sConfPath)
+						
+	psr.add_option('-g','--generic', dest="bGeneric", action="store_true",
+	               default=False)
+						
+	psr.add_option('-t','--list-todo', dest="bListTodo", action="store_true",
+	               default=False)
+						
+	psr.add_option('-w', '--list-working', dest="bListWorking",
+	               action="store_true", default=False)
+	
+	psr.add_option('-d', '--list-done', dest="bListDone", action="store_true",
+	               default=False)
+						
+	(opts, lArgs) = psr.parse_args(argv[1:])
+	
+	
+	# We can handle help without reading the config.
+	if not opts.bListTodo and not opts.bListWorking and not opts.bListDone:
+		if len(lArgs) == 0:
+			print "Type '%s help' for usage."%sProg
+			return 0
+		elif len(lArgs) == 1:
+			if lArgs[0].lower() == 'help':
+				psr.print_help(sys.stdout)
+				return 0
+		else:
+			if lArgs[0].lower() == 'help':
+				if lArgs[1].lower() in g_dTemplates:
+					prnJobHelp(sProg, lArgs[1].lower())
+					return 0
+				else:
+					perr("ERROR: Task type '%s' is unknown. "%lArgs[1])
+					perr("(Run %s -h to get a list of known task types)\n"%sProg)
+					return 13
+	
+	
+		if lArgs[0].lower() not in g_dTemplates:
+			perr("ERROR: Job type '%s' is unknown. "%lArgs[1])
+			perr("(Run %s with no parameters to get a list of know job types)\n"%sProg)
+			return 13
+	
+	perr("Server definition: %s\n"%opts.sConfig)
+	
+	dConf = getConf()
+	if dConf == None:
+		return 17
+		
+	# Set the system path
+	if not setModulePath(dConf):
+		return 18
+		
+	# Load the das2 module
+	try:
+		das2 = __import__('das2', globals(), locals(), [], 0)
+	except ImportError, e:
+		perr("Error importing module 'das2'\r\n: %s\n"%(str(e)))
+		return 19
+	
+	# Load the das2server.util module
+	try:
+		mTmp = __import__('das2server', globals(), locals(), ['util'], 0)
+	except ImportError, e:
+		perr(u"Error importing module 'das2server'\r\n: %s\n"%(str(e)))
+		return 19
+	try:
+		U = mTmp.util
+	except AttributeError:
+		perr(u'No module named das2server.util under %s\n'%dConf['MODULE_PATH'])
+		return 20
+
+	fLog = StderrLog()
+
+	broker = U.task.getBroker(fLog, dConf)
+	if broker == None:
+		return 21
+		
+	if opts.bListTodo:
+		return prnTodoQueue(broker)
+		
+	if opts.bListWorking:
+		return prnWorkingQueues(broker)
+	
+	if opts.bListDone:
+		return prnDoneQueue(broker)
+		
+	tplt = g_dTemplates[lArgs[0]]
+	try:
+		sTask = tplt.getTask(lArgs[1:])
+	except ValueError, e:
+		perr("ERROR: %s"%str(e))
+		return 13
+	
+	perr("Adding task '%s'\n"%sTask)
+	try:
+		broker.lpush('das2_todo', 	sTask)
+	except ServerError, e:
+		perr("ERROR: Job broker error, %s.\n"%str(e))
+		return 21
+	
+	return 0
+	
+##############################################################################
+if __name__ == '__main__':
+	main(sys.argv)
+

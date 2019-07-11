@@ -1,0 +1,468 @@
+#!/usr/bin/env python
+
+import sys
+import os
+import os.path
+import optparse
+import time
+import codecs
+import signal
+import socket
+import atexit
+
+from os.path import dirname as dname
+
+g_sConfPath = REPLACED_ON_BUILD
+
+perr = sys.stderr.write
+
+
+##############################################################################
+# Default Task handler dictionary
+
+g_dDefHandlers = {
+	'TASK_CACHE':    'das2server.deftasks.cachetask',
+	'TASK_USAGE':    'das2server.deftasks.debugtask',
+	'TASK_COVERAGE': 'das2server.deftasks.covertask',
+	'TASK_LIST':     'das2server.deftasks.listtask',
+	'HAPI_INFO_CACHE': 'das2server.h_api.infotask'
+}
+
+g_dLoadedModules = {
+	'TASK_CACHE':      None,
+	'TASK_USAGE':      None,
+	'TASK_COVERAGE':   None,
+	'TASK_LIST':       None,
+	'HAPI_INFO_CACHE': None
+}
+
+##############################################################################
+# Das2 PyServer Utilities Module
+
+U = None
+
+##############################################################################
+# Handling Shutdown
+
+# Changed to true when receiving SIGINT
+g_bShutdown = False
+g_broker = None
+g_lCurTask = []
+
+def signal_handler(signum, frame):
+	global g_bShutdown, g_broker, g_lCurTask
+	
+	for i in xrange(0, len(g_lCurTask)):
+		if g_lCurTask[i] != None:
+			g_lCurTask[i].shutdown(signum)
+			g_lCurTask[i] = None
+		
+	g_bShutdown = True
+	if g_broker != None:
+		g_broker.disconnect()
+		g_broker = None
+	
+	# make everything stop with an exception
+	raise U.errors.CancelOp("Received SIGTERM")
+	
+
+##############################################################################
+# A generic version reporting block
+
+def stripSVNkey(s):
+	if s.find(':') == -1:
+		return s.strip(" $") + ": unknown"
+	else:
+		return s.strip(' $')
+
+g_sRev = stripSVNkey("$Rev: 10500 $")
+g_sURL = stripSVNkey("$URL: https://saturn.physics.uiowa.edu/svn/das2/servers/devel/pyserver/scripts/das2_srv_arbiter.in $")
+g_sWho = stripSVNkey("$LastChangedBy: cwp $")
+g_sWhen = stripSVNkey("$LastChangedDate: 2018-02-26 17:29:16 -0600 (Mon, 26 Feb 2018) $")
+
+
+##############################################################################
+# Get my config file, boiler plate that has to be re-included in each script
+# since the location of the modules can be configured in the config file
+
+def getConf():
+	
+	if not os.path.isfile(g_sConfPath):
+		if os.path.isfile(g_sConfPath + ".example"):
+			perr(u"Move\n   %s.example\nto\n   %s\nand configure your site\n"%(
+				  g_sConfPath, g_sConfPath))
+		else:
+			perr(u"%s is missing\n"%g_sConfPath)
+			
+		return None
+
+	# Yes, the Das2 server config files can contain unicode characters
+	fIn = codecs.open(g_sConfPath, 'rb', encoding='utf-8')
+	
+	dConf = {}
+	nLine = 0
+	for sLine in fIn:
+		nLine += 1
+		iComment = sLine.find('#')
+		if iComment > -1:
+			sLine = sLine[:iComment]
+	
+		sLine = sLine.strip()
+		if len(sLine) == 0:
+			continue
+		
+		iEquals = sLine.find('=')
+		if iEquals < 1 or iEquals > len(sLine) - 2:
+			preLoadError(u"Error in %s line %d"%(g_sConfPath, nLine))
+			fIn.close()
+			return None
+		
+		sKey = sLine[:iEquals].strip()
+		sVal = sLine[iEquals + 1:].strip(' \t\v\r\n\'"')
+		dConf[sKey] = sVal
+	
+	fIn.close()
+	
+	# As a finial step, inclued a reference to the config file itself
+	dConf['__file__'] = g_sConfPath
+	
+	return dConf
+
+
+##############################################################################
+# Update sys.path, boiler plate code that has to be re-included in each script
+# since config file can change module path
+
+def setModulePath(dConf):
+	if not dConf.has_key('MODULE_PATH'):
+		perr(u"Set MODULE_PATH = /dir/containing/das2server_python_module")
+		return False	
+	
+	lDirs = dConf['MODULE_PATH'].split(os.pathsep)
+	for sDir in lDirs:
+		if os.path.isdir(sDir):
+				if sDir not in sys.path:
+					sys.path.insert(0, sDir)
+		
+	return True
+
+##############################################################################
+	
+class StderrLog(object):
+	def write(self, sThing):
+		sys.stderr.write("%s\n"%sThing)
+	
+	def newPrefix(self):
+		pass
+
+	
+##############################################################################
+def daemonize(fLog, sPidFile):
+	"""Detach from the controlling terminal, and write the daemon process 
+	PID to sPidFile.  Returns 0 on success"""
+	
+	# Function only works in POSIX environments, need to probably switch
+	# to some external library in order to work on windows.
+	
+	# Taken from:
+	#  http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
+	# by Sander Marechal - Thanks!
+	
+	sPidDir = dname(sPidFile)
+	if not os.path.isdir(sPidDir):
+		try:
+			os.makedirs(sPidDir, 0750)
+		except OSError:
+			sys.stderr.write("Can't make dir %s\n"%sPidDir)
+			return 13
+	
+	# If our PID file already exists, refuse to start
+	if os.path.isfile(sPidFile):
+		sys.stderr.write("PID file %s already exists, remove "%sPidFile +\
+		                  "file before starting in daemon mode.\n")
+		return 13
+	
+	# do the UNIX double-fork magic, see Stevens' "Advanced Programming in 
+	# the UNIX Environment" for details (ISBN 0201563177) 
+	# http://www.erlenstar.demon.co.uk/unix/faq_2.html#SEC16
+	try:
+		pid = os.fork()
+		if pid > 0:            
+			sys.exit(0)   # exit first parent
+	except OSError, e:
+		sys.stderr.write("fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
+		return 13
+       
+	# decouple from parent environment
+	os.chdir("/")
+	os.setsid()
+	os.umask(0) 
+	
+	# do second fork
+	try:
+		pid = os.fork()
+		if pid > 0:
+			sys.exit(0)   # exit from second parent
+	except OSError, e:
+		sys.stderr.write("fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
+		return 13
+       
+	# redirect standard file descriptors
+	sys.stdout.flush()
+	sys.stderr.flush()
+	si = file('/dev/null', 'r')
+	so = file('/dev/null', 'a+')
+	
+	# Just incase we are accidentally writing to stdout/stderr somewhere
+	# in a library call...
+	os.dup2(si.fileno(), sys.stdin.fileno())
+	os.dup2(so.fileno(), sys.stdout.fileno())
+	os.dup2(fLog.fileno(), sys.stderr.fileno())
+
+	# write pidfile
+	atexit.register(delPid, sPidFile)
+	pid = str(os.getpid())
+	file(sPidFile,'w+').write("%s\n" % pid)
+	
+	fLog.newPrefix()
+	fLog.write("das2_srv_arbiter started, PID written to %s"%sPidFile)
+	return 0
+
+##############################################################################
+def delPid(sPidFile):
+	if sPidFile != None and os.path.isfile(sPidFile):
+		os.remove(sPidFile)
+
+##############################################################################
+def taskFactory(U, dConf, broker, sQueue, iTask, sTask, fLog):
+	global g_dLoadedModules
+
+	lTask = sTask.split('|')
+	
+	if len(lTask) < 7:
+		raise ValueError("Error: Task has too few fields to be valid %s"%sTask)
+	
+	sCat = lTask[6].strip()
+	
+	if not g_dDefHandlers.has_key(sCat):
+		raise ValueError("No task handler is defined for items of type %s"%sCat)
+	
+	
+	sModule = g_dDefHandlers[sCat]    # Start with the default
+	
+	if dConf.has_key(sCat):           # Take the task module from config if 
+		sModule = dConf[sCat]          #   it has one
+
+	if g_dLoadedModules[sCat] != None:
+		return g_dLoadedModules[sCat]
+			
+	if sModule.find('.') != -1:
+		# If the module is in the form A.B.C then issue a load like
+		# from A.B import C.
+		iLastDot = sModule.rfind('.')
+		if iLastDot >= len(sModule) - 2:
+			raise U.errors.ServerError("Bad handler for request %s: '%s'"%(
+			                            sReqType, sModule), fLog)
+				
+		sModPath = sModule[:iLastDot]
+		sModName = sModule[iLastDot + 1:]
+		
+		# Do an absolute import
+		try:
+			__import__(sModule, globals(), locals(), [], 0)
+			Module = sys.modules[sModule]
+			
+		except ImportError, e:
+			raise U.errors.ServerError("Error loading module %s from %s: %s"%(
+			                 sModName, sModPath, e))
+		
+	else:
+		# If the module name is just a top level object do a call like
+		# import A
+		try:
+			Module = __import__(sModule, globals(), locals(), [], 0)
+		except ImportError, e:
+			raise U.errors.ServerError("Error loading module %s: %s"%(sModule, e))
+
+	task = Module.Task(dConf, broker, sQueue, iTask, sTask, fLog)
+	
+	return task
+	
+
+##############################################################################
+def main(argv):
+
+	global g_bShutdown, g_broker, g_lCurTask, perr, U
+
+	sUsage="das2_srv_arbiter [-D]"
+	sDesc="""
+This is a background processing program for the Das2 server defined by the
+configuration file:
+
+%s
+
+The current version can't process more than one job at a time.
+"""%g_sConfPath
+
+	psr = optparse.OptionParser(
+		prog="das2_srv_arbiter", usage=sUsage, description=sDesc, 
+		version=" \n".join( [g_sRev, g_sWho, g_sWhen, g_sURL] )
+	)
+	
+	psr.add_option('-D', '--daemon', dest='sPidFile', metavar="PID_FILE",
+	               default=None, help="Detach from the controlling terminal "+\
+						" and became a system daemon, writing the process ID to"+\
+						" the given PID_FILE.")
+						
+	psr.add_option('-c', '--config', dest="sConfig", metavar="FILE",
+	               help="Use FILE as the Das2 server configuration instead "+\
+	               "of the compiled in default.", default=g_sConfPath)
+						
+	(opts, lArgs) = psr.parse_args(argv[1:])
+		
+	# Try to open the config
+	perr("Server definition: %s\n"%opts.sConfig)
+
+	dConf = getConf()
+	if dConf == None:
+		return 17
+		
+	# Set the system path
+	if not setModulePath(dConf):
+		return 18
+		
+	# Load the util module
+	try:
+		mTmp = __import__('das2server', globals(), locals(), ['util'], 0)
+	except ImportError, e:
+		perr(u"Error importing module 'das2server'\r\n: %s\n"%(str(e)))
+		return 19
+	try:
+		U = mTmp.util
+	except AttributeError:
+		perr(u'No module named das2server.util under %s\n'%dConf['MODULE_PATH'])
+		return 20
+		
+		
+	# Set the Binary path and the LD_LIBRARY_PATH's
+	U.misc.envPathMunge("PATH", dConf['BIN_PATH'])
+	U.misc.envPathMunge("LD_LIBRARY_PATH", dConf['LIB_PATH'])
+	
+	if dConf.has_key('LOG_PATH') and opts.sPidFile:
+	
+		# The switch to using fLog over stderr happens within daemonize
+		fLog = U.io.DasLogFile(dConf['LOG_PATH'], 
+		       "arbiter_%s"%socket.gethostname())
+		nRet = daemonize(fLog, opts.sPidFile)	
+		if nRet != 0:
+			return nRet
+			
+	else:
+		fLog = StderrLog()
+		
+	# Change the nice value
+	if os.name == 'posix':
+		os.nice(5)  # Drop our priority compared to real-time processing
+		
+	perr = None  # Prevent accidental use of perr
+		
+	fLog.write("Setting process umask to 0002")
+	os.umask(0002)
+	
+	# Setup the signal handler so that sub-processes can be shutdown
+	# when we are:
+	signal.signal(signal.SIGTERM, signal_handler)
+	signal.signal(signal.SIGINT, signal_handler)
+		
+	# My in process Queue
+	sWorkQueue = "das2_working_%d"%os.getpid()
+	
+	# Should probably allow one job of each type to run at a time in 
+	# the future, or provide for jobs of a single type to talk to the
+	# other jobs to see if there is a conflict, this would be really 
+	# nice for caching jobs, but alas, I need to get this working so
+	# only one job at a time for now.  -cwp 2015-03-26
+	
+	g_lCurTask = []
+	bFirst = True
+	broker = None
+	while not g_bShutdown:
+		
+		if broker == None:
+			try:
+				broker = U.task.getBroker(fLog, dConf)
+				fLog.write("Connection to job broker established")
+			except U.errors.ServerError, e:
+				fLog.write("Job broker not available, %s"%str(e) +\
+				           "  Will try again in 5 minutes")
+				time.sleep(60*5)
+				continue
+		
+		# Save a global reference to the broker for the signal handler
+		g_broker = broker
+		
+		# Block waiting to move items to the queue job
+		try:
+			sTask = broker.brpoplpush("das2_todo", sWorkQueue)
+		except U.errors.DasError, e:
+			fLog.write("Exception caught while reading/writing queues 'das2_todo', '%s': %s"%(
+			           sWorkQueue, str(e)))
+			break
+		except KeyboardInterrupt, e:
+			fLog.write("Keyboard Interrupt caught, shutting down.")
+			break
+		
+		if not bFirst:
+			fLog.newPrefix()
+		bFirst = False
+		
+		fLog.write("Starting Task - '%s'"%sTask)
+		
+		# Could keep a list of "in flight" tasks here in the future
+		try:			
+			task = taskFactory(U, dConf, broker, sWorkQueue, 0, sTask, fLog)
+			g_lCurTask.append(task)
+		
+		except ValueError, e:
+			fLog.write("ERROR: Bad Task Entry, %s"%e)
+			broker.lpop(sWorkQueue)
+			continue
+		except U.errors.QueryError, e:
+			fLog.write("ERROR: Bad Task Request, %s"%e)
+			broker.lpop(sWorkQueue)
+			continue
+		except U.errors.DasError, e:
+			fLog.write("ERROR: Inproper Server configuration, %s"%e)
+			broker.lpop(sWorkQueue)
+			continue
+		
+		try:
+			task.begin()
+			task.run(fLog)
+				
+		except Exception, e: 
+			task.end(13, str(e).replace('|',' '))
+			fLog.write("ERROR: %s"%e)
+		else:
+			task.end()
+		
+		fLog.write("Task type '%s' finished at %s, with return code %d"%(
+		           task.category(), task.endTime(), task.retCode()))
+		
+		g_lCurTask.pop()
+		broker.brpoplpush(sWorkQueue, "das2_finished")
+	
+	# Make sure this always runs
+	if broker != None:
+		broker.delete(sWorkQueue)
+	fLog.write("das2_srv_arbiter normal shut down")
+	return 0
+	
+##############################################################################
+if __name__ == '__main__':
+	main(sys.argv)
+
+	
+	
+	
+	

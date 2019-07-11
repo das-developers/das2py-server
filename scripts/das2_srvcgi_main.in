@@ -1,0 +1,464 @@
+#!/usr/bin/env python
+
+import sys
+import cgi
+import cgitb
+import time
+import os.path
+import os
+import codecs
+import StringIO
+import traceback
+
+from os.path import join as pjoin
+
+cgitb.enable()
+
+g_sConfPath = REPLACED_ON_BUILD
+
+##############################################################################
+# Browser identification for use before util modules are loaded, after they 
+# are loaded util.io.g_lNotDas2App is used.  If you update this list, *also*
+# update the list is util.io
+
+_g_BrowserAgent = ['firefox','explorer','chrome','safari']
+
+
+##############################################################################
+# Default request handler dictionary
+
+g_dDefHandlers = {
+	'HANDLE_NONE':     'das2server.defhandlers.intro23',
+	'HANDLE_DEBUG':    'das2server.defhandlers.debug',
+	'HANDLE_PEERS':    'das2server.defhandlers.peers',
+	'HANDLE_RESOURCE': 'das2server.defhandlers.resource',
+	'HANDLE_LOGO':     'das2server.defhandlers.logo',
+	'HANDLE_ID':       'das2server.defhandlers.id',
+	
+	# Das 2.2 services
+	'HANDLE_DSDF_LIST_ALL':     'das2server.defhandlers.dsdfList',
+	'HANDLE_DSDF_EXAMPLE_LIST': 'das2server.defhandlers.dsdfList',
+	'HANDLE_DSDF_DESCRIBE':     'das2server.defhandlers.dsdfDescribe',
+	'HANDLE_DSDF_DATASET':      'das2server.defhandlers.dsdfDataset',
+	
+	# Das 2.3 services
+	
+	# List of services offered by this server
+	'HANDLE_SERVICES': 'das2server.defhandlers.services',
+	
+	# All sources & dirs on server, only good for replication, not main interface
+	'HANDLE_CATALOG':      'das2server.defhandlers.catalog',
+	
+	# Sources and/or catalogs in a particular directory
+	'HANDLE_DIRECTORY':    'das2server.defhandlers.directory',
+	
+	# New version of dsdfDescribe
+	'HANDLE_SOURCE':       'das2server.defhandlers.source',
+	
+	# New version of dsdfDataset
+	'HANDLE_DATA':         'das2server.defhandlers.data',
+	
+	# New feature
+	'HANDLE_COVERAGE':     'das2server.defhandlers.coverage',
+	
+	# New feature
+	'HANDLE_IMAGE':        'das2server.defhandlers.plot',
+	
+	# Helophysics API substem
+	'HANDLE_H_API_NONE':         'das2server.h_api.root',
+	'HANDLE_H_API_CAPS':         'das2server.h_api.caps',
+	'HANDLE_H_API_CATALOG' :     'das2server.h_api.catalog',
+	'HANDLE_H_API_INFO':         'das2server.h_api.info',
+	'HANDLE_H_API_DATA':         'das2server.h_api.data'
+}
+
+##############################################################################
+# Cut down version of error handling for use before the module path is loaded
+
+def preLoadError(uOut):
+	"""Cut down error handling for use before the util modules are loaded,
+	script must exit afte calling this or multiple HTTP headers will be 
+	emitted.
+	"""
+	
+	sType = 'InternalServerError'
+	
+	bClientIsBrowser = False
+	if os.environ.has_key("HTTP_USER_AGENT"):
+		
+		sAgent = os.environ['HTTP_USER_AGENT'].lower()
+	
+		for sTest in _g_BrowserAgent:
+			if sAgent.find(sTest) != -1:
+				bClientIsBrowser = True
+				break	
+	sys.stdout.write("Status: 500 Internal Server Error\r\n")
+	
+	if bClientIsBrowser:
+		sys.stdout.write("Content-Type: text/plain; charset=utf-8\r\n\r\n")
+		
+		sys.stdout.write(uOut.encode('utf-8'))
+	else:
+		sys.stdout.write("Content-Type: text/vnd.das2.das2stream\r\n\r\n")
+
+		uOut = uOut.replace(u'\n', u'\n\r').replace(u'"', u"'")
+		uOut = u'<exception type="%s" message="%s" />\n'%(sType, uOut)
+		sOut = uOut.encode('utf-8')
+		sys.stdout.write("[00]%06d"%len(sOut))
+		sys.stdout.write(sOut)
+
+
+##############################################################################
+# Get my config file, boiler plate that has to be re-included in each script
+# since the location of the modules can be configured in the config file
+
+def getConf():
+	
+	if not os.path.isfile(g_sConfPath):
+		if os.path.isfile(g_sConfPath + ".example"):
+			preLoadError(u"Move\n     %s.example\nto\n     %s\n and configure your site"%(
+			      g_sConfPath, g_sConfPath))
+		else:
+			preLoadError(u"%s is missing\n"%g_sConfPath)
+			
+		return None
+
+	# Yes, the Das2 server config files can contain unicode characters
+	fIn = codecs.open(g_sConfPath, 'rb', encoding='utf-8')
+	
+	dConf = {}
+	nLine = 0
+	for sLine in fIn:
+		nLine += 1
+		iComment = sLine.find('#')
+		if iComment > -1:
+			sLine = sLine[:iComment]
+	
+		sLine = sLine.strip()
+		if len(sLine) == 0:
+			continue
+		
+		iEquals = sLine.find('=')
+		if iEquals < 1 or iEquals > len(sLine) - 2:
+			preLoadError(u"Error in %s line %d"%(g_sConfPath, nLine))
+			fIn.close()
+			return None
+		
+		sKey = sLine[:iEquals].strip()
+		sVal = sLine[iEquals + 1:].strip(' \t\v\r\n\'"')
+		dConf[sKey] = sVal
+	
+	
+	fIn.close()
+	
+	# As a finial step, inclued a reference to the config file itself
+	dConf['__file__'] = g_sConfPath
+	
+	return dConf
+
+
+##############################################################################
+# Update sys.path, boiler plate code that has to be re-included in each script
+# since config file can change module path
+
+def setModulePath(dConf):
+	if not dConf.has_key('MODULE_PATH'):
+		preLoadError(u"Set MODULE_PATH = /dir/containing/das2server_python_module")
+		return False	
+	
+	lDirs = dConf['MODULE_PATH'].split(os.pathsep)
+	for sDir in lDirs:
+		if os.path.isdir(sDir):
+				if sDir not in sys.path:
+					sys.path.insert(0, sDir)
+		
+	return True
+
+
+#############################################################################
+# Look up a module and call it's handler function
+
+def getHandler(U, fLog, dConf, sReqType):
+	"""Return a handler module object.  This doesn't just return the handler
+	function in the module because future handler interfaces my involve more
+	than one function in the API"""
+	
+	if sReqType != 'HANDLE_RESOURCE':
+		fLog.write("   Request Type: %s"%sReqType)
+			
+	# Take the handler from the conf, if not present, use the default
+	sModule = g_dDefHandlers[sReqType]
+	
+	if dConf.has_key(sReqType):
+		sModule = dConf[sReqType]
+		
+	if sModule == None or sModule == '':
+		U.io.queryError(fLog, u"No handler for requset type %s"%sReqType)
+		return None
+	
+	if sModule.find('.') != -1:
+		# If the module is in the form A.B.C then issue a load like
+		# from A.B import C.
+		
+		iLastDot = sModule.rfind('.')
+		if iLastDot >= len(sModule) - 2:
+			U.io.svrError("Bad handler for request %s: '%s'"%(
+			                    sReqType, sModule), fLog)
+			return None
+				
+		sModPath = sModule[:iLastDot]
+		sModName = sModule[iLastDot + 1:]
+		
+		# Do an absolute import
+		try:
+			__import__(sModule, globals(), locals(), [], 0)
+			module = sys.modules[sModule]
+			
+		except ImportError, e:
+			U.io.serverError(fLog, "Error loading module %s from %s: %s"%(
+			                 sModName, sModPath, e))
+			return None
+		
+	else:
+		# If the module name is just a top level object do a call like
+		# import A
+		try:
+			module = __import__(sModule, globals(), locals(), [], 0)
+		except ImportError, e:
+			U.io.serverError(fLog, "Error loading module %s: %s"%(sModule, e))
+			return None
+	
+	if sReqType != 'HANDLE_RESOURCE':
+		fLog.write("   Handler: %s"%module.__file__)
+	return module
+		
+
+#############################################################################
+# Main
+
+def main(form):
+
+	rStartTime = time.time()
+			
+	dConf = getConf()
+	if dConf == None:
+		return 17
+		
+	# Set the system path
+	if not setModulePath(dConf):
+		return 18
+		
+	# Load the util module
+	try:
+		mTmp = __import__('das2server', globals(), locals(), ['util'], 0)
+	except ImportError, e:
+		preLoadError(u"Error importing module 'das2server'\r\n: %s"%(str(e)))
+		return 19
+	try:
+		U = mTmp.util
+	except AttributeError:
+		preLoadError(u'No module named das2server.util under %s'%dConf['MODULE_PATH'])
+		return 20
+		
+	U.misc.envPathMunge("PATH", dConf['BIN_PATH'])
+	U.misc.envPathMunge("LD_LIBRARY_PATH", dConf['LIB_PATH'])
+	
+	if dConf.has_key('LOG_PATH'):
+		fLog = U.io.DasLogFile(dConf['LOG_PATH'], os.getenv('REMOTE_ADDR'))
+		#fLog.write("INFO: Logging to %s"%dConf['LOG_PATH'])
+	else:
+		fLog = U.io.DasLogFile()
+
+	#for sKey in dConf.keys():
+	#	fLog.write("%s = %s"%(sKey, dConf[sKey]))	
+	
+	for sEnv in ['SCRIPT_NAME', 'SERVER_NAME', 'QUERY_STRING']:
+		if not os.environ.has_key(sEnv):
+			error(u"Wierd Error, %s is not set in the script environment\r\n"%sEnv)
+			return 21
+	
+	sPathInfo = ''
+	if os.getenv("PATH_INFO"):
+		sPathInfo = os.getenv("PATH_INFO")
+		
+	if sPathInfo.find('..') != -1:
+		U.io.queryError(fLog, u"Bad Path")
+		return 25
+	
+	# Don't log resource requests, this just clutters up the logs
+	if not sPathInfo.startswith('/resource'):
+		fLog.write("Input")
+		fLog.write("   Request URL: %s"%U.io.getUrl())
+		fLog.write("   On Host: %s"%os.getenv('SERVER_NAME'))
+		fLog.write("   For Program: %s"%os.getenv('SCRIPT_NAME'))
+		fLog.write("   For Path: %s"%sPathInfo)
+		fLog.write("   Parameters: %s"%os.getenv('QUERY_STRING'))
+	
+		if os.environ.has_key("HTTP_USER_AGENT"):
+			fLog.write("   User Agent: %s"%os.environ['HTTP_USER_AGENT'])
+		else:
+			fLog.write("   User Agent: Unknown (HTTP_USER_AGENT not given)")
+	
+		
+	# Check to see that our resource path is sent and exist, or just 
+	# exit with an error
+	if not dConf.has_key('RESOURCE_PATH'):
+		U.io.error(u"Set the RESOURCE_PATH keyword in %s"%g_sConfPath, fLog)
+		return 22
+	
+	if not os.path.isdir(dConf['RESOURCE_PATH']):
+		U.io.error(u"Can't locate resources, server path "
+		      "%s doesn't exsit"%dConf['RESOURCE_PATH'], fLog)
+		return 23
+		
+	# Handle Das2.2 style queries, except for the intro, these all have 
+	# the server = keyword pattern
+	sServer = form.getfirst('server', None)
+	sReqType = None
+	if sServer != None:
+		sServer = sServer.lower()
+		
+		if sServer == 'list':
+			sReqType = 'HANDLE_DSDF_LIST_ALL'
+
+		elif sServer == 'discovery':
+			sReqType = 'HANDLE_DSDF_EXAMPLE_LIST'
+			
+		elif sServer == 'dsdf':
+			sReqType = 'HANDLE_DSDF_DESCRIBE'
+			
+		elif sServer == 'source':
+			sReqType = 'HANDLE_DSDF_SOURCE'
+				
+		elif sServer == 'logo':
+			sReqType = 'HANDLE_LOGO'
+	
+		elif sServer == 'id':
+			sReqType = 'HANDLE_ID'
+
+		elif sServer in ['dataset', 'compactdataset']:
+			sReqType = 'HANDLE_DSDF_DATASET'
+	
+		elif sServer == 'image':
+			sReqType = 'HANDLE_DSDF_IMAGE'
+		
+		elif sServer == 'peers':
+			sReqType = 'HANDLE_PEERS'
+			
+		elif sServer == 'debug':
+			sReqType = 'HANDLE_DEBUG'
+		
+		elif sServer in ['id','authenticator']:
+			# 'authenticator' and 'id' are not yet handled
+			U.io.todoError(fLog, u"The queries: server=authenticator and "+\
+			               u"server=id have not been implemented")
+		else:
+			U.io.queryError(fLog, u"Bad server keyword.  Server must be "
+	   	      "[dataset|dsdf|logo|list|discovery]\n")
+					
+	# If the path starts with '/hapi' send requests to subsystem handlers
+	elif sPathInfo.startswith('/hapi'):
+		sKey = "ENABLE_HAPI_SUBSYS"
+		if (sKey not in dConf) or (dConf[sKey].lower() not in ('true','yes','1')):
+			U.io.queryError(fLog, u"Heliophysics API Subsystem not enabled, "+\
+			 u"contact the server administrator if this feature is needed")
+		
+		else: 
+			dTmp = {'/hapi/capabilities': 'HANDLE_H_API_CAPS',
+					  '/hapi/catalog':      'HANDLE_H_API_CATALOG',
+					  '/hapi/info':         'HANDLE_H_API_INFO',
+					  '/hapi/data':         'HANDLE_H_API_DATA' }
+			for sKey in dTmp:
+				if sPathInfo.startswith(sKey):
+					sReqType = dTmp[sKey]
+					break
+					
+			# Fall back, just send info page
+			if sReqType is None:
+				sReqType = 'HANDLE_H_API_NONE'
+			
+			
+	# Handle Das 2.3 style queries
+	else:
+		if sPathInfo in [None, '', '/']:
+			sReqType = 'HANDLE_NONE'
+			
+		elif sPathInfo.startswith('/services'):
+			sReqType = 'HANDLE_SERVICES'
+		
+		elif sPathInfo.startswith('/debug'):
+			sReqType = 'HANDLE_DEBUG'
+		
+		elif sPathInfo.startswith('/peers'):
+			sReqType = 'HANDLE_PEERS'		
+						
+		elif sPathInfo.startswith('/catalog'):
+			sReqType = 'HANDLE_CATALOG'
+			
+		elif sPathInfo.startswith('/logo'):
+			sReqType = 'HANDLE_LOGO'
+				
+		elif sPathInfo.startswith('/resource'):
+			sReqType = 'HANDLE_RESOURCE'		
+		
+		elif sPathInfo.startswith('/source'):
+			if sPathInfo.endswith('/') or sPathInfo.endswith('index.json'):
+				sReqType = 'HANDLE_DIRECTORY'
+			else:
+				sReqType = 'HANDLE_SOURCE'
+					
+		elif sPathInfo.startswith('/data'):
+			sReqType = 'HANDLE_DATA'
+					
+		elif sPathInfo.startswith('/coverage'):
+			sReqType = 'HANDLE_COVERAGE'
+	
+	#fLog.write('Hello, server = %s, sReqType = %s'%(sServer, sReqType))
+		
+	if sReqType == None:
+		return 24
+	
+	if not sPathInfo.startswith('/resource'):
+		fLog.write("\nRouting")
+	
+	H = getHandler(U, fLog, dConf, sReqType)
+	if H == None:
+		return 25
+	
+	try:
+		nRet = H.handleReq(U, sReqType, dConf, fLog, form, sPathInfo)
+	except:
+		fString = StringIO.StringIO()
+		traceback.print_exc(file=fString)
+		sMsg = "\nException in handler: %s\n%s"%(H.__name__, fString.getvalue())
+		U.io.serverError(fLog, sMsg)
+		nRet = 26
+	
+	sys.stdout.flush()
+	if nRet != 0:
+		fLog.write("\nError handling query, return value = %s"%nRet)
+		return nRet
+	
+	rEndTime = time.time()
+	rDuration = rEndTime - rStartTime
+	if rDuration < 0.001:
+		sDuration = "%.1f nanoseconds"%( rDuration * 1000000) 
+	elif rDuration < 1.0:
+		sDuration = "%.1f milliseconds"%( rDuration * 1000 )
+	elif rDuration < 120.0:
+		sDuration = "%.1f seconds"%rDuration
+	else:
+		sDuration = "%.2f minutes"%(rDuration / 60.0)
+	
+	if not sPathInfo.startswith('/resource'):
+		fLog.write("\nQuery handled without error in %s."%sDuration)
+	return 0
+
+
+##############################################################################
+# Stub main for cgi
+
+form = cgi.FieldStorage()
+
+# Return values don't matter in CGI programming.  That's unfortunate
+main(form)

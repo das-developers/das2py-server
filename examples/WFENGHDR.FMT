@@ -1,0 +1,1247 @@
+/* Updated - 3/12/92 - SMH */
+/* Updated -12/15/92 - EFRIED */
+/* Modified - 2000-10-27 - LJG */
+
+  /* */
+  /* Table format description begins here. */
+  /* */
+
+  OBJECT                  = COLUMN
+    NAME                    = RECORD_ID
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 1
+    BYTES                   = 1
+    DESCRIPTION             = "Always 0 (zero) for header record."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = FILE_NUMBER
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 2
+    BYTES                   = 1
+    DESCRIPTION             = "File number for original EDR tape product.
+      File number reset to 0 for first file on tape, and incremented by
+      one for each file written."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = PHYSICAL_SEQUENCE_NUMBER
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 3
+    BYTES                   = 2
+    DESCRIPTION             = "Physical sequence number on Experiment
+      Data Record tape."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = LOGICAL_SEQUENCE_NUMBER
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 5
+    BYTES                   = 2
+    DESCRIPTION             = "Logical sequence number on Experiment Data
+      Record tape."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = FIRST_ERT
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 7
+    BYTES                   = 4
+    DESCRIPTION             = "Earth Received Time year and day value.
+      Time of first line record in the file containing valid data."
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = FIRST_ERT_YEAR
+      BIT_DATA_TYPE           = MSB_UNSIGNED_INTEGER
+      START_BIT               = 1
+      BITS                    = 7
+      DESCRIPTION             = "Earth Received Time years past 1900.
+        Time of first line record in the file containing valid data."
+    END_OBJECT              = BIT_COLUMN
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = FIRST_ERT_DAY
+      BIT_DATA_TYPE           = MSB_UNSIGNED_INTEGER
+      START_BIT               = 8
+      BITS                    = 9
+      DESCRIPTION             = "Earth Received Time day of year."
+    END_OBJECT              = BIT_COLUMN
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = FIRST_ERT_MINUTE
+      BIT_DATA_TYPE           = MSB_UNSIGNED_INTEGER
+      START_BIT               = 22
+      BITS                    = 11
+      DESCRIPTION             = "Earth Received Time minute of day."
+    END_OBJECT              = BIT_COLUMN
+
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = FIRST_ERT_MILLISECOND
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 11
+    BYTES                   = 2
+    DESCRIPTION             = "Earth Received Time millisecond of
+      minute."
+  END_OBJECT              = COLUMN
+
+/* Another way to do the same thing - 2 bit columns instead of 4 */
+
+  OBJECT                  = COLUMN
+    NAME                    = LAST_ERT
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 13
+    BYTES                   = 2
+    DESCRIPTION             = "Earth Received Time year and day value.
+      Time of last line record of the file containing valid data."
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = LAST_ERT_YEAR
+      BIT_DATA_TYPE           = MSB_UNSIGNED_INTEGER
+      START_BIT               = 1
+      BITS                    = 7
+      DESCRIPTION             = "Earth Received Time years past 1900."
+    END_OBJECT              = BIT_COLUMN
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = LAST_ERT_DAY
+      BIT_DATA_TYPE           = MSB_UNSIGNED_INTEGER
+      START_BIT               = 8
+      BITS                    = 9
+      DESCRIPTION             = "Earth Received Time day of year."
+    END_OBJECT              = BIT_COLUMN
+
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = LAST_ERT_MINUTE
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 15
+    BYTES                   = 2
+    DESCRIPTION             = "Earth Received Time minute of day."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = LAST_ERT_MILLISECOND
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 17
+    BYTES                   = 2
+    DESCRIPTION             = "Earth Received Time millisecond
+        of minute."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = FIRST_FDS16_COUNT
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 19
+    BYTES                   = 2
+    DESCRIPTION             = "Flight Data Subsystem modulo 65536
+      (16-bit) count.  This is the count for the first line record of the
+      file containing valid data.  Note that this may not correspond to
+      the FDS count for line record 1."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = FIRST_FDS60_COUNT
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 21
+    BYTES                   = 2
+    DESCRIPTION             = "Flight Data Subsystem modulo 60 count.
+      This is the count for the first line record of the file containing
+      valid data.  Note that this may not correspond to the FDS count for
+      line record 1."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = FIRST_FDS_LINE_COUNT
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 23
+    BYTES                   = 2
+    DESCRIPTION             = "Flight Data Subsystem line count for first
+      line record containing valid data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = LAST_FDS16_COUNT
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 25
+    BYTES                   = 2
+    DESCRIPTION             = "Flight Data Subsystem modulo 65536
+      (16-bit) count.  This is the count for the last line record of the
+      file containing valid data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = LAST_FDS60_COUNT
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 27
+    BYTES                   = 2
+    DESCRIPTION             = "Flight Data Subsystem modulo 60 count.
+      This is the count for the last line record of the file containing
+      valid data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = LAST_FDS_LINE_COUNT
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 29
+    BYTES                   = 2
+    DESCRIPTION             = "Flight Data Subsystem line count for last
+      line record containing valid data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = SCET
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 31
+    BYTES                   = 2
+    DESCRIPTION             = "Spacecraft Event Time year and day value.
+      Not always reliable; see column PWS_LABEL at START_BYTE 249."
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = SCET_YEAR
+      BIT_DATA_TYPE           = MSB_UNSIGNED_INTEGER
+      START_BIT               = 1
+      BITS                    = 7
+      DESCRIPTION             = "Spacecraft Event Time years past 1900."
+    END_OBJECT              = BIT_COLUMN
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = SCET_DAY
+      BIT_DATA_TYPE           = MSB_UNSIGNED_INTEGER
+      START_BIT               = 8
+      BITS                    = 9
+      DESCRIPTION             = "Spacecraft Event Time day of year.  Not
+      always reliable; see column PWS_LABEL at START_BYTE 249."
+    END_OBJECT              = BIT_COLUMN
+
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = SCET_MINUTE
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 33
+    BYTES                   = 2
+    DESCRIPTION             = "Spacecraft Event Time minute of day.  Not
+      always reliable; see column PWS_LABEL at START_BYTE 249."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = SCET_MILLISECOND
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 35
+    BYTES                   = 2
+    DESCRIPTION             = "Spacecraft Event Time millisecond of
+      minute.  Not always reliable; see column PWS_LABEL at START_BYTE 249."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = PHYSICAL_RECORDING_DATA
+    DATA_TYPE               = CHARACTER
+    START_BYTE              = 37
+    BYTES                   = 32
+    DESCRIPTION             = "MTIS/IPL system identification
+      information.  MTIS/IPL Data for first line record of the Recording
+      Data file."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = FIRST_SYNC_CODE
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 69
+    BYTES                   = 3
+    DESCRIPTION             = "GCF sync ID for the first line record of
+      the file containing valid data."
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = FIRST_SYNC
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      START_BIT               = 1
+      BITS                    = 24
+      DESCRIPTION             = "GCF sync ID bits."
+    END_OBJECT              = BIT_COLUMN
+
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = FIRST_SOURCE_ID
+    DATA_TYPE               = UNSIGNED_INTEGER
+    START_BYTE              = 72
+    BYTES                   = 1
+    DESCRIPTION             = "GCF source ID."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = FIRST_DESTINATION_ID
+    DATA_TYPE               = UNSIGNED_INTEGER
+    START_BYTE              = 73
+    BYTES                   = 1
+    DESCRIPTION             = "GCF destination ID."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = FIRST_BLOCK_ID
+    DATA_TYPE               = UNSIGNED_INTEGER
+    START_BYTE              = 74
+    BYTES                   = 1
+    DESCRIPTION             = "GCF block ID."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = FIRST_COMM
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 75
+    BYTES                   = 2
+    DESCRIPTION             = "GCF communications parameters."
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = FIRST_GDD_ID
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      START_BIT               = 1
+      BITS                    = 3
+      DESCRIPTION             = "GCF GDD ID."
+    END_OBJECT              = BIT_COLUMN
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = FIRST_UDT_ID
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      START_BIT               = 4
+      BITS                    = 7
+      DESCRIPTION             = "GCF UDT ID."
+    END_OBJECT              = BIT_COLUMN
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = FIRST_DDT_ID
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      START_BIT               = 11
+      BITS                    = 6
+      DESCRIPTION             = "GCF DDT ID."
+    END_OBJECT              = BIT_COLUMN
+
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = FIRST_GCF_PARM
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 77
+    BYTES                   = 4
+    DESCRIPTION             = "GCF Spacecraft parameters."
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = FIRST_SPACECRAFT_NUMBER
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      START_BIT               = 2
+      BITS                    = 7
+      DESCRIPTION             = "GCF Spacecraft number."
+    END_OBJECT              = BIT_COLUMN
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = FIRST_TIME_ID
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      START_BIT               = 9
+      BITS                    = 24
+      DESCRIPTION             = "GCF time ID."
+    END_OBJECT              = BIT_COLUMN
+
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = FIRST_GCF_DAY_BLOCK
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 81
+    BYTES                   = 2
+    DESCRIPTION             = "GCF year and block number."
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = FIRST_DAY
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      START_BIT               = 3
+      BITS                    = 12
+      DESCRIPTION             = "GCF day of year."
+    END_OBJECT              = BIT_COLUMN
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = FIRST_BLOCK_COUNT
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      START_BIT               = 15
+      BITS                    = 2
+      DESCRIPTION             = "GCF block serial count."
+    END_OBJECT              = BIT_COLUMN
+
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = FIRST_SERIAL_NUMBER
+    DATA_TYPE               = UNSIGNED_INTEGER
+    START_BYTE              = 83
+    BYTES                   = 1
+    DESCRIPTION             = "GCF block serial count."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = FIRST_MILLISECOND_CLOCK
+    DATA_TYPE               = UNSIGNED_INTEGER
+    START_BYTE              = 84
+    BYTES                   = 1
+    DESCRIPTION             = "GCF millisecond clock count."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = FIRST_LOCK_STATUS
+    DATA_TYPE               = UNSIGNED_INTEGER
+    START_BYTE              = 85
+    BYTES                   = 1
+    DESCRIPTION             = "GCF lock status."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = FIRST_CONFIGURATION
+    DATA_TYPE               = UNSIGNED_INTEGER
+    START_BYTE              = 86
+    BYTES                   = 1
+    DESCRIPTION             = "GCF configuration status."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = ESC_PARAMETER
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 87
+    BYTES                   = 2
+    DESCRIPTION             = "GCF ESC value."
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = FIRST_ESC
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      START_BIT               = 14
+      BITS                    = 2
+      DESCRIPTION             = "GCF ESC value."
+    END_OBJECT              = BIT_COLUMN
+
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = LAST_SYNC_CODE
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 89
+    BYTES                   = 3
+    DESCRIPTION             = "GCF sync ID for the last line record of
+      the file containing valid data."
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = LAST_SYNC
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      START_BIT               = 1
+      BITS                    = 24
+      DESCRIPTION             = "GCF sync ID bits."
+    END_OBJECT              = BIT_COLUMN
+
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = LAST_SOURCE_ID
+    DATA_TYPE               = UNSIGNED_INTEGER
+    START_BYTE              = 92
+    BYTES                   = 1
+    DESCRIPTION             = "GCF source ID."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = LAST_DESTINATION_ID
+    DATA_TYPE               = UNSIGNED_INTEGER
+    START_BYTE              = 93
+    BYTES                   = 1
+    DESCRIPTION             = "GCF destination ID."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = LAST_BLOCK_ID
+    DATA_TYPE               = UNSIGNED_INTEGER
+    START_BYTE              = 94
+    BYTES                   = 1
+    DESCRIPTION             = "GCF block ID."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = LAST_COMM
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 95
+    BYTES                   = 2
+    DESCRIPTION             = "GCF communications parameters."
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = LAST_GDD_ID
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      START_BIT               = 1
+      BITS                    = 3
+      DESCRIPTION             = "GCF GDD ID."
+    END_OBJECT              = BIT_COLUMN
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = LAST_UDT_ID
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      START_BIT               = 4
+      BITS                    = 7
+      DESCRIPTION             = "GCF UDT ID."
+    END_OBJECT              = BIT_COLUMN
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = LAST_DDT_ID
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      START_BIT               = 11
+      BITS                    = 6
+      DESCRIPTION             = "GCF DDT ID."
+    END_OBJECT              = BIT_COLUMN
+
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = LAST_GCF_PARM
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 97
+    BYTES                   = 4
+    DESCRIPTION             = "GCF Spacecraft parameters."
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = LAST_SPACECRAFT_NUMBER
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      START_BIT               = 2
+      BITS                    = 7
+      DESCRIPTION             = "GCF Spacecraft number."
+    END_OBJECT              = BIT_COLUMN
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = LAST_TIME_ID
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      START_BIT               = 9
+      BITS                    = 24
+      DESCRIPTION             = "GCF time ID."
+    END_OBJECT              = BIT_COLUMN
+
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = LAST_GCF_DAY_BLOCK
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 101
+    BYTES                   = 2
+    DESCRIPTION             = "GCF year and block number."
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = LAST_DAY
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      START_BIT               = 3
+      BITS                    = 12
+      DESCRIPTION             = "GCF day of year."
+    END_OBJECT              = BIT_COLUMN
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = LAST_BLOCK_COUNT
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      START_BIT               = 15
+      BITS                    = 2
+      DESCRIPTION             = "GCF block serial count."
+    END_OBJECT              = BIT_COLUMN
+
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = LAST_SERIAL_NUMBER
+    DATA_TYPE               = UNSIGNED_INTEGER
+    START_BYTE              = 103
+    BYTES                   = 1
+    DESCRIPTION             = "GCF block serial count."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = LAST_MILLISECOND_CLOCK
+    DATA_TYPE               = UNSIGNED_INTEGER
+    START_BYTE              = 104
+    BYTES                   = 1
+    DESCRIPTION             = "GCF millisecond clock count."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = LAST_LOCK_STATUS
+    DATA_TYPE               = UNSIGNED_INTEGER
+    START_BYTE              = 105
+    BYTES                   = 1
+    DESCRIPTION             = "GCF lock status."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = LAST_CONFIGURATION
+    DATA_TYPE               = UNSIGNED_INTEGER
+    START_BYTE              = 106
+    BYTES                   = 1
+    DESCRIPTION             = "GCF configuration status."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = ESC_PARAMETER
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 107
+    BYTES                   = 2
+    DESCRIPTION             = "GCF ESC value."
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = LAST_ESC
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      START_BIT               = 14
+      BITS                    = 2
+      DESCRIPTION             = "GCF ESC value."
+    END_OBJECT              = BIT_COLUMN
+
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = IRT_YEAR
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 109
+    BYTES                   = 1
+    DESCRIPTION             = "Internal received time, year of century.
+      Receipt time from DACs for Uranus/Neptune data; unused for
+      Jupiter/Saturn data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = IRT_DAY
+    DATA_TYPE               = INTEGER
+    START_BYTE              = 110
+    BYTES                   = 1
+    DESCRIPTION             = "Internal received time, day of year.
+      Receipt time from DACs for Uranus/Neptune data; unused for
+      Jupiter/Saturn data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = IRT_MINUTE
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 111
+    BYTES                   = 2
+    DESCRIPTION             = "Internal received time, minute of day.
+      Receipt time from DACs for Uranus/Neptune data; unused for
+      Jupiter/Saturn data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = IRT_MILLISECOND
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 113
+    BYTES                   = 2
+    DESCRIPTION             = "Internal received time, millisecond of
+      minute. Receipt time from DACs for Uranus/Neptune data; unused for
+      Jupiter/Saturn data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = NOT_USED
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 115
+    BYTES                   = 8
+    DESCRIPTION             = "Not used; will be set to zeroes."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = FORMAT_ID
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 119
+    BYTES                   = 2
+    DESCRIPTION             = "Telemetry format ID for this image."
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = FORMAT_TYPE
+      START_BIT               = 9
+      BITS                    = 2
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      DESCRIPTION             = "Format ID = 2 for imaging."
+    END_OBJECT              = BIT_COLUMN
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = IMAGE_FORMAT_CODE
+      START_BIT               = 11
+      BITS                    = 5
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      DESCRIPTION             = "Image format ID.  Note that the ID used
+        by the GDS may differ from the ID down-linked by the spacecraft:\n
+        \n
+         0=I3G4;  12=IM2c;   23=IM26; \n
+         2=IMS;   13=IM23;   24=IM15; \n
+         3=IM20;  14=IM24;   25=IM25; \n
+         4=IMO;   15=GS4;    26=IM6;  \n
+         5=IM21;  16=IM2W;   27=IM5;  \n
+         6=IMQ;   17=GS2;    28=IM4;  \n
+         7=IM22;  18=IM14;   29=IM3;  \n
+         8=IMK;   19=OC3     30=IM2;  \n
+         9=IM7;   20=IM12;   31=IM13. \n
+        10=IM2x;  21=IM11;            \n
+        11=IM9;   22=IM10;            "
+    END_OBJECT              = BIT_COLUMN
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = FORMAT_SC_ID
+      START_BIT               = 16
+      BITS                    = 1
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      DESCRIPTION             = "Zero for Voyager 2, one for Voyager 1."
+    END_OBJECT              = BIT_COLUMN
+
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = MIN_BSNR_SNT
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 121
+    BYTES                   = 2
+    DESCRIPTION             = "Bit Signal to noise ratio (Jupiter/Saturn)
+      or System Noise Temperature (Uranus/Neptune) minimum.  The minimum
+      value found for the 800 scan lines."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = MAX_BSNR_SNT
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 123
+    BYTES                   = 2
+    DESCRIPTION             = "Bit Signal to noise ratio (Jupiter/Saturn)
+      or System Noise Temperature (Uranus/Neptune) maximum.  The maximum
+      value found for the 800 scan lines."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = MIN_SSNR
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 125
+    BYTES                   = 2
+    DESCRIPTION             = "Symbol synchronizer signal to noise ratio
+      minimum."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = MAX_SSNR
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 127
+    BYTES                   = 2
+    DESCRIPTION             = "Symbol synchronizer signal to noise ratio
+      maximum."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = MIN_AGC
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 129
+    BYTES                   = 2
+    DESCRIPTION             = "Automatic gain control minimum."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = MAX_AGC
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 131
+    BYTES                   = 2
+    DESCRIPTION             = "Automatic gain control maximum."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = SYNC_CODE_ERRORS
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 133
+    BYTES                   = 2
+    DESCRIPTION             = "Number of sync word errors."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = FDS_COUNT_ERRORS
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 135
+    BYTES                   = 2
+    DESCRIPTION             = "Number of FDS count errors.  The sum of
+      the FDS count errors for the scan lines which contain valid data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = SYNC_PARAMETER_1
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 137
+    BYTES                   = 2
+    DESCRIPTION             = "Sync parameters I and P as described in
+      the MTIS SRD."
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = SYNC_PARM_I
+      START_BIT               = 1
+      BITS                    = 8
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      DESCRIPTION             = "Sync parm I"
+    END_OBJECT              = BIT_COLUMN
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = SYNC_PARM_P
+      START_BIT               = 9
+      BITS                    = 8
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      DESCRIPTION             = "Sync Parm P"
+    END_OBJECT              = BIT_COLUMN
+
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = SYNC_PARAMETER_2
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 139
+    BYTES                   = 2
+    DESCRIPTION             = "Three five-bit values representing the
+      sync parameters J, K, and L as described in the MTIS SDR."
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = SYNC_PARM_J
+      START_BIT               = 2
+      BITS                    = 5
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      DESCRIPTION             = "Sync Parm J"
+    END_OBJECT              = BIT_COLUMN
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = SYNC_PARM_K
+      START_BIT               = 7
+      BITS                    = 5
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      DESCRIPTION             = "Sync Parm K"
+    END_OBJECT              = BIT_COLUMN
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = SYNC_PARM_L
+      START_BIT               = 12
+      BITS                    = 5
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      DESCRIPTION             = "Sync Parm L"
+    END_OBJECT              = BIT_COLUMN
+
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = SYNC_PARAMETER_3
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 141
+    BYTES                   = 2
+    DESCRIPTION             = "Three five-bit values representing the
+      sync parameters M, N, and R as described in the MTIS SDR."
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = SYNC_PARM_M
+      START_BIT               = 2
+      BITS                    = 5
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      DESCRIPTION             = "Sync Parm M"
+    END_OBJECT              = BIT_COLUMN
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = SYNC_PARM_N
+      START_BIT               = 7
+      BITS                    = 5
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      DESCRIPTION             = "Sync Parm N"
+    END_OBJECT              = BIT_COLUMN
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = SYNC_PARM_R
+      START_BIT               = 12
+      BITS                    = 5
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      DESCRIPTION             = "Sync Parm R"
+    END_OBJECT              = BIT_COLUMN
+
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = NUMBER_OF_LINES
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 143
+    BYTES                   = 2
+    DESCRIPTION             = "Total number of line records in the file
+      which contain some valid data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = NUMBER_OF_FULL_LINES
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 145
+    BYTES                   = 2
+    DESCRIPTION             = "Number of line records in the file which
+      are composed entirely of full minor frames."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = NUMBER_OF_PARTIAL_LINES
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 147
+    BYTES                   = 2
+    DESCRIPTION             = "Total number of line records in the file
+      which contain some valid data but are not composed entirely of full
+      minor frames."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = NUMBER_OF_UNREADABLE_RECORDS
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 149
+    BYTES                   = 2
+    DESCRIPTION             = "Total number of records from the IDR
+      and/or SDR which were unreadable and which fell within a time
+      period for which data was required for this file.  Note: For SDR
+      input this does not necessarily result in data loss."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = LOGICAL_SEQUENCE_BREAKS
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 151
+    BYTES                   = 2
+    DESCRIPTION             = "Total number of gaps on the IDR and/or SDR
+      as indicated by a discontinuity in the logical record numbers which
+      fell within a time period for which data was required for this
+      file."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = SORT_PARAMETERS
+    ITEMS                   = 4
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 153
+    BYTES                   = 2
+    DESCRIPTION             = "Sort parameter 1 thru 4.  Not applicable
+      to PWS data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = MINOR_FRAMES_FROM_IDR
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 161
+    BYTES                   = 2
+    DESCRIPTION             = "Number of minor frames from Intermediate
+      Data Record."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = MINOR_FRAMES_FROM_WBDL
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 163
+    BYTES                   = 2
+    DESCRIPTION             = "Number of minor frames from Wide Band Data
+      Link."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = MINOR_FRAMES_FROM_SDR
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 165
+    BYTES                   = 2
+    DESCRIPTION             = "Number of minor frames from System Data
+      Record."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = MISSING_MINOR_FRAMES
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 167
+    BYTES                   = 2
+    DESCRIPTION             = "Number of missing minor frames."
+  END_OBJECT              = COLUMN
+
+/* Bytes 169, 170 are not used */
+
+  OBJECT                  = COLUMN
+    NAME                    = PICTURE_NUMBER
+    DATA_TYPE               = CHARACTER
+    START_BYTE              = 171
+    BYTES                   = 10
+    DESCRIPTION             = "Picno (picture count, target, spacecraft,
+      day).  Not applicable tp PWS data.  Ten ASCII characters of the
+      form NNNNES+DD, where:\n
+      \n
+      NNNN = picture number within day;                      \n
+      E    = planet of encounter (J=Jupiter, S=Saturn,....); \n
+      -    = indicates before closest planetary approach;    \n
+      +    = indicates after closest planetary approach;     \n
+      DDD  = Number of days from closest approach.           \n
+      Not applicable to PWS."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = TARGET_BODY
+    DATA_TYPE               = CHARACTER
+    START_BYTE              = 181
+    BYTES                   = 10
+    DESCRIPTION             = "Observational target of image.  Not used
+      for Jupiter/Saturn data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = INPUT_SOURCE
+    DATA_TYPE               = UNSIGNED_INTEGER
+    START_BYTE              = 191
+    BYTES                   = 1
+    DESCRIPTION             = "Input data source.  Logical sum (result of
+      successive inclusive or operations) of input source of all line
+      records in the file.  The values are:\n
+      \n
+      0 - Not Used;                                             \n
+      1 - Real Time data;                                       \n
+      2 - System Data Record (SDR) tape data;                   \n
+      3 - Intermediate Data Record (IDR) tape data;             \n
+      4 - Experiment Data Record (EDR) tape data (reprocessed); \n
+      7 - Fill data.                                            "
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = INPUT_TYPE
+    DATA_TYPE               = UNSIGNED_INTEGER
+    START_BYTE              = 192
+    BYTES                   = 1
+    DESCRIPTION             = "Input data type.  Logical sum (result of
+      successive inclusive or operations) of input type of all line
+      records in the file.  Values are:\n
+      \n
+      0 - Voyager 2;                               \n
+      1 - Voyager 1;                               \n
+      2 - Proof Test Model data;                   \n
+      3 - Not Used;                                \n
+      4 - External Simulation (DSN spacecraft 41); \n
+      5 - External Simulation (DSN spacecraft 42); \n
+      6 - Voyager 2 test data;                     \n
+      7 - Voyager 1 test data.                     "
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = SHUTTERED_PICTURE_INDICATOR
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 193
+    BYTES                   = 2
+    DESCRIPTION             = "Shuttered picture indicator.  Subcom
+      position 1.  Not applicable to PWS data."
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = CAMERA_ID
+      START_BIT               = 1
+      BITS                    = 1
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      DESCRIPTION             = "Camera ID number (O=WA, 1=NA).  Not
+        applicable to PWS data."
+    END_OBJECT              = BIT_COLUMN
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = SHUTTERED_PICTURE_FLAG
+      START_BIT               = 2
+      BITS                    = 15
+      BIT_DATA_TYPE           = UNSIGNED_INTEGER
+      DESCRIPTION             = "Shuttered picture indicator, all ones
+        for a shuttered image, all zeroes for unshuttered images.  Not
+        applicable to PWS data."
+    END_OBJECT              = BIT_COLUMN
+
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = SLOW_SCAN_STATUS
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 195
+    BYTES                   = 2
+    DESCRIPTION             = "Slow scan status.  Subcom position 2.  Not
+      applicable to PWS data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = CAMERA_MODE
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 197
+    BYTES                   = 2
+    DESCRIPTION             = "Exposure time, filter, electronics
+      calibration.  Subcom position 3.  Not applicable to PWS data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = PICTURE_COUNT
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 199
+    BYTES                   = 2
+    DESCRIPTION             = "Picture count.  Subcom position 4.  Not
+      applicable to PWS data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = PRESENT_VALUE_A
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 201
+    BYTES                   = 2
+    DESCRIPTION             = "Parameter A through D present value.
+      Subcom position 5.  Not applicable to PWS data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = WORD_INDICATOR_A
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 203
+    BYTES                   = 2
+    DESCRIPTION             = "Parameter A through D word indicator.
+      Subcom position 6.  Not applicable to PWS data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = WORD_POINTER_A
+    DATA_TYPE               = LSB_INTEGER
+    START_BYTE              = 205
+    BYTES                   = 2
+    DESCRIPTION             = "Parameter A through D word pointer.
+      Subcom position 7.  Not applicable to PWS data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = PRESENT_VALUE_B
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 207
+    BYTES                   = 2
+    DESCRIPTION             = "Parameter A through D present value.
+      Subcom position 8.  Not applicable to PWS data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = WORD_POINTER_B
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 209
+    BYTES                   = 2
+    DESCRIPTION             = "Parameter A through D word pointer.
+      Subcom position 9.  Not applicable to PWS data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = PRESENT_VALUE_C
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 211
+    BYTES                   = 2
+    DESCRIPTION             = "Parameter A through D present value.
+      Subcom position 10.  Not applicable to PWS data."
+
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = WORD_INDICATOR_C
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 213
+    BYTES                   = 2
+    DESCRIPTION             = "Parameter A through D word indicator.
+      Subcom position 11.  Not applicable to PWS data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = PRESENT_VALUE_D
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 215
+    BYTES                   = 2
+    DESCRIPTION             = "Parameter A through D present value.
+      Subcom position 12.  Not applicable to PWS data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = WORD_INDICATOR_D
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 217
+    BYTES                   = 2
+    DESCRIPTION             = "Parameter A through D word indicator.
+      Subcom position 13.  Not applicable to PWS data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = WORD_POINTER_D
+    DATA_TYPE               = MSB_INTEGER
+    START_BYTE              = 219
+    BYTES                   = 2
+    DESCRIPTION             = "Parameter A through D word pointer.
+      Subcom position 14.  Not applicable to PWS data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = NA_ANALOG_SAMPLES
+    DATA_TYPE               = UNSIGNED_INTEGER
+    ITEMS                   = 10
+    START_BYTE              = 221
+    BYTES                   = 1
+    DESCRIPTION             = "Narrow angle analog samples.  Subcom
+      positions 15-19.  Not applicable to PWS data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = PIX_STAT
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 231
+    BYTES                   = 2
+    DESCRIPTION             = "Pixel average and command status.  Subcom
+      position 20.  For data compression formats (IMO, IMQ, IMK, and
+      IM2c) this field is replaced by Command Status Word SC06QT.  Not
+      applicable to PWS data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = ISS_ENG
+    ITEMS                   = 10
+    DATA_TYPE               = UNSIGNED_INTEGER
+    START_BYTE              = 233
+    BYTES                   = 1
+    DESCRIPTION             = "Imaging Science Subsystem (ISS)
+      engineering measurements.  Not applicable to PWS data."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = URANUS_FLAGS_FIELD
+    DATA_TYPE               = MSB_UNSIGNED_INTEGER
+    START_BYTE              = 243
+    BYTES                   = 2
+    DESCRIPTION             = "Bits 1 through 14 are unused.  Bit 15
+      indicates imaging data compression if set to 1.  Bit 16 indicates
+      PWS data if set to one, ISS data if set to 0 in IM2W mode."
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = COMPRESSION_FLAG
+      BIT_DATA_TYPE           = MSB_UNSIGNED_INTEGER
+      START_BIT               = 15
+      BITS                    = 1
+      DESCRIPTION             = "Bit is set to one for compressed
+        imaging."
+    END_OBJECT              = BIT_COLUMN
+
+    OBJECT                  = BIT_COLUMN
+      NAME                    = IM2W_FLAG
+      BIT_DATA_TYPE           = MSB_UNSIGNED_INTEGER
+      START_BIT               = 16
+      BITS                    = 1
+      DESCRIPTION             = "Bit is set to one for PWS data, 0 for
+        ISS data."
+    END_OBJECT              = BIT_COLUMN
+
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = PWS_LABEL
+    DATA_TYPE               = CHARACTER
+    START_BYTE              = 249
+    BYTES                   = 52
+    DESCRIPTION             = "ASCII text added to PWS archived files
+      specifying spacecraft, subsystem, SCLK, and SCET of the beginning
+      of the current frame (line 1) in the form:\n
+      \n
+        VOYAGER-n PWS  n/nnnnn.nn yyyy-mm-ddThh:mm:ss.sssZ\n
+      \n
+      followed by two binary zero (ASCII NUL) characters.
+      This is believed to be the most reliable SCET for this data file
+      and is also the only reliable identification of spacecraft and SCLK
+      partition number."
+  END_OBJECT              = COLUMN
+
+  OBJECT                  = COLUMN
+    NAME                    = SPARE
+    DATA_TYPE               = INTEGER
+    START_BYTE              = 301
+    BYTES                   = 724
+    ITEMS                   = 724
+    ITEM_BYTES              = 1
+    DESCRIPTION             = "Binary zero-filled spares"
+  END_OBJECT              = COLUMN

@@ -1,0 +1,76 @@
+#!/usr/bin/env python
+
+import sys
+import subprocess
+import time
+
+g_sAutoplotJar = '%(INST_HOST_BIN)s/autoplot.jar'
+g_sSvrClass = 'org.virbo.autoplot.AutoplotServer'
+
+##############################################################################
+
+def main(lArgs):
+	""" Use autoplot as an image server
+	"""
+	
+	perr = sys.stderr.write
+	
+	if '-h' in lArgs or '--help' in lArgs:
+		perr("This script expects 6 arguments, listed below with example values:\n")
+		perr("  server=http://emfisis.physics.uiowa.edu/das/das2Server\n")
+		perr("  dataset=rbsp/RBSP-B/HFR_spectra.dsdf\n")
+		perr("  start_time=2013-03-01\n")
+		perr("  end_time=2013-03-02\n")
+		perr("  image=HFR_spectra_34578.png\n")
+		perr("  params='KEEP-SPIKES Bu'\n")
+		return 3
+
+	if len(lArgs) < 7:
+		perr("Expected 6 arguments on the command line, received %%d\n"%%(len(lArgs) - 1))
+		return 13
+		
+	dArgs = {}
+	for sArg in lArgs[1:]:
+		iEquals = sArg.find('=')
+		if iEquals in [ -1, 0]:
+			perr("Malformed argument '%%s'\n"%%sArg)
+			return 13
+		dArgs[sArg[:iEquals]] = sArg[iEquals + 1:].strip("'\" \t")
+	
+	try:
+	
+		if len( dArgs['params']) == 0:
+			sFmt = "vap+das2server:%%(server)s?dataset=%%(dataset)s&"+\
+			       "start_time=%%(start_time)s&end_time=%%(end_time)s"
+		else:
+			sFmt = "vap+das2server:%%(server)s?dataset=%%(dataset)s&"+\
+			       "start_time=%%(start_time)s&end_time=%%(end_time)s&params=%%(params)s"
+					 
+		sUri = sFmt%%dArgs
+		sImg = dArgs['image']
+	except KeyError, e:
+		perr("Setting '%%s' missing in the command line arguments\n"%%e)
+		return 13
+	
+	
+	rStart = time.time()
+	
+	sCmd="java -Djava.awt.headless=true -cp %%s %%s -u '%%s' -o=%%s"%%(
+	      g_sAutoplotJar, g_sSvrClass, sUri, sImg)
+	
+	
+	perr("   image maker exec: %%s\n"%%sCmd)
+	
+	nRet = subprocess.call(sCmd, shell=True)
+	
+	rEnd = time.time()
+	
+	perr("  image maker exec time: %.2g seconds"%(rStart - rEnd))
+
+	return nRet
+
+##############################################################################
+# Kicker stub
+
+if __name__ == "__main__":
+	sys.exit(main(sys.argv))

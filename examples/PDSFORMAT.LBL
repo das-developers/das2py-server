@@ -1,0 +1,171 @@
+PDS_VERSION_ID       = PDS3
+
+
+/* File Characteristics  */
+
+RECORD_TYPE          = FIXED_LENGTH
+RECORD_BYTES         = 1024
+FILE_RECORDS         = 801
+DATA_LINES           = 800
+
+
+/* Data Object Pointers  */
+
+^ENGINEERING_TABLE    = ("VG1_1979-03-01_12-26-11-956.DAT", 1)
+^WF_ROW_PREFIX_TABLE  = ("VG1_1979-03-01_12-26-11-956.DAT", 2)
+^TIME_SERIES          = ("VG1_1979-03-01_12-26-11-956.DAT", 2)
+
+
+/* Identification Data Elements  */
+
+DATA_SET_ID           = "VG1-J/S/SS-PWS-1-EDR-WFRM-60MS-V1.0"
+
+INSTRUMENT_HOST_NAME  = "VOYAGER 1"
+INSTRUMENT_HOST_ID    = VG1
+
+START_TIME            = 1979-03-01T12:26:11.956Z
+STOP_TIME             = 1979-03-01T12:26:59.956Z
+
+MISSION_PHASE_NAME    = "JUPITER ENCOUNTER"
+TARGET_NAME           = { "JUPITER", "SOLAR SYSTEM" }
+
+PRODUCT_ID            = "VG1P02C1626951"
+PRODUCT_TYPE          = DATA
+STANDARD_DATA_PRODUCT_ID = "VG1_PWS_WFRM"
+
+PRODUCT_CREATION_TIME = 2011-10-31
+EARTH_RECEIVED_TIME   = 1979-03-01T13:03:18.199Z
+
+SPACECRAFT_CLOCK_START_COUNT = "02/16269.51"
+SPACECRAFT_CLOCK_STOP_COUNT =  "02/16269.52"
+
+
+/* Instrument Description  */
+
+INSTRUMENT_NAME      = "PLASMA WAVE RECEIVER"
+INSTRUMENT_ID        = PWS
+SECTION_ID           = WFRM
+
+/* Data Object Structure  */
+
+DESCRIPTION = "Voyager Waveform File Diagram
+   
+         ENGINEERING_TABLE    SPARE  _ ASCII LABEL ___ SPARE         
+     REC /                \ /      \/                 \ / \          
+           bytes   1-242               bytes  249-300                
+         ---------------------------------------------------         
+      1  |   Eng rec      |         | s/c ID SCLK SCET |   |         
+         ---------------------------------------------------         
+      2  |              |  1600 4-bit waveform samples|    |\        
+         --------------------------------------------------- 60 ms   
+         |              |                             |    |/between
+         --------------------------------------------------- rows    
+         |              |                             |    |         
+         ---------------------------------------------------         
+         |              | | |      ...                |    |         
+         ---------------------------------------------------         
+         |              | \ /                         |    |         
+         |                .03472222 ms between samples     |         
+         |                                                 |         
+         |    ...           ...                            |         
+         |                                                 |         
+         |                                                 |         
+     801 |              |                             |    |         
+         ---------------------------------------------------         
+           bytes 1-220            bytes 221-1020       1020-         
+         \             / \                           / 1024          
+          \           /   \                         /              
+           ROW_PREFIX      \_____             _____/                     
+            _TABLE                TIME_SERIES                         
+"
+
+/* Data Object Descriptions  */
+
+OBJECT                 = ENGINEERING_TABLE
+  NAME                 = ENGINEERING_TABLE
+  INTERCHANGE_FORMAT   = BINARY
+  ROWS                 = 1
+  COLUMNS              = 94
+  ROW_BYTES            = 1024
+  ROW_SUFFIX_BYTES     = 0
+  DESCRIPTION          = "This table describes the format of the
+      engineering record which is included as the the first record in
+      each PWS high rate waveform file.  This record contains the
+      first 242 bytes of data extracted from the Mission and Test
+      Imaging System (MTIS) header record on each file of an imaging
+      EDR tape.  A 243rd byte containing some flag fields has been
+      added to the table for all data collected during the Jupiter
+      encounter."
+  ^STRUCTURE           = "WFENGHDR.FMT"
+END_OBJECT             =  ENGINEERING_TABLE
+
+OBJECT                 = WF_ROW_PREFIX_TABLE
+  NAME                 = WF_ROW_PREFIX_TABLE
+  INTERCHANGE_FORMAT   = BINARY
+  ROWS                 = 800
+  COLUMNS              = 45
+  ROW_BYTES            = 220
+  ROW_SUFFIX_BYTES     = 804
+  DESCRIPTION          = "This table describes the format of the
+      engineering data associated with the collection of each row of
+      waveform data (1600 waveform samples)."
+  ^STRUCTURE           = "WFROWPFX.FMT"
+END_OBJECT             = WF_ROW_PREFIX_TABLE
+
+OBJECT                 = TIME_SERIES
+  NAME                 = TIME_SERIES
+  INTERCHANGE_FORMAT   = BINARY
+  ROWS                 = 800
+  COLUMNS              = 1
+  ROW_BYTES            = 800
+  ROW_PREFIX_BYTES     = 220
+  ROW_SUFFIX_BYTES     = 4
+  SAMPLING_PARAMETER_NAME = TIME
+  SAMPLING_PARAMETER_UNIT = SECOND
+  SAMPLING_PARAMETER_INTERVAL = 0.06
+  DESCRIPTION          = "This time_series consists of up to 800
+      records (or rows, lines) of PWS waveform sample data.  Each
+      record 2-801 of the file (or frame) contains 1600 4-bit
+      samples, prefaced by 220 bytes of MTIS information.  1600 4-bit
+      samples are at 28,800 samples/second collected in 55.56 msec
+      followed by a 4.44 msec gap.  Each 60 msec interval constitutes
+      a line of waveform samples.  Each file contains up to 800
+      lines of waveform samples for a 48 second frame.
+"
+  OBJECT                 = COLUMN
+    NAME                 = WAVEFORM_BYTE
+    DATA_TYPE            = INTEGER
+    START_BYTE           = 221
+    BYTES                = 800
+    ITEMS                = 800
+    ITEM_BYTES           = 1
+
+    OBJECT                 = BIT_COLUMN
+      NAME                 = WAVEFORM_SAMPLES
+      BIT_DATA_TYPE        = UNSIGNED_INTEGER
+      START_BIT            = 1
+      BITS                 = 8
+      ITEMS                = 2
+      ITEM_BITS            = 4
+      SAMPLING_PARAMETER_NAME = TIME
+      SAMPLING_PARAMETER_UNIT = SECOND
+      SAMPLING_PARAMETER_INTERVAL = 0.00003472222
+      OFFSET               = -7.5
+      VALID_MINIMUM        = 0
+      VALID_MAXIMUM        = 15
+      DESCRIPTION          = "The 4-bit waveform samples constitute
+          an array of waveform measurements which are encoded into
+          binary values from 0 to 15 and may be re-mapped to reduce
+          the artificial zero-frequency component.  For example,
+          stored values can be mapped to the following floating point
+          values:
+
+           0 = -7.5    1 = -6.5    2 = -5.5    3 = -4.5
+           4 = -3.5    5 = -2.5    6 = -1.5    7 = -0.5
+           8 =  0.5    9 =  1.5   10 =  2.5   11 =  3.5
+          12 =  4.5   13 =  5.5   14 =  6.5   15 =  7.5
+          "
+    END_OBJECT             = BIT_COLUMN
+  END_OBJECT             = COLUMN
+END_OBJECT             = TIME_SERIES
+END

@@ -1,0 +1,85 @@
+; This is a DSDF file.  DSDF files define data sources.  A data source is 
+; simply a program that the server can invoke to produce data over a given
+; parameter range in a usable format such as a Das2 stream or a QStream.  Since
+; the Das2 system is defined in terms of interfaces between programs, it does
+; not matter what computer language is used to create your data producers.
+; As long as they write a usable stream to standard output they will plug
+; into the overall server.
+;
+; Programs provided with the server may operate on your data stream before
+; it's provided to the end client.  For example, the program das2_bin_avgsec
+; reads a Das2 stream on it's input and produces an output stream with 
+; reduced time resolution.  Another program, das2_psd calculates the power
+; spectral density of an input Das2 stream and writes the transformed stream
+; to it's standard output.  Multiple manipulations may be chained together,
+; but they all start with a your data reader programs, not data files.
+;
+; The following example DSDF and it's associated reader provide wideband
+; low-frequency electric field waveforms collected by Voyager 1 while
+; crossing Jupiter's bow-shock in the solar wind.
+
+
+; All Data sources must have a one-line description
+
+description = 'Uncalibrated Voyager 1 PWS Wideband dynamic spectra (Sample Dataset)'
+
+
+; Summaries are optional, but encouraged.  The example below demonstrates
+; multi-line strings
+
+summary = 'Dynamic spectra generated from the Waveform_Example data source '+$
+          'see the summary of the Wavform_Example data source for more '+$
+			 'information.'
+
+
+; Any Bourne shell compatible command may be used below.  The server will 
+; automatically add up to three arguments on the command line after 
+; the reader, they are, in order:  START_TIME  STOP_TIME  EXTRA_PARAMETERS
+; The first two are always given, the third is only provided if supplied
+; by the end-user client program (such as Autoplot)
+
+reader = 'env PYTHONPATH=%(INST_HOST_LIB)s:%(INST_EXT_LIB)s %(PWD)s/examples/example_spectra.sh %(PWD)s/examples'
+
+
+; This dataset is able to use the default reducer, das2_bin_avgsec
+; thus the reducer directive is not needed here.
+; reducer = das2_bin_avgsec
+
+
+; The output of this reader comes from das2_psd and is thus a das2Stream
+
+das2Stream = 1
+
+
+; Technical contacts should know how to fix software or data issues with this
+; data source.  All data sources must provide a technical contact email.
+
+techContact = 'Your Name <your.name@yourplace.edu>'
+
+
+; Scientific Contact, these are not required but highly encouraged.
+
+sciContact = 'Some Scientist <some.scientist@yourplace.edu>'
+
+
+; Currently this is not used by the Das2 server
+
+validRange = '1979-03-01T12:26:11 to 1979-03-01T12:29:24 UTC'
+
+
+; Autoplot will display example ranges in a drop-down menu when loading 
+; data.  Up to 100 examples may be listed (00 through 99)
+; For this small dataset we are just taking the whole range as the
+; example.
+
+exampleRange_00 = '1979-03-01T12:26:11 to 1979-03-01T12:29:24 UTC'
+
+
+; This reader can take extra parameters in the optional third argument.
+; These can be used to change how the dynamic spectrum is calculated.
+; These are described below.  When using Autoplot as the client these
+; descriptions are visible to the end user, but are somewhat cluncky at
+; this point.
+
+param_00 = 'DFT_LEN (optional) - The length of each transform, defaults to 800'
+param_01 = 'DFT_SLIDE (optional) - The denominator of the overlap fraction, defaults to 2 (i.e. 1/2 overlap)'

@@ -1,0 +1,20 @@
+[planet]
+url = http://planet.physics.uiowa.edu/das/das2Server
+description = Primary Das2 server at Iowa.  Provides access to plasma wave data from
+  Cassini, Galileo, Juno, Mars Express, and Voyager.
+ Operated by Prof. Gurnett's space physics research group at the University of Iowa
+
+[jupiter]
+url = http://jupiter.physics.uiowa.edu/das/server
+description = Off-loads Juno processing from the central server, planet.
+ Operated by Prof. Gurnett's space physics research group at the University of Iowa
+
+[zeus]
+url = http://zeus.physics.uiowa.edu/das/server
+description = Provides Jupiter radio astronomy data from the Long Wave Array
+ Operated by Masafumi Imia at the University of Iowa
+
+[emfisis]
+url = http://emfisis.physics.uiowa.edu/das/das2Server
+description = Serves EMFISIS data from the Van Allen Probes mission.  
+ Operated by Prof. Kletzing's space physics research group at the University of Iowa
