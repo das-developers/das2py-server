@@ -1,6 +1,6 @@
 # das2-pyserver
 
-Das2 servers typically provide data relavent to space plasma and magnetospheric
+Das2 servers typically provide data relevant to space plasma and magnetospheric
 physics research.  To retrieve data, an HTTP GET request is posted to a das2 
 server by a client program and a self-describing stream of data values covering
 the requested time range, at the requested time resolution, is provided in the
@@ -13,18 +13,18 @@ or IDL ([das2pro](https://github.com/das-developers/das2pro) ).
 *das2-pyserver* consists of python scripts that run external programs, called
 readers, which provide the full resolution data streams.  Since they are
 external programs, readers may be written in **any** desired programming
-language and have **any** desired software license.  When a request for data
-received, das2-pyserver inspects the HTTP GET URL and checks to see if it's
-local cache contains the required data, at the desired time resolution, or
-better.  If the request as already cached, an HTTP request body is generated
-from cache blocks,  If not, the associated reader program and data reducer are
+language and have **any** desired software license.  When a request for data is
+received, das2-pyserver inspects the HTTP GET URL and checks to see if its
+local cache contains the required data, at the desired time resolution or
+better.  If the request is already cached, an HTTP request body is generated
+from cache blocks.  If not, the associated reader program and data reducer are
 invoked on the server and the standard output stream from the 
 `"reader_prog | reducer_prog"` pipeline is delivered as the request body.
 
 ## Dependencies
 
-Compilation and installation of das2-pyserver currently requires a linux
-environment.  That can change, it's just not been tested.  Here's the build and
+Compilation and installation of das2-pyserver currently requires a Linux
+environment.  That can change -- it's just not been tested.  Here are the build and
 test steps.  In the instructions below the '$' character is used at the
 beginning of a line to indicate commands to run in a shell.
 
@@ -34,7 +34,7 @@ beginning of a line to indicate commands to run in a shell.
    directory
 
 3. [Redis](https://redis.io), known to work with version 3.2.12, will
-   like work with older versions as well.
+   likely work with older versions as well.
 	
 4. python-redis, the python bindings for Redis.
 
@@ -69,8 +69,8 @@ apt-get install python-hiredis                         # needed by pyserver
 
 ## Getting the sources
 
-For now some of the sources are in SVN and some in git repositories, this 
-well change as time permits.
+For now some of the sources are in SVN and some in git repositories.  This 
+will change as time permits.
 ```
 svn co https://saturn.physics.uiowa.edu/svn/das2/core/stable/libdas2_3
 git clone https://github.com/das-developers/das2-pyserver.git
@@ -98,7 +98,7 @@ $ python$PYVER
 
 The absolute path to the top-level configuration file, `das2server.conf` is
 written into the top-level CGI scripts by the make commands.  To determine
-where this will be install setup the following environment varible:
+where this will be installed setup the following environment varible:
 ```
 $ export SERVER_ROOT=/root/server/data/location
 ```
