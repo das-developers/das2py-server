@@ -69,72 +69,81 @@ $ apt-get install python-hiredis                         # needed by pyserver
 
 ## Getting the sources
 
-<<<<<<< HEAD
 For now some of the sources are in SVN and some in git repositories, this 
 well change as time permits.
 ```bash
 $ svn co https://saturn.physics.uiowa.edu/svn/das2/core/stable/libdas2_3
 $ git clone https://github.com/das-developers/das2-pyserver.git
-=======
-For now some of the sources are in SVN and some in git repositories.  This 
-will change as time permits.
-```
-svn co https://saturn.physics.uiowa.edu/svn/das2/core/stable/libdas2_3
-git clone https://github.com/das-developers/das2-pyserver.git
->>>>>>> ec24dfd0f7be4a9470a4cc8ea214086e728ddce9
 ```
 
 ## Building libdas2.3, and das2py
-Decide where your das2 server code and configuration will live, in the example
-below I chose `/usr/local/das2srv` but you can select any location you like.
+
+Decide where your das2 server code and configuration information will reside. 
+In the example below I've  selected `/usr/local/das2srv` but you can choose
+any location you like.
+
 ```bash
 $ export PREFIX=/usr/local/das2srv   # Adjust to taste
 $ export PYVER=3.6                   # or 2.7, or 3.7 etc.
+$ export N_ARCH=/                    # no need for per-OS directories
 ```
 
 Test your `PYVER` setting by making sure the following command brings up a
-python interpreter
+python interpreter:
+
 ```bash
 $ python$PYVER
 ```
 
+The following sequence will build, test, and install libdas2.3 and das2py
+if you have all prerequisite libraries installed:
 
-
-
-### Building das2-pyserver
-
-
-The absolute path to the top-level configuration file, `das2server.conf` is
-written into the top-level CGI scripts by the make commands.  To determine
-where this will be installed setup the following environment varible:
+```bash
+$ cd libdas2_3
+$ make
+$ make test
+$ make pylib
+$ make pylib_test
+$ make install
+$ make pylib_install
 ```
-$ export SERVER_ROOT=/root/server/data/location
-```
 
+## Build and install das2-pyserver
 
-
-
-```
-$ git clone git@github.com:das-developers/das2-pyserver.git  das2-pyserver
+```bash
 $ cd das2-pyserver
-$ 
+$ export PREFIX=/usr/local/das2srv   # Use same location as above
+$ export PYVER=3.6                   # Use same version as above
+$ export N_ARCH=/
 ```
+
+Set an identifier for the server.  This is used to distinguish multiple servers
+at the same site.  This can be any UTF-8 string without whitespace or punctuation,
+for example:
+```bash
+$ export SERVER_ID=solar_orbiter_testbed
+```
+
+Now build and install the python module and example configuration files.  The
+commands below will also setup a test data source that you can delete later.
+
+```bash
+$ make
+$ make install
+$ make examples
+```
+
+## Configure Apache
 [working...]
 
 
-
-Test
-----
-[working...]
+## Testing
+[working ...]
 
 
-Server-Reader Interface
------------------------
-[working...]
-
-
-
-
-
+## Next steps
+For further customization and configuration of your das2-pyserver installation, including
+authentication, worker processes and caching and consult the Users Guide document
+`das2_pyserver_ug.odt` included in the root of the reository
 
 

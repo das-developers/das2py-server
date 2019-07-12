@@ -1,0 +1,17 @@
+Text to be included in the users guide...
+
+Data sources advertised in das2-pyserver catalog listings can be merged into
+the federated das2 catalog system.  Export a site identifier for your server.
+The site ID should be lower case, it should not start with a number and may 
+only contain ASCII 7-bit alphabetic and underscores.  Examples are given below:
+
+```
+$ export DAS2_SITE=uiowa     # University of Iowa
+$ export DAS2_SITE=iap_cap   # Institute of Atmospheric Physics, Czech Acadame of Sciences
+```
+
+This is only a database token, the actual description associated with the
+token is sent in the federated catalog pages.  Select any short mnemonic
+that makes sense for your organization, so long as it does not conflict
+with existing entries in 
+this [catalog](https://das2.org/catalog/das/site.json).
