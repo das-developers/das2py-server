@@ -13,20 +13,6 @@ INSTALL_RES=$(patsubst %, $(SERVER_RES)/%, $(RESOURCES))
 EX_DSDFS=_dirinfo_.dsdf Random.dsdf Waveform.dsdf Spectra.dsdf
 INSTALL_EX_DSDFS=$(patsubst %.dsdf, $(SERVER_DATA)/Examples/%.dsdf, $(EX_DSDFS))
 
-# Compiler Setup ############################################################
-
-# Locale is placed here so that it is easy to change.  The software assumes
-# UTF-8 internally, so if your system locale is not a UTF-8 setting, uncomment
-# and change the following line. 
-#  For example, on Windows use:
-#DLOCALE=-DLOCALE=english_us.65001
-
-CC=gcc
-CFLAGS=-Wall -ggdb -std=c99 -I$(INST_INC) $(DLOCALE)
-#CFLAGS=-Wall -O2 -std=c99 -I$(INST_INC) $(DLOCALE)
-# Make sure we use static libs since we're GNU source anyawy
-LFLAGS= $(INST_NAT_LIB)/libdas2.3.a -L$(INST_NAT_LIB) -lfftw3 -lssl -lcrypto -lexpat -lz -lm -lpthread
-
 # Pattern Rules #############################################################
 
 .SUFFIXES:

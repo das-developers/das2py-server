@@ -50,35 +50,35 @@ software are included below.
 
 For convienience, dependent package installation commands for das2-pyserver
 and libdas2.3 are provided below for CentOS 7:
-```
-yum install gcc subversion git                     # for source downloads
-yum install expat-devel fftw-devel openssl-devel   # needed to build libdas2.3
-yum install python3 python3-numpy python3-devel    # needed to bulid das2py
-yum install --enablerepo=epel install redis        # needed by pyserver
-yum install --enablerepo=epel install hiredis      # needed by pyserver
-yum install --enablerepo=epel install python-redis # needed by pyserver
+```bash
+$ yum install gcc subversion git                     # for source downloads
+$ yum install expat-devel fftw-devel openssl-devel   # needed to build libdas2.3
+$ yum install python3 python3-numpy python3-devel    # needed to bulid das2py
+$ yum install --enablerepo=epel install redis        # needed by pyserver
+$ yum install --enablerepo=epel install hiredis      # needed by pyserver
+$ yum install --enablerepo=epel install python-redis # needed by pyserver
 ```
 and Debian 9.1:
-```
-apt-get install gcc subversion git                     # for source downloads
-apt-get install libexpat-dev libfftw3-dev libssl-dev   # needed to bulid libdas2.3
-apt-get install python3-dev python3-distutils python3-numpy  # to build das2py
-apt-get install redis-server                           # needed by pyserver
-apt-get install python-hiredis                         # needed by pyserver
+```bash
+$ apt-get install gcc subversion git                     # for source downloads
+$ apt-get install libexpat-dev libfftw3-dev libssl-dev   # needed to bulid libdas2.3
+$ apt-get install python3-dev python3-distutils python3-numpy  # to build das2py
+$ apt-get install redis-server                           # needed by pyserver
+$ apt-get install python-hiredis                         # needed by pyserver
 ```
 
 ## Getting the sources
 
 For now some of the sources are in SVN and some in git repositories, this 
 well change as time permits.
-```
-svn co https://saturn.physics.uiowa.edu/svn/das2/core/stable/libdas2_3
-git clone https://github.com/das-developers/das2-pyserver.git
+```bash
+$ svn co https://saturn.physics.uiowa.edu/svn/das2/core/stable/libdas2_3
+$ git clone https://github.com/das-developers/das2-pyserver.git
 ```
 
 ## Building libdas2.3, and das2py
 Decide where your das2 server code and configuration will live, in the example
-below we choose `/usr/local/das2srv` but you can select any location you like.
+below I chose `/usr/local/das2srv` but you can select any location you like.
 ```bash
 $ export PREFIX=/usr/local/das2srv   # Adjust to taste
 $ export PYVER=3.6                   # or 2.7, or 3.7 etc.

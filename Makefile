@@ -1,16 +1,8 @@
 ##############################################################################
 # Generic definitions for: Server specific programs + hosted python
 
-ifeq ($(PREFIX),)
-ifeq ($(HOME),)
-PREFIX=$(USERPROFILE)
-else
-PREFIX=$(HOME)
-endif
-endif
-
 ifeq ($(SERVER_ROOT),)
-SERVER_ROOT=$(PREFIX)/servers/$(SERVER_ID)
+SERVER_ROOT=$(HOME)/das2srv
 endif
 
 ifeq ($(SERVER_DATA),)
@@ -34,6 +26,11 @@ ifeq ($(SERVER_BIN),)
 SERVER_BIN=$(SERVER_ROOT)/bin
 endif
 
+ifeq ($(SERVER_LIB),)
+SERVER_BIN=$(SERVER_ROOT)/lib
+endif
+
+
 ifeq ($(H_ARCH),)
 ifeq ($(PYVER),)
 PYVER=$(shell python -c "import sys; print '.'.join( sys.version.split()[0].split('.')[:2] )")
@@ -47,24 +44,15 @@ ifeq ($(N_ARCH),)
 N_ARCH=$(shell uname -s).$(shell uname -p)
 endif
 
-ifeq ($(INST_INC),)
-INST_INC=$(PREFIX)/include/$(N_ARCH)
-endif
-
-# This python module is not site specific and goes in a generic place
-ifeq ($(INST_HOST_LIB),)
+ifeq ($(SERVER_HOST_LIB),)
 INST_HOST_LIB=$(PREFIX)/lib/$(H_ARCH)
 endif
 
-ifeq ($(INST_EXT_LIB),)
-INST_EXT_LIB=$(PREFIX)/lib/$(N_ARCH)/$(H_ARCH)
-endif
-
-ifeq ($(INST_NAT_BIN),)
+ifeq ($(READER_BIN),)
 INST_NAT_BIN=$(PREFIX)/bin/$(N_ARCH)
 endif
 
-ifeq ($(INST_NAT_LIB),)
+ifeq ($(READER_LIB_PATH),)
 INST_NAT_LIB=$(PREFIX)/lib/$(N_ARCH)
 endif
 
@@ -81,8 +69,7 @@ export INST_HOST_LIB
 export INST_EXT_LIB
 export INST_NAT_BIN
 
-SERVER_BUILD:=build.$(SERVER_ID)
-BUILD_DIR:=build.$(N_ARCH)
+BUILD_DIR:=build
 
 # Source Definitions #########################################################
 
