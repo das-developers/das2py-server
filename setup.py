@@ -53,7 +53,7 @@ class build_scripts_wconf(build_scripts):
 			if not match: continue
 	
 			if sys.version_info.major > 2:  
-				s = "'g_sConfPath = '%s'\n"%g_sConfig
+				s = "g_sConfPath = '%s'\n"%g_sConfig
 				lLines[i] = s.encode(encoding)
 			
 			else:
@@ -388,7 +388,7 @@ lDataFiles = [
 setup(
    name="das2server",
 	version="2.2",
-	description="Das2 pyserver - das2 stream caching and reduction CGI service",
+	description="Das2 pyserver - a das2 stream caching and reduction CGI service",
 	author="Chris Piker",
 	packages=lPkg,
 	scripts=lScripts,

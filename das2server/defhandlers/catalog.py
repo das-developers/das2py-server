@@ -23,7 +23,7 @@ def getCatalog(U, fLog, sInDir, sDirUrl, sDirUri):
 		try:
 			fIn = open(sDirInfo, "rb")
 			dDsdf = U.dsdf.readDsdf(fIn, fLog)
-		except Error, e:
+		except Error as e:
 			U.io.serverError(fLog, str(e))
 		
 		if 'uri' in dDsdf:

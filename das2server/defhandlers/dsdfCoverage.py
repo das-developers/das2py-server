@@ -54,7 +54,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	else:
 		try:
 			rRes = float(sRes)
-		except ValueError, e:
+		except ValueError as e:
 			U.io.queryError(fLog, u"Invalid das2.2 query, resolution '%s'"%sRes+\
 			                "is not convertable to a floating point number")
 			return 17
@@ -91,7 +91,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		
 		dsdf.fillDefaults(dConf)
 	
-	except U.errors.DasError, e:
+	except U.errors.DasError as e:
 		U.io.dasErr2HttpMsg(fLog, e)
 		return 17
 	
@@ -136,7 +136,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		
 		if lMissing != None and len(lMissing) > 0:
 			for t in lMissing:
-				print "Missing: ", t
+				print("Missing: ", t)
 				
 			fLog.write("   Cache miss: Submitting build task for %d "%len(lMissing)+\
 			           "cacheLevel_%02d blocks."%lMissing[0][2])

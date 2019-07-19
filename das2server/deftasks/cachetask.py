@@ -214,7 +214,7 @@ class Task(T.TaskHandler):
 						fLog.write("Error detected in run, cleaning output: %s"%sOutTmp)
 						try:
 							os.remove(sOutTmp)
-						except IOError, e:
+						except IOError as e:
 							fLog.write("File '%s' could not be removed!"%sOutTmp)
 							pass
 				else:

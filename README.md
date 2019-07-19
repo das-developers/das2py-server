@@ -35,14 +35,14 @@ beginning of a line to indicate commands to run in a shell.
 
 3. [Redis](https://redis.io), known to work with version 3.2.12, will
    likely work with older versions as well.
-	
+
 4. python-redis, the python bindings for Redis.
 
 5. [libdas2](https://saturn.physics.uiowa.edu/svn/das2/core/stable/libdas2_3), 
    both the base C tools and Python bindings must be built.  In the future
-	libdas2 will be split into **das2c** and **das2py** and moved to
-	github, for now you'll have to consult the libdas2 [INSTALL.txt](https://saturn.physics.uiowa.edu/svn/das2/core/stable/libdas2_3/INSTALL.txt) 
-	file and build from SVN sources.
+   libdas2 will be split into **das2c** and **das2py** and moved to
+   github, for now you'll have to consult the libdas2 [INSTALL.txt](https://saturn.physics.uiowa.edu/svn/das2/core/stable/libdas2_3/INSTALL.txt) 
+   file and build from SVN sources.
 
 Since libdas2 provides small binaries needed by das2 pyserver, and since there
 are no pre-built libdas2.3 packages, installing instructions for both sets of
@@ -76,7 +76,7 @@ $ svn co https://saturn.physics.uiowa.edu/svn/das2/core/stable/libdas2_3
 $ git clone https://github.com/das-developers/das2-pyserver.git
 ```
 
-## Building libdas2.3, and das2py
+## Build and install libdas2.3 and das2py
 
 Decide where your das2 server code and configuration information will reside. 
 In the example below I've  selected `/usr/local/das2srv` but you can choose
@@ -130,15 +130,77 @@ Now build and install the python module and example configuration files.  The
 commands below will also setup a test data source that you can delete later.
 
 ```bash
-$ python setup.py install --prefix=${PREFIX} --install-lib=${PREFIX}/lib/python${PYVER}
+$ python${PYVER} setup.py install --prefix=${PREFIX} --install-lib=${PREFIX}/lib/python${PYVER}
 ```
 
-## Configure Apache
-[working...]
 
+## Configure Apache
+
+Apache configurations vary widely by Linux distribution and personal taste.
+The following procedure is provided as an example and has been tested on
+CentOS 7.
+
+First determine which directory on your server maps to an Apache HTTPS CGI
+directory.  To do this inspect `/etc/httpd/conf/httpd.conf` (or similar).
+The default is `/var/www/cgi-bin`.  To provide a better URLs for your site add
+the line:
+
+```apache
+ScriptAlias /das/ "/var/www/cgi-das/"
+```
+
+directly under the line:
+
+```apache
+ScriptAlias /cgi-bin/ "/var/www/cgi-bin/"
+```
+
+inside the `<IfModule alias_module>` section of httpd.conf.  
+
+Then provide configuration information for your `/var/www/cgi-das` directory
+inside the `/etc/httpd/conf.d/ssl.conf` file.  We're editing the ssl.conf 
+instead of the httpd.conf file because das2 clients may transmit passwords. 
+
+
+```apache
+<Directory "/var/www/cgi-das">
+  Options ExecCGI FollowSymLinks
+
+  # Make sure Authorization HTTP header is available to Das CGI scripts
+  RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+  RewriteEngine on
+
+  AllowOverride None
+  Allow from all
+  Order allow,deny
+</Directory>
+```
+
+By default, authorization headers are not made available to CGI scripts.  The
+re-write rule above allows the `Authorization` header to be based down to the
+`das2_srvcgi_main` script.  This is needed to allow your das2 server to
+support password protected datasets.  
+
+Now symlink the \*_srvcgi_\* scripts into your new CGI directory.  Choose the
+name of the symlink carefully as it will be part of the public URL for your
+site:
+
+```bash
+cd /var/www/cgi-das
+sudo ln -s ${PREFIX}/bin/das2_srvcgi_main server
+sudo ln -s ${PREFIX}/bin/das2_srvcgi_main log
+```
+
+Finally trigger a re-read of the Apache configuration data:
+
+```bash
+sudo systemctl restart httpd.service
+sudo systemctl status httpd.service
+```
 
 ## Testing
-[working ...]
+
+Test the server by 
 
 
 ## Next steps

@@ -176,7 +176,7 @@ def reqInfoCacheBuild(fLog, dConf, sId, sHParams):
 
 	try:
 		broker.lpush('das2_todo', sTask)
-	except E.ServerError, e:
+	except E.ServerError as e:
 		fLog.write('ERROR: %s'%str(e))
 	
 	return None

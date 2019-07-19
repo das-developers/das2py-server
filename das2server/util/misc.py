@@ -57,7 +57,7 @@ def symWalk(fLog, sRoot, fileCallBack = None, dirCallBack = None, tData = None,
 	
 	try:
 		lItems = os.listdir(_sRoot)
-	except OSError, e:
+	except OSError as e:
 		sErr = u"WARNING:  Couldn't list directory '%s'"%_sRoot
 		fLog.write(sErr.encode('utf-8'))
 		return True

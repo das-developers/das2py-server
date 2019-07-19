@@ -105,7 +105,7 @@ def main():
 	# Load the util module
 	try:
 		mTmp = __import__('das2server', globals(), locals(), ['util'], 0)
-	except ImportError, e:
+	except ImportError as e:
 		preLoadError(u"Error importing module 'das2server'\r\n: %s"%(str(e)))
 		return 19
 	try:

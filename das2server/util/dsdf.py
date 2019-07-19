@@ -195,7 +195,7 @@ class Dsdf(object):
 
 		try:
 			self.d = readDsdf(fIn, fLog)
-		except ValueError, e:
+		except ValueError as e:
 			raise ServerError(str(e))
 
 		fIn.close()
@@ -317,7 +317,7 @@ class Dsdf(object):
 			elif len(lKeyWord) == 2:
 				try:
 					nLevel = int(lKeyWord[1], 10)
-				except ValueError, e:
+				except ValueError as e:
 					raise ServerError(str(e))
 			else:
 				raise ServerError("Invalid Keyword: %s"%sKey)
@@ -341,7 +341,7 @@ class Dsdf(object):
 					                  " in value for DSDF keyword %s"%sKey)
 				try:
 					rRes = float(lDatum[0])
-				except ValueError, e:
+				except ValueError as e:
 					raise ServerError("Can't convert resolution %s to an integer"%lDatum[0])
 				sUnits = lDatum[1]
 
@@ -449,7 +449,7 @@ class Dsdf(object):
 		# Set the cache levels
 		try:
 			self.d['cacheLevel'] = self.getCacheLevels()
-		except ValueError, e:
+		except ValueError as e:
 			raise ServerError(u"Misconfigured Data Source %s: %s"%(self.sName, str(e)))
 
 		# Set a default cache reader if none was provided

@@ -6,7 +6,7 @@ import time
 try:
 	import redis
 	g_bHaveRedis = True
-except ImportError, e:
+except ImportError as e:
 	g_bHaveRedis = False
 
 
@@ -30,49 +30,49 @@ class QueueBroker(object):
 	def keys(self, sPtrn):
 		try:
 			ret = self.broker.keys(sPtrn)
-		except redis.exceptions.ConnectionError, e:
+		except redis.exceptions.ConnectionError as e:
 			raise ServerError(str(e))
 		return ret
 		
 	def lrange(self, sKey, iBeg, iEnd):
 		try:
 			ret = self.broker.lrange(sKey, iBeg, iEnd)
-		except redis.exceptions.ConnectionError, e:
+		except redis.exceptions.ConnectionError as e:
 			raise ServerError(str(e))
 		return ret
 	
 	def lpush(self, sKey, sVal):
 		try:
 			ret = self.broker.lpush(sKey, sVal)
-		except redis.exceptions.ConnectionError, e:
+		except redis.exceptions.ConnectionError as e:
 			raise ServerError(str(e))
 		return ret
 	
 	def brpoplpush(self, sPopQueue, sPushQueue):
 		try:
 			ret = self.broker.brpoplpush(sPopQueue, sPushQueue)
-		except redis.exceptions.ConnectionError, e:
+		except redis.exceptions.ConnectionError as e:
 			raise ServerError(str(e))
 		return ret
 			
 	def lpop(self, sQueue):
 		try:
 			ret = self.broker.lpop(sQueue)
-		except redis.exceptions.ConnectionError, e:
+		except redis.exceptions.ConnectionError as e:
 			raise ServerError(str(e))
 		return ret
 		
 	def delete(self, sKey):
 		try:
 			ret = self.broker.delete(sKey)
-		except redis.exceptions.ConnectionError, e:
+		except redis.exceptions.ConnectionError as e:
 			raise ServerError(str(e))
 		return ret
 		
 	def lset(self, sKey, iPos, sVal):
 		try:
 			ret = self.broker.lset(sKey, iPos, sVal)
-		except redis.exceptions.ConnectionError, e:
+		except redis.exceptions.ConnectionError as e:
 			raise ServerError(str(e))
 		return ret
 		
@@ -115,7 +115,7 @@ def getBroker(fLog, dConf):
 		broker = QueueBroker(host=lConn[0], port=lConn[1], db=lConn[2],
 		                     socket_connect_timeout=300)
 		sKey = broker.keys('das2_*')
-	except ServerError, e:
+	except ServerError as e:
 		fLog.write("   ERROR: Job broker not available at %s:%d, db=%d.\n"%(
 		     lConn[0], lConn[1], lConn[2]))
 		return None

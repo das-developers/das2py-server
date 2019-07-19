@@ -48,10 +48,10 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		sys.stdout.write('WWW-Authenticate: Basic realm="Das2 Server"\r\n\r\n')
 		return 0
 	
-	print "Content-Type: text/html; charset=utf-8"
-	print
+	print("Content-Type: text/html; charset=utf-8")
+	print("")
 
-	print """
+	print("""
 <html>
 <title>Das2 PyServer Enviroment</title>
 <body>
@@ -59,48 +59,48 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 
 <p>Server is defined by config file: %s</p>
 <p>Here's the config values</p>
-"""%dConf['__file__']
+"""%dConf['__file__'])
 
-	print "<ul>"
+	print("<ul>")
 	lKeys = dConf.keys()
 	lKeys.sort()
 	for sKey in lKeys:
 		if sKey != '__file__':
-			print "<li>%s = %s</li>"%(sKey, dConf[sKey])
-	print "</ul>"
+			print("<li>%s = %s</li>"%(sKey, dConf[sKey]))
+	print("</ul>")
 		
-	print "<p>Here's the script environment</p>"
-	print "<ul>"
+	print("<p>Here's the script environment</p>")
+	print("<ul>")
 	lKeys = os.environ.keys()
 	lKeys.sort()
 	for sKey in lKeys:
-		print "<li>%s = %s</li>"%(sKey, os.getenv(sKey))
-	print "</ul>"
+		print("<li>%s = %s</li>"%(sKey, os.getenv(sKey)))
+	print("</ul>")
 	
-	print "<p>Here's the User info</p>"
-	print "<ul><li>login = %s</li>"%sUser
-	print "<li>crypt = %s</li></ul>"%sCrypt
+	print("<p>Here's the User info</p>")
+	print("<ul><li>login = %s</li>"%sUser)
+	print("<li>crypt = %s</li></ul>"%sCrypt)
 	
 	
-	print "<p>Here's the form data</p>"
-	print "<ul>"
+	print("<p>Here's the form data</p>")
+	print("<ul>")
 	for sKey in form.keys():
-		print "<li>%s = %s</li>"%(sKey, form.getfirst(sKey, "None").lower())
-	print "</ul>"
+		print("<li>%s = %s</li>"%(sKey, form.getfirst(sKey, "None").lower()))
+	print("</ul>")
 	
-	print "<p>Here's the python module path</p>"
-	print "<ul>"
+	print("<p>Here's the python module path</p>")
+	print("<ul>")
 	for item in sys.path:
-		print "<li>%s</li>"%item
-	print "</ul>"
+		print("<li>%s</li>"%item)
+	print("</ul>")
 	
-	print "<p>Here's the binary path</p>"
-	print "<ul>"
+	print("<p>Here's the binary path</p>")
+	print("<ul>")
 	lPath = os.environ['PATH'].split(os.pathsep)
 	for sPath in lPath:
-		print "<li>%s</li>"%sPath
-	print "</ul>"
+		print("<li>%s</li>"%sPath)
+	print("</ul>")
 	
-	print "</body>\r\n</html>"
+	print("</body>\r\n</html>")
 	
 	return 0

@@ -7,12 +7,12 @@ import time
 import os.path
 import os
 import codecs
-import StringIO
 import traceback
 
-from os.path import join as pjoin
+#from io import BytesIO     # handles bytes strings
+from io import StringIO    # handles unicode strings
 
-cgitb.enable()
+from os.path import join as pjoin
 
 g_sConfPath = REPLACED_ON_BUILD
 
@@ -84,7 +84,7 @@ def preLoadError(uOut):
 	sType = 'InternalServerError'
 	
 	bClientIsBrowser = False
-	if os.environ.has_key("HTTP_USER_AGENT"):
+	if "HTTP_USER_AGENT" in os.environ:
 		
 		sAgent = os.environ['HTTP_USER_AGENT'].lower()
 	
@@ -96,6 +96,7 @@ def preLoadError(uOut):
 	
 	if bClientIsBrowser:
 		sys.stdout.write("Content-Type: text/plain; charset=utf-8\r\n\r\n")
+		cgitb.enable(format='text')
 		
 		sys.stdout.write(uOut.encode('utf-8'))
 	else:
@@ -162,7 +163,7 @@ def getConf():
 # since config file can change module path
 
 def setModulePath(dConf):
-	if not dConf.has_key('MODULE_PATH'):
+	if 'MODULE_PATH' in dConf:
 		preLoadError(u"Set MODULE_PATH = /dir/containing/das2server_python_module")
 		return False	
 	
@@ -189,7 +190,7 @@ def getHandler(U, fLog, dConf, sReqType):
 	# Take the handler from the conf, if not present, use the default
 	sModule = g_dDefHandlers[sReqType]
 	
-	if dConf.has_key(sReqType):
+	if sReqType in dConf:
 		sModule = dConf[sReqType]
 		
 	if sModule == None or sModule == '':
@@ -214,7 +215,7 @@ def getHandler(U, fLog, dConf, sReqType):
 			__import__(sModule, globals(), locals(), [], 0)
 			module = sys.modules[sModule]
 			
-		except ImportError, e:
+		except ImportError as e:
 			U.io.serverError(fLog, "Error loading module %s from %s: %s"%(
 			                 sModName, sModPath, e))
 			return None
@@ -224,7 +225,7 @@ def getHandler(U, fLog, dConf, sReqType):
 		# import A
 		try:
 			module = __import__(sModule, globals(), locals(), [], 0)
-		except ImportError, e:
+		except ImportError as e:
 			U.io.serverError(fLog, "Error loading module %s: %s"%(sModule, e))
 			return None
 	
@@ -251,7 +252,7 @@ def main(form):
 	# Load the util module
 	try:
 		mTmp = __import__('das2server', globals(), locals(), ['util'], 0)
-	except ImportError, e:
+	except ImportError as e:
 		preLoadError(u"Error importing module 'das2server'\r\n: %s"%(str(e)))
 		return 19
 	try:
@@ -263,7 +264,7 @@ def main(form):
 	U.misc.envPathMunge("PATH", dConf['BIN_PATH'])
 	U.misc.envPathMunge("LD_LIBRARY_PATH", dConf['LIB_PATH'])
 	
-	if dConf.has_key('LOG_PATH'):
+	if 'LOG_PATH' in dConf:
 		fLog = U.io.DasLogFile(dConf['LOG_PATH'], os.getenv('REMOTE_ADDR'))
 		#fLog.write("INFO: Logging to %s"%dConf['LOG_PATH'])
 	else:
@@ -273,7 +274,7 @@ def main(form):
 	#	fLog.write("%s = %s"%(sKey, dConf[sKey]))	
 	
 	for sEnv in ['SCRIPT_NAME', 'SERVER_NAME', 'QUERY_STRING']:
-		if not os.environ.has_key(sEnv):
+		if sEnv not in os.environ:
 			error(u"Wierd Error, %s is not set in the script environment\r\n"%sEnv)
 			return 21
 	
@@ -294,7 +295,7 @@ def main(form):
 		fLog.write("   For Path: %s"%sPathInfo)
 		fLog.write("   Parameters: %s"%os.getenv('QUERY_STRING'))
 	
-		if os.environ.has_key("HTTP_USER_AGENT"):
+		if "HTTP_USER_AGENT" in os.environ:
 			fLog.write("   User Agent: %s"%os.environ['HTTP_USER_AGENT'])
 		else:
 			fLog.write("   User Agent: Unknown (HTTP_USER_AGENT not given)")
@@ -302,7 +303,7 @@ def main(form):
 		
 	# Check to see that our resource path is sent and exist, or just 
 	# exit with an error
-	if not dConf.has_key('RESOURCE_PATH'):
+	if not 'RESOURCE_PATH' in dConf:
 		U.io.error(u"Set the RESOURCE_PATH keyword in %s"%g_sConfPath, fLog)
 		return 22
 	

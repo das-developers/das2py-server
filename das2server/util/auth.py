@@ -53,7 +53,7 @@ def _ageToTime(fLog, sResource, sAge):
 			else:
 				raise ValueError("Unexpected Units value '%s', in '%s'"%(c, sAge))
 				
-	except ValueError, e:
+	except ValueError as e:
 		bAdjusted = False
 		
 	if not bAdjusted:
@@ -202,7 +202,7 @@ def checkAgeAccess(dConf, fLog, form, sResource, sValue):
 	try:
 		dtBeg = DasTime(sBeg)
 		dtEnd = DasTime(sEnd)
-	except ValueError, e:
+	except ValueError as e:
 		fLog.write("   Authorization: Bad Query can't parse time range (%s to %s)"%(sBeg, sEnd))
 		return AUTH_FAIL
 	
