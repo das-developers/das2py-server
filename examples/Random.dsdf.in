@@ -1,32 +1,31 @@
-; This is a DSDF file.  DSDF files define data sources.  A data source is 
-; simply a program that the server can invoke to produce data over a given
-; parameter range in a usable format such as a Das2 stream or a QStream.  Since
-; the Das2 system is defined in terms of interfaces between programs, it does
-; not matter what computer language is used to create your data producers.
-; As long as they write a usable stream to standard output they will plug
-; into the overall server.  In fact this data source doesn't read any files
-; at all.
-;
-; Programs provided with the server may operate on your data stream before
-; it's provided to the end client.  For example, the program das2_bin_avgsec
-; reads a Das2 stream on it's input and produces an output stream with 
-; reduced time resolution.  Another program, das2_psd calculates the power
-; spectral density of an input Das2 stream and writes the transformed stream
-; to it's standard output.  Multiple manipulations may be chained together,
-; but they all start with a your data reader programs, not data files.
-;
-; The following example DSDF and it's associated reader provide 200 random
-; points in the given interval between -10 and +10.
+# This is a DSDF file.  DSDF files define data sources.  A data source is 
+# simply a program that the server can invoke to produce data over a given
+# parameter range.  Since das2 pyserver invokes external reader programs to
+# generate data, it does not matter what type of files the data are stored in
+# nor which computer language is used to create the readers.  As long as reader
+# programs write a usable stream to standard output they will plug into the
+# overall server.  In fact this data source doesn't read any files at all.
+#
+# Programs provided with the server may operate on your data stream before
+# it's provided to the end client.  For example, the program das2_bin_avgsec
+# reads a das2 stream on it's input and produces an output stream with 
+# reduced time resolution.  Another program, das2_psd calculates the power
+# spectral density of an input das2 stream and writes the transformed stream
+# to it's standard output.  Multiple manipulations may be chained together,
+# but they all start with a your data reader programs, not data files.
+#
+# The following example DSDF and it's associated reader provide 200 random
+# points in the given interval between -10 and +10.
 
-; Required Items
+# Required Items
 description = 'Produce random values between -10 and +10'
-reader = 'env PYTHONPATH=%(INST_HOST_LIB)s:%(INST_EXT_LIB)s %(PWD)s/examples/example_random.py'
+reader = 'python%(PYVER)s %(PREFIX)s/examples/random.py'
 reducer = not_reducible
 das2Stream = 1
 techContact = 'Your Name <your.name@yourplace.edu>'
 exampleRange_00 = '2017-01-01 to 2017-03-01 UTC'
 
-; Optional Items
-;  none
+# Optional Items
+#  none
 
 

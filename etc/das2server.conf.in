@@ -27,25 +27,27 @@ CONTACT_URL  = "https://update-das2server.conf.nowhere.edu/~someone/"
 
 
 # The top location of any dsdf files
-DSDF_ROOT = "%(SERVER_DATA)s"
+DSDF_ROOT = "%(PREFIX)s/datasets"
 
 # if using authentication, the name of the group and users files
-USER_PASSWD = "%(SERVER_ETC)s/passwd"
-USER_GROUP  = "%(SERVER_ETC)s/group"
+USER_PASSWD = "%(PREFIX)s/etc/passwd"
+USER_GROUP  = "%(PREFIX)s/etc/group"
 
 # The module path for loading utilities and handles, there can be
 # more than one entry, seperate them via os.pathsep characters, i.e.
 # usually a ':' but use '\' on windows
-MODULE_PATH = ["%(INST_HOST_LIB)s", "%(INST_EXT_LIB)s"]
+MODULE_PATH = ["%(PREFIX)s/lib", "%(PREFIX)s/lib/python%(PYVER)s"]
 
-# The directory for binaries that don't have an explicit path
-BIN_PATH = ["%(SERVER_BIN)s", "%(INST_NAT_BIN)s"]
+# The directory for binaries that don't have an explicit path, separate
+# paths with a comma
+BIN_PATH = ["%(PREFIX)s/bin"]
 
-# A directory to set for loading shared objects
-LIB_PATH = ["%(INST_NAT_LIB)s", ]
+# A directory to set for loading shared objects, separate paths with
+# a comma
+LIB_PATH = ["%(PREFIX)s/lib"]
 
 # Where to put log files.  You should probably pick an alternate location
-LOG_PATH = "/tmp"
+LOG_PATH = "$(PREFIX)s/log"
 
 # The URL to the das2_srvcgi_logrdr program.  If this value doesn't
 # contain '//' then it is assumed to be relative to the path to the 
@@ -78,19 +80,20 @@ IGNORE_REDIRECT = false
 
 # Path to various resource files, such as style sheets, logos, etc
 # Should contain das2server.xsl, and a logo.*.
-RESOURCE_PATH = "%(SERVER_RES)s"
+RESOURCE_PATH = "%(PREFIX)s/resource"
 
 # Old 2.2 support.  Prior to das 2.3 there was no concept of a central catalog
 # thus servers could only find each other via peers lists.  To support older
 # clients provide a list of you other servers here.
-PEERS_FILE = "%(SERVER_ETC)s/das2peers.ini"
+PEERS_FILE = "%(PREFIX)s/etc/das2peers.ini"
 
 # Program used to upconverting Das1 streams.  Only used by the U. Iowa group
 DAS1_TO_DAS2 = "das2_from_das1"
 
 # The absolute filesystem path to the data cache, only used if caching has 
-# been enabled in one or more DSDF files.
-CACHE_ROOT = "%(SERVER_CACHE)s"
+# been enabled in one or more DSDF files.  You might want to pick an alternate
+# location
+CACHE_ROOT = "%(PREFIX)s/cache"
 
 # Set the default stream reducer. DSDFs can override this setting for individal
 # datasets using the 'reducer=' directive.

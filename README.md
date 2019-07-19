@@ -28,7 +28,7 @@ environment.  That can change -- it's just not been tested.  Here are the build 
 test steps.  In the instructions below the '$' character is used at the
 beginning of a line to indicate commands to run in a shell.
 
-1. Python 2.7, or Python >= 3.4
+1. Python >= 2.6, or Python >= 3.4
 
 2. Apache2, any remotely recent version configured with at least one CGI
    directory
@@ -110,16 +110,18 @@ $ make pylib_install
 
 ## Build and install das2-pyserver
 
+To allow the server software to automatically find das2py, use the same
+environment as above:
+
 ```bash
 $ cd das2-pyserver
 $ export PREFIX=/usr/local/das2srv   # Use same location as above
 $ export PYVER=3.6                   # Use same version as above
-$ export N_ARCH=/
 ```
 
 Set an identifier for the server.  This is used to distinguish multiple servers
-at the same site.  This can be any UTF-8 string without whitespace or punctuation,
-for example:
+at the same site.  This can be any UTF-8 string without whitespace or 
+punctuation, for example:
 ```bash
 $ export SERVER_ID=solar_orbiter_testbed
 ```
@@ -128,9 +130,7 @@ Now build and install the python module and example configuration files.  The
 commands below will also setup a test data source that you can delete later.
 
 ```bash
-$ make
-$ make install
-$ make examples
+$ python setup.py install --prefix=${PREFIX} --install-lib=${PREFIX}/lib/python${PYVER}
 ```
 
 ## Configure Apache

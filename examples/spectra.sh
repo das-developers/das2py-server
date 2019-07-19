@@ -2,7 +2,7 @@
 
 ##############################################################################
 function prnHelp {
-	echo "$1 - Generate power spectral density values from example_waveform.py" 1>&2
+	echo "$1 - Generate power spectral density values from waveform.py" 1>&2
 	echo " "  1>&2
 	echo "Usage: $1 EXAMPLE_DIR BEGIN END [LENGTH] [SLIDE]"  1>&2
 	echo "       $1 [-h | --help]"  1>&2
@@ -10,7 +10,7 @@ function prnHelp {
 	echo " "  1>&2
 	echo "Output power spectral density by essentially running the pipeline" 1>&2
 	echo " "  1>&2
-	echo "   example_waveform.py EXAMPLE_DIR BEG END | das2_psd LEN SLIDE" 1>&2
+	echo "   waveform.py EXAMPLE_DIR BEG END | das2_psd LEN SLIDE" 1>&2
 	echo " " 1>&2
 	echo "The last three arguments may be in any order.  The first integer" 1>&2
 	echo "argument is taken to the be fourier transform length, by default" 1>&2
@@ -84,8 +84,8 @@ function main {
 		nDenom=2
 	fi
 	
-	echo "exec: ${sExDir}/example_waveform.py $sExDir $sBeg $sEnd | das2_psd -c 2s $nLen $nDenom " 1>&2
-	${sExDir}/example_waveform.py $sExDir $sBeg $sEnd | das2_psd -c 2s $nLen $nDenom
+	echo "exec: ${sExDir}/waveform.py $sExDir $sBeg $sEnd | das2_psd -c 2s $nLen $nDenom " 1>&2
+	${sExDir}/waveform.py $sExDir $sBeg $sEnd | das2_psd -c 2s $nLen $nDenom
 	return $?
 }
 

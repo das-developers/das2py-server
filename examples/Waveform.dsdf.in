@@ -42,14 +42,14 @@ summary = 'Raw Voyager PWS 4-bit waveform values.  Without correlating '+$
 ; The first two are always given, the third is only provided if supplied
 ; by the end-user client program (such as Autoplot)
 
-reader = 'env PYTHONPATH=%(INST_HOST_LIB)s:%(INST_EXT_LIB)s %(PWD)s/examples/example_waveform.py %(PWD)s/examples'
+reader = 'python%(PYVER) %(PREFIX)s/examples/waveform.py %(PREFIX)s/examples/data'
 
 
 ; The default reducer simply outputs bin averages, which are not suitable
 ; for waveform data.  Here we tell the server that it should not pipe the
 ; output of this reader through a reducer program.
 
-reducer = not_reducible
+reducer = 'not_reducible'
 
 
 ; This reader produces data as a das2Stream.  QStreams may also be used
