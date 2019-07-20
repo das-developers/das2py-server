@@ -62,10 +62,10 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	dReplace = {"script":U.io.getScriptUrl()}
 	
 	sExQuery = ""
-	if dConf.has_key('SAMPLE_DSDF'):
+	if 'SAMPLE_DSDF' in dConf:
 		dReplace['dataset'] = dConf['SAMPLE_DSDF']
 			
-	if dConf.has_key('SAMPLE_START') and dConf.has_key('SAMPLE_END'):
+	if 'SAMPLE_START' in dConf and 'SAMPLE_END' in dConf:
 		dReplace['start_time'] = dConf['SAMPLE_START']
 		dReplace['end_time'] = dConf['SAMPLE_END']
 	
@@ -76,7 +76,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 				
 	sViewLog = ""
-	if dConf.has_key('VIEW_LOG_URL'):
+	if 'VIEW_LOG_URL' in dConf:
 		if len(dConf['VIEW_LOG_URL']) > 0:
 			sViewLog = '<a href="%s">Recent '%dConf['VIEW_LOG_URL']+\
 			           'activity logs</a> for your IP address are available.'
@@ -88,7 +88,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	pout('<h1>')
 	pout('<img src="%(script)s?server=logo" />'%dReplace )
 
-	if dConf.has_key('SITE_NAME'):
+	if 'SITE_NAME' in dConf:
 		pout( dConf['SITE_NAME'])
 	else:
 		pout( "Set SITE_NAME in %s"%dConf['__file__'])
@@ -154,7 +154,7 @@ Where the <i>DATA_SET_NAME</i> is one of the file paths provided by a
 data source list query.
 """%dReplace)
 
-	if dReplace.has_key('dataset'):
+	if 'dataset' in dReplace:
 		pout("""
 For example:
 <br /><br />
@@ -176,7 +176,7 @@ recommended, in general these look like YYYY-MM-DDTHH:MM:SS.sss where
 uneeded time fields may be omitted.
 """%dReplace)
 
-	if dReplace.has_key('start_time') and dReplace.has_key('end_time'):
+	if 'start_time' in dReplace and 'end_time' in dReplace:
 		pout("""
 For example:
 <br /><br />
@@ -186,7 +186,7 @@ For example:
 	
 	pout("<br /><br /></li>")
 	
-	if dConf.has_key('PNG_MAKER'):
+	if 'PNG_MAKER' in dConf:
 		pout("""
 <li><b>Plot Download</b> -- This server has been extended with a server side
 plotter which delivers data as PNG images.  To use this functionality enter a
@@ -196,8 +196,8 @@ URL with the pattern:
 <br /><br />
 """%dReplace)
 
-		if dReplace.has_key('start_time') and dReplace.has_key('end_time') and \
-		   dReplace.has_key('dataset'):
+		if 'start_time' in dReplace and 'end_time' in dReplace and \
+		   'dataset' in dReplace:
 			pout("""
 For example:
 <br /><br />

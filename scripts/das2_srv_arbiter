@@ -14,7 +14,7 @@ from os.path import dirname as dname
 
 g_sConfPath = REPLACED_ON_BUILD
 
-perr = sys.stderr.write
+perr = sys.stdout.write   # Only writes text in python 3
 
 
 ##############################################################################
@@ -52,7 +52,7 @@ g_lCurTask = []
 def signal_handler(signum, frame):
 	global g_bShutdown, g_broker, g_lCurTask
 	
-	for i in xrange(0, len(g_lCurTask)):
+	for i in range(0, len(g_lCurTask)):
 		if g_lCurTask[i] != None:
 			g_lCurTask[i].shutdown(signum)
 			g_lCurTask[i] = None
@@ -150,7 +150,7 @@ def setModulePath(dConf):
 	
 class StderrLog(object):
 	def write(self, sThing):
-		sys.stderr.write("%s\n"%sThing)
+		stderr.write("%s\n"%sThing)
 	
 	def newPrefix(self):
 		pass
@@ -173,12 +173,12 @@ def daemonize(fLog, sPidFile):
 		try:
 			os.makedirs(sPidDir, 0750)
 		except OSError:
-			sys.stderr.write("Can't make dir %s\n"%sPidDir)
+			stderr.write("Can't make dir %s\n"%sPidDir)
 			return 13
 	
 	# If our PID file already exists, refuse to start
 	if os.path.isfile(sPidFile):
-		sys.stderr.write("PID file %s already exists, remove "%sPidFile +\
+		stderr.write("PID file %s already exists, remove "%sPidFile +\
 		                  "file before starting in daemon mode.\n")
 		return 13
 	

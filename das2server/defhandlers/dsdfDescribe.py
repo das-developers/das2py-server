@@ -46,7 +46,7 @@ def _dsdfToStreamHdr(dsdf):
 		lRepKeys = dReplace.keys()
 		
 		lNewValue = [None]*len(lValue)
-		for i in xrange(0, len(lValue)):
+		for i in range(0, len(lValue)):
 			if lValue[i] in lRepKeys:
 				lNewValue[i] = dReplace[ lValue[i] ]
 			else:
@@ -73,13 +73,13 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	fLog.write("\nDas 2.2 Description Handler")
 	
-	if not dConf.has_key('DSDF_ROOT'):
+	if 'DSDF_ROOT' not in dConf:
 		U.io.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
 		return 17
 		
 	dsdf = U.dsdf.Dsdf(sDsdf, dConf, form, fLog)
 	
-	if dsdf.has_key(u'rename'):
+	if u'rename' in dsdf:
 		return U.dsdf.handleRedirect(fLog, sDsdf, dsdf)
 	
 	sOut = _dsdfToStreamHdr(dsdf)

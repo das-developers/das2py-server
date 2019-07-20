@@ -150,13 +150,13 @@ def reqInfoCacheBuild(fLog, dConf, sId, sHParams):
 		
 	lTask = ['']*(HINFO_CACHE.HPARAMS+1)
 	
-	if os.environ.has_key('SERVER_NAME'):
+	if 'SERVER_NAME' in os.environ:
 		lTask[HINFO_CACHE.REQUESTER] = lTask[HINFO_CACHE.REQUESTER] + os.environ['SERVER_NAME']
 
-	if os.environ.has_key('SCRIPT_NAME'):
+	if 'SCRIPT_NAME' in os.environ:
 		lTask[HINFO_CACHE.REQUESTER] = "%s%s"%(lTask[HINFO_CACHE.REQUESTER], os.environ['SCRIPT_NAME'])
 
-	if os.environ.has_key('REMOTE_ADDR'):
+	if 'REMOTE_ADDR' in os.environ:
 		lTask[HINFO_CACHE.RMTREQ] = lTask[HINFO_CACHE.RMTREQ] + os.environ['REMOTE_ADDR']
 		
 	if sys.platform.lower().startswith('win'):

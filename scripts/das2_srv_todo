@@ -237,7 +237,7 @@ def prnJobHelp(sProg, sJob):
 	(n1stCol, n2ndCol, sFmt) = _keyAndSumFmt(lArgs, " - ", 71)
 	
 	print "Parameters:"
-	for i in xrange(0, len(lArgs)):
+	for i in range(0, len(lArgs)):
 		sInfo = sFmt%(lArgs[i], tplt.summary(lArgs[i]))
 		print "%4d) %s"%(i+1, sInfo)
 	
@@ -252,7 +252,7 @@ def prnJobHelp(sProg, sJob):
 		else:
 			print "Example:"
 			
-		for i in xrange(0, len(lEx)):
+		for i in range(0, len(lEx)):
 			print "   %s:"%lEx[i][0]
 			print
 			print "      %s %s %s"%(sProg, tplt.name(), lEx[i][1])
@@ -307,7 +307,7 @@ def prnTodoQueue(broker):
 				           lTask[6].lower().replace('task_','') ]
 				lOutput += lTask[7:]
 				
-				for i in xrange(0, len(lOutput)):
+				for i in range(0, len(lOutput)):
 					if len(lOutput[i]) > lColWidths[i]:
 						lColWidths[i] = len(lOutput[i])
 				
@@ -345,7 +345,7 @@ def prnWorkingQueues(broker):
 				           lTask[6].lower().replace('task_','') ]
 				lOutput += lTask[7:-3]
 				
-				for i in xrange(0, len(lOutput)):
+				for i in range(0, len(lOutput)):
 					if len(lOutput[i]) > lColWidths[i]:
 						lColWidths[i] = len(lOutput[i])
 				
@@ -391,7 +391,7 @@ def prnDoneQueue(broker):
 				           lTask[6].lower().replace('task_','') ]
 				lOutput += lTask[7:-4]
 				
-				for i in xrange(0, len(lOutput)):
+				for i in range(0, len(lOutput)):
 					if len(lOutput[i]) > lColWidths[i]:
 						lColWidths[i] = len(lOutput[i])
 				

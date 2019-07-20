@@ -52,7 +52,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	sScript = U.io.getScriptUrl()
 	
-	if not dConf.has_key('DSDF_ROOT'):
+	if 'DSDF_ROOT' not in dConf:
 		error.sendUnkId(fLog, "Server misconfigured, DSDF_ROOT not specified")
 		return 10
 	

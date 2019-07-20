@@ -1,5 +1,8 @@
 """Utilities to support Server-Side caching"""
 
+# make py2 code safer by preventing relative imports
+from __future__ import absolute_import
+
 import sys
 import time
 
@@ -11,9 +14,9 @@ if not sys.platform.lower().startswith('win'):
 
 import das2
 
-import task as T
-import dsdf as D
-import errors as E
+from . import task as T
+from . import dsdf as D
+from . import errors as E
 
 
 ##############################################################################
@@ -305,7 +308,7 @@ def missList(fLog, dConf, dsdf, sNormParam, rRes, sBeg, sEnd, bCoverage=True):
 	lRes.sort()
 	
 	iRes = 0
-	for iKey in xrange(0, len(lRes) - 1):
+	for iKey in range(0, len(lRes) - 1):
 		if lRes[iKey + 1] > rRes:
 			break
 		iRes += 1
@@ -387,11 +390,11 @@ def reqCacheBuild(fLog, dConf, sDsdf, lToBuild, bCoverage=False):
 	
 		lTask = ['']*CACHE_FIELDS.LEN_INITAL
 		
-		if os.environ.has_key('SERVER_NAME'):
+		if 'SERVER_NAME' in os.environ:
 			lTask[1] = lTask[1] + os.environ['SERVER_NAME']
-		if os.environ.has_key('SCRIPT_NAME'):
+		if 'SCRIPT_NAME' in os.environ:
 			lTask[1] = "%s%s"%(lTask[1], os.environ['SCRIPT_NAME'])
-		if os.environ.has_key('REMOTE_ADDR'):
+		if 'REMOTE_ADDR' in os.environ:
 			lTask[3] = lTask[3] + os.environ['REMOTE_ADDR']
 		
 		if sys.platform.lower().startswith('win'):

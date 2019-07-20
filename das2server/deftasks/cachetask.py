@@ -59,7 +59,7 @@ class Task(T.TaskHandler):
 		sCacheRoot = pjoin(dConf['CACHE_ROOT'], "data")
 					
 		# Note, DSDFs that specify interval datasources aren't yet cacheable
-		if self.dsdf.has_key(u'requiresInterval'):
+		if u'requiresInterval' in self.dsdf:
 			E.TodoError("Caching for interval based data sources such as "+\
 			            sDsdf + " is not yet implemented")
 			
@@ -73,7 +73,7 @@ class Task(T.TaskHandler):
 			self.lLevels = self.dsdf['cacheLevel'].keys()
 		else:
 			nLevel = int(sLvlTmp, 10)
-			if not self.dsdf['cacheLevel'].has_key(nLevel):
+			if nLevel not in self.dsdf['cacheLevel']:
 				raise ValueError("Cache Level %d is not defined for datasource '%s'"%(
 				                 nLevel, sDsdf))
 			self.lLevels = [ nLevel ]

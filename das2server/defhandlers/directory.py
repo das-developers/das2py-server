@@ -187,7 +187,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	"""
 	pout = sys.stdout.write
 	
-	if not dConf.has_key('DSDF_ROOT'):
+	if 'DSDF_ROOT' not in dConf:
 		U.io.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
 		return 17
 	

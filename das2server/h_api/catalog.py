@@ -208,7 +208,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	pout("Content-Type: application/json; charset=utf-8")
 	
-	if not dConf.has_key('DSDF_ROOT'):
+	if 'DSDF_ROOT' not in dConf:
 		U.io.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
 		return 17
 	
@@ -239,7 +239,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	lCat = []
 	#fLog.write('Found %d usable DSDFs'%len(lOut))
 	
-	for i in xrange(0, len(lOut)):
+	for i in range(0, len(lOut)):
 		dItem = {'id':lOut[i][0]}
 		
 		# Could have added a url here to help them out, but they chose to ignore

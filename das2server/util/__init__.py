@@ -1,12 +1,15 @@
-import io
-import misc
-import dsdf
-import dsid
-import auth
-import task
-import cache
-import command
+# make py2 code safer by preventing relative imports
+from __future__ import absolute_import
+
+from . import io
+from . import misc
+from . import dsdf
+from . import dsid
+from . import auth
+from . import task
+from . import cache
+from . import command
 
 if io.isBrowser():
-	import site
+	from . import site
 

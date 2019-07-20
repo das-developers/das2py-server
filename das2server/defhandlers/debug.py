@@ -16,7 +16,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	bAuth = False
 	sUser = None
 	sCrypt = None
-	if os.environ.has_key('HTTP_AUTHORIZATION'):
+	if 'HTTP_AUTHORIZATION' in os.environ:
 		sAuth = os.environ['HTTP_AUTHORIZATION']
 		if sAuth.startswith('Basic') and len(sAuth) > 12:
 		
@@ -27,7 +27,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 			sUser = lAuth[0]
 			sPasswd = lAuth[1]
 			
-			if dConf.has_key('USER_PASSWD') and os.path.isfile(dConf['USER_PASSWD']):
+			if 'USER_PASSWD' in dConf and os.path.isfile(dConf['USER_PASSWD']):
 				fIn = file(dConf['USER_PASSWD'], 'rb')
 			
 				for sLine in fIn:

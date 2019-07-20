@@ -44,20 +44,20 @@ def preLoadError(uOut):
 			if sAgent.find(sTest) != -1:
 				bClientIsBrowser = True
 				break	
-	sys.stdout.write("Status: 500 Internal Server Error\r\n")
+	stdout.write("Status: 500 Internal Server Error\r\n")
 	
 	if bClientIsBrowser:
-		sys.stdout.write("Content-Type: text/plain; charset=utf-8\r\n\r\n")
+		stdout.write("Content-Type: text/plain; charset=utf-8\r\n\r\n")
 		
-		sys.stdout.write(uOut.encode('utf-8'))
+		stdout.write(uOut.encode('utf-8'))
 	else:
-		sys.stdout.write("Content-Type: text/vnd.das2.das2stream\r\n\r\n")
+		stdout.write("Content-Type: text/vnd.das2.das2stream\r\n\r\n")
 
 		uOut = uOut.replace(u'\n', u'\n\r').replace(u'"', u"'")
 		uOut = u'<exception type="%s" message="%s" />\n'%(sType, uOut)
 		sOut = uOut.encode('utf-8')
-		sys.stdout.write("[00]%06d"%len(sOut))
-		sys.stdout.write(sOut)
+		stdout.write("[00]%06d"%len(sOut))
+		stdout.write(sOut)
 
 
 ##############################################################################
@@ -89,7 +89,7 @@ def main():
 	else:
 		type="das2"
 	
-	#pout = sys.stdout.write
+	#pout = stdout.write
 	#pout("Content-Type: text/plain; charset=utf-8\r\n\r\n")
 	
 	# Find out the log directory location
@@ -188,8 +188,8 @@ def main():
 	else:
 		dReplace['contact-url'] = "https://update-das2server.conf.nowhere.edu/~someone/"
 	
-	sys.stdout.write("Content-Type: text/html; charset=utf-8\r\n")
-	sys.stdout.write("Cache-Control: no-cache\r\n\r\n")
+	stdout.write("Content-Type: text/html; charset=utf-8\r\n")
+	stdout.write("Cache-Control: no-cache\r\n\r\n")
 	
 	print """<html>
 <head>
@@ -256,7 +256,7 @@ def main():
 # gather configuration data 
 ##############################################################################
 def error(uText):
-	pout = sys.stdout.write
+	pout = stdout.write
 	pout("Content-Type: text/plain; charset=utf-8\r\n\r\n")
 	pout(uText.encode('utf-8'))
 	

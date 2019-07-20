@@ -1,5 +1,8 @@
 """General Work Task creater and Handler"""
 
+# make py2 code safer by preventing relative imports
+from __future__ import absolute_import
+
 import sys
 import time
 
@@ -10,7 +13,7 @@ except ImportError as e:
 	g_bHaveRedis = False
 
 
-from errors import *
+from . import errors as E
 
 ##############################################################################
 class QueueBroker(object):
@@ -31,49 +34,49 @@ class QueueBroker(object):
 		try:
 			ret = self.broker.keys(sPtrn)
 		except redis.exceptions.ConnectionError as e:
-			raise ServerError(str(e))
+			raise E.ServerError(str(e))
 		return ret
 		
 	def lrange(self, sKey, iBeg, iEnd):
 		try:
 			ret = self.broker.lrange(sKey, iBeg, iEnd)
 		except redis.exceptions.ConnectionError as e:
-			raise ServerError(str(e))
+			raise E.ServerError(str(e))
 		return ret
 	
 	def lpush(self, sKey, sVal):
 		try:
 			ret = self.broker.lpush(sKey, sVal)
 		except redis.exceptions.ConnectionError as e:
-			raise ServerError(str(e))
+			raise E.ServerError(str(e))
 		return ret
 	
 	def brpoplpush(self, sPopQueue, sPushQueue):
 		try:
 			ret = self.broker.brpoplpush(sPopQueue, sPushQueue)
 		except redis.exceptions.ConnectionError as e:
-			raise ServerError(str(e))
+			raise E.ServerError(str(e))
 		return ret
 			
 	def lpop(self, sQueue):
 		try:
 			ret = self.broker.lpop(sQueue)
 		except redis.exceptions.ConnectionError as e:
-			raise ServerError(str(e))
+			raise E.ServerError(str(e))
 		return ret
 		
 	def delete(self, sKey):
 		try:
 			ret = self.broker.delete(sKey)
 		except redis.exceptions.ConnectionError as e:
-			raise ServerError(str(e))
+			raise E.ServerError(str(e))
 		return ret
 		
 	def lset(self, sKey, iPos, sVal):
 		try:
 			ret = self.broker.lset(sKey, iPos, sVal)
 		except redis.exceptions.ConnectionError as e:
-			raise ServerError(str(e))
+			raise E.ServerError(str(e))
 		return ret
 		
 
@@ -93,7 +96,7 @@ def getBroker(fLog, dConf):
 		return None
 	
 	sBroker = 'redis'
-	if dConf.has_key('WORK_QUEUE_BROKER'):
+	if 'WORK_QUEUE_BROKER' in dConf:
 		if dConf['WORK_QUEUE_BROKER'].lower() != 'redis':
 			fLog.write("Configuration Error, currently only redis is supported"+\
 			           " as a work queue broker.\n  WORK_QUEUE_BROKER = "+\
@@ -102,7 +105,7 @@ def getBroker(fLog, dConf):
 			
 	
 	lConn = ["localhost", 6379, 0]
-	if dConf.has_key("WORK_QUEUE_CONN"):
+	if "WORK_QUEUE_CONN" in dConf:
 		lConn = dConf["WORK_QUEUE_CONN"].split(":")
 		if len(lConn) > 1:
 			lConn[1] = int(lConn[1])
@@ -115,7 +118,7 @@ def getBroker(fLog, dConf):
 		broker = QueueBroker(host=lConn[0], port=lConn[1], db=lConn[2],
 		                     socket_connect_timeout=300)
 		sKey = broker.keys('das2_*')
-	except ServerError as e:
+	except E.ServerError as e:
 		fLog.write("   ERROR: Job broker not available at %s:%d, db=%d.\n"%(
 		     lConn[0], lConn[1], lConn[2]))
 		return None

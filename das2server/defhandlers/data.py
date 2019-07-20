@@ -8,7 +8,12 @@ import json
 from os.path import basename as bname
 from os.path import join as pjoin
 
-from urllib import quote_plus as urlEnc
+# Module moved in python3
+try:
+	from urllib import quote_plus as urlEnc
+except ImportError:
+	from urllib.parse import quote_plus as urlEnc
+
 
 ##############################################################################
 def pout(sOut):
@@ -296,7 +301,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 				u"module before running on windows.")
 		return 7	
 	
-	if not dConf.has_key('DSDF_ROOT'):
+	if 'DSDF_ROOT' not in dConf:
 		U.io.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
 		return 17
 	

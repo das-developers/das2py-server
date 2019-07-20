@@ -39,8 +39,6 @@ class build_scripts_wconf(build_scripts):
 	'g_sConfDir = Thing' line.
 	"""
 	
-	
-
 	def embed_config(self, lLines, encoding):
 		r"""Convert lines that start with g_sConfPath (no proceeding whitespace)
 		and change them to g_sConfPath = $SERVER_ETC/das2server.conf

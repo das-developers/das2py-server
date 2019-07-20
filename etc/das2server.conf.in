@@ -34,17 +34,17 @@ USER_PASSWD = "%(PREFIX)s/etc/passwd"
 USER_GROUP  = "%(PREFIX)s/etc/group"
 
 # The module path for loading utilities and handles, there can be
-# more than one entry, seperate them via os.pathsep characters, i.e.
-# usually a ':' but use '\' on windows
-MODULE_PATH = ["%(PREFIX)s/lib", "%(PREFIX)s/lib/python%(PYVER)s"]
+# more than one entry, seperate them via ':' characters, no matter
+# the operating systems default pathsep character.
+MODULE_PATH = "%(PREFIX)s/lib:%(PREFIX)s/lib/python%(PYVER)s"
 
 # The directory for binaries that don't have an explicit path, separate
-# paths with a comma
-BIN_PATH = ["%(PREFIX)s/bin"]
+# multiple paths with ':'
+BIN_PATH = "%(PREFIX)s/bin"
 
-# A directory to set for loading shared objects, separate paths with
-# a comma
-LIB_PATH = ["%(PREFIX)s/lib"]
+# A directory to set for loading shared objects, separate multiple
+# paths with ':'
+LIB_PATH = "%(PREFIX)s/lib"
 
 # Where to put log files.  You should probably pick an alternate location
 LOG_PATH = "$(PREFIX)s/log"

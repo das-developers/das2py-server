@@ -1,4 +1,6 @@
-# -*- coding=utf-8 -*-
+# make py2 code safer by preventing relative imports
+from __future__ import absolute_import
+
 import os
 import sys
 import time
@@ -6,7 +8,29 @@ import codecs
 
 from os.path import join as pjoin
 
-from errors import *
+from . import errors as E
+
+# Ugg, the python 2/3 mess.  Would be fine if I was paid overtime...
+try:
+	unicode         # in python2 only unicode class has .encode
+except NameError:
+	unicode = str   # In python3 all strings have .encode
+
+def pout(item):
+	"""Write bytes or strings, in python 2 or 3
+	If input item is bytes, write them, if item is a unicode string encode as
+	utf-8 first"""
+		
+	if sys.version_info[0] == 2:
+		if isinstance(item, unicode):
+			sys.stdout.write(item.encode('utf-8'))
+		else:
+			sys.stdout.write(item)
+	else:
+		if isinstance(item, unicode):
+			sys.stdout.buffer.write(item.encode('utf-8'))
+		else:
+			sys.stdout.buffer.write(item)
 
 ##############################################################################
 def getScriptUrl():
@@ -107,7 +131,7 @@ g_dMime = {True:g_dBrowserMime, False:g_dDasClientMime}
 g_lNotDas2App = ['firefox','explorer', 'safari', 'chrome', 'konqueror']
 
 def isBrowser():
-	if not os.environ.has_key("HTTP_USER_AGENT"):
+	if "HTTP_USER_AGENT" not in os.environ:
 		return False
 	
 	sAgent = os.environ['HTTP_USER_AGENT'].lower()
@@ -181,15 +205,15 @@ def dasExcept(sType, uOut, fLog=None, bHdrSent=False):
 	global g_bHdrSent
 	
 	if fLog != None:
-		fLog.write(uOut.encode('utf-8'))
+		fLog.write(uOut)
 	
 	bClientIsBrowser = isBrowser()
 	
 	if not bHdrSent:
 		if bClientIsBrowser:
-			sys.stdout.write("Content-Type: text/plain; charset=utf-8\r\n\r\n")
+			pout("Content-Type: text/plain; charset=utf-8\r\n\r\n")
 		else:
-			sys.stdout.write("Content-Type: text/vnd.das2.das2stream\r\n\r\n")
+			pout("Content-Type: text/vnd.das2.das2stream\r\n\r\n")
 		g_bHdrSent = True
 	
 	# If headers were already sent before we entered this function then it
@@ -197,7 +221,7 @@ def dasExcept(sType, uOut, fLog=None, bHdrSent=False):
 	# the error as a das2 exception regardless of the client type
 	
 	if bClientIsBrowser and (not bHdrSent):
-		sys.stdout.write(uOut.encode('utf-8'))
+		pout(uOut)
 	else:
 		uOut = uOut.replace(u'\n', u'&#13;&#10;').replace(u'"', u"'")
 		
@@ -206,8 +230,8 @@ def dasExcept(sType, uOut, fLog=None, bHdrSent=False):
 		
 		uOut = u'<exception type="%s" message="%s" />\n'%(sType, uOut)
 		sOut = uOut.encode('utf-8')
-		sys.stdout.write("[00]%06d"%len(sOut))
-		sys.stdout.write(sOut)
+		pout("[00]%06d"%len(sOut))
+		pout(sOut)
 	
 	sys.stdout.flush()
 
@@ -216,55 +240,49 @@ def dasExcept(sType, uOut, fLog=None, bHdrSent=False):
 
 def serverError(fLog, uOut, bHdrSent=False):
 	if not bHdrSent:
-		sys.stdout.write("Status: 500 Internal Server Error\r\n")
+		pout("Status: 500 Internal Server Error\r\n")
 	dasExcept('InternalServerError', uOut, fLog, bHdrSent)
 
 def todoError(fLog, uOut, bHdrSent=False):
 	if not bHdrSent:
-		sys.stdout.write("Status: 501 Not Implemented\r\n")
+		pout("Status: 501 Not Implemented\r\n")
 	dasExcept('NotImplemented', uOut, fLog, bHdrSent)
 
 def queryError(fLog, uOut, bHdrSent=False):
 	if not bHdrSent:
-		sys.stdout.write("Status: 400 Bad Request\r\n")
+		pout("Status: 400 Bad Request\r\n")
 	dasExcept('BadRequest', uOut, fLog, bHdrSent)
 	
 def forbidError(fLog, uOut, bHdrSent=False):
 	if not bHdrSent:
-		sys.stdout.write("Status: 403 Forbidden\r\n")
+		pout("Status: 403 Forbidden\r\n")
 	dasExcept('Forbidden', uOut, fLog, bHdrSent)
 
 def notFoundError(fLog, uOut, bHdrSent=False):
-	sys.stdout.write("Status: 404 Not Found\r\n")
+	pout("Status: 404 Not Found\r\n")
 	dasExcept('NoSuchDatasource', uOut, fLog, bHdrSent)
 	
 	
 # Taking any DasError exception and outputting the proper HTTP codes
 def dasErr2HttpMsg(fLog, exp, bHdrSent=False):
 	
-	if isinstance(exp, ServerError):
+	if isinstance(exp, E.ServerError):
 		serverError(fLog, str(exp), bHdrSent)
 	
-	elif isinstance(exp, QueryError):
+	elif isinstance(exp, E.QueryError):
 		queryError(fLog, str(exp), bHdrSent)
 		
-	elif isinstance(exp, TodoError):
+	elif isinstance(exp, E.TodoError):
 		todoError(fLog, str(exp), bHdrSent)
 	
-	elif isinstance(exp, NotFoundError):
+	elif isinstance(exp, E.NotFoundError):
 		notFoundError(fLog, str(exp), bHdrSent)
 	
-	elif isinstance(exp, ForbidError):
+	elif isinstance(exp, E.ForbidError):
 		forbidError(fLog, str(exp), bHdrSent)
 	
 	else:
 		raise ValueError("Unknown DasError type")
-
-
-##############################################################################
-def pout(sOut):
-	sys.stdout.write(sOut)
-	sys.stdout.write('\r\n')
 	
 	
 ##############################################################################
@@ -294,20 +312,48 @@ class DasLogFile(object):
 		return self._file.fileno()
 		
 	def write(self, sMsg):
-		lMsg = sMsg.split('\n')
-		for sLine in lMsg:
-			if len(sLine.strip()) > 0:
-				# Python 2 bug: Don't use a u'' for the formatting string
-				# always let implicit up conversion handle the problem
-				sOut = '[%s %4d] %s\n'%(self.sPrefix, self.nLine, sLine)
-				if sys.version_info[0] >= 3:
-					self._file.buffer.write(bytes(sMsg.encode('utf-8')))
-				else:
-					codecs.getwriter('utf-8')(self._file).write(sOut)
+	
+		if isinstance(sMsg, unicode):
+			lMsg = sMsg.split(u'\n')
+			
+			for sLine in lMsg:
+				if len(sLine.strip()) > 0:
+
+					sOut = '[%s %4d] %s\n'%(self.sPrefix, self.nLine, sLine)
 				
-				self.nLine += 1
+					if sys.version_info[0] >= 3:
+						self._file.buffer.write(sOut.encode('utf-8'))
+					else:
+						self._file.write(sOut.encode('utf-8'))
+					
+					self.nLine += 1
+
+		else:
+			lMsg = sMsg.split(b'\n')
+			
+			for xLine in lMsg:
+				if len(xLine.strip()) > 0:
+					
+					if sys.version_info[0] >= 3:
+						sPre = '[%s %4d] '%(self.sPrefix, self.nLine)
+						self._file.buffer.write(sPre.encode('utf-8'))					
+						self._file.buffer.write(xLine)
+						self._file.buffer.write(b'\n')
+					else:
+						# Good ole Python 2 binary strings
+						# Thank jeebus *something* is still simple
+						xOut = '[%s %4d] %s\n'%(self.sPrefix, self.nLine, xLine)
+						self._file.write(xOut)
+					
+					self.nLine += 1
+
 		self._file.flush()
+
 		
 	def close(self):
 		if self._file != sys.stderr:
 			self._file.close()
+
+
+
+

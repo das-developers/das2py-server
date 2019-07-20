@@ -71,7 +71,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	sScript = U.io.getScriptUrl()
 	
-	if not dConf.has_key('DSDF_ROOT'):
+	if 'DSDF_ROOT' not in dConf:
 		error.sendUnkId(fLog, "Server misconfigured, DSDF_ROOT not specified", True)
 		return 10
 			
@@ -106,7 +106,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	sNormParams = U.dsdf.normalizeParams(sRdrParams)
 	
 	# Handle authorization
-	if dsdf.has_key('readAccess'):
+	if 'readAccess' in dsdf:
 		nRet = U.auth.authorize(dConf, fLog, form, sDsdf, dsdf['readAccess'])
 		if nRet != U.auth.AUTH_SUCCESS:
 			error.sendIncompatable(fLog, "Data source requires authorization")

@@ -29,7 +29,7 @@ def getDataDirs(U, dConf, fLog, sRelPath):
 	
 	# Keep a list of directories
 
-	if not dConf.has_key('DSDF_ROOT'):
+	if 'DSDF_ROOT' not in dConf:
 		fLog.write("   ERROR: Configuration item DSDF_ROOT missing")
 		return None
 
@@ -118,7 +118,7 @@ def _dataNavHeader(U, sReqType, dConf, fLog, form, sPathInfo):
 	pout('  <center><ul id="datanav">')
 	
 	
-	for i in xrange(0, len(lParts)):
+	for i in range(0, len(lParts)):
 		sPart = lParts[i]
 		sName = 	lParts[i].rstrip('/').replace('_',' ').upper()
 		
@@ -141,12 +141,12 @@ def browserHeader(U, sReqType, dConf, fLog, form, sPathInfo):
 
 	sScriptURL = U.io.getScriptUrl()
 	
-	if dConf.has_key('SITE_NAME'):
+	if 'SITE_NAME' in dConf:
 		sSiteId = dConf['SITE_NAME']
 	else:
 		sSiteId = "Set SITE_NAME in %s"%dConf['__file__']
 	
-	if dConf.has_key('STYLE_SHEET'):
+	if 'STYLE_SHEET' in dConf:
 		sCssLink = "%s/resource/%s"%(sScriptURL, dConf['STYLE_SHEET'])
 	else:
 		sCssLink = "%s/resource/das2server.css"%sScriptURL
@@ -177,7 +177,7 @@ def browserHeader(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	#pout('    <li><a href="%s/server/examples">Queries</a></li>'%sScriptURL)
 	
-	#if dConf.has_key('VIEW_LOG_URL'):
+	#if 'VIEW_LOG_URL' in dConf:
 	#	if len(dConf['VIEW_LOG_URL']) > 0:
 	#		if allowViewLog(dConf, fLog, os.environ['REMOTE_ADDR']):
 	#			

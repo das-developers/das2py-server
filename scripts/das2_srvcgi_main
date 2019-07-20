@@ -16,6 +16,29 @@ from os.path import join as pjoin
 
 g_sConfPath = REPLACED_ON_BUILD
 
+# handle output, python 2/3 compatible
+try:
+	unicode
+except NameError:
+	unicode = str
+
+def pout(item):
+	"""Write bytes or strings, in python 2 or 3
+	If input item is bytes, write them, if item is a unicode string encode as
+	utf-8 first"""
+		
+	if sys.version_info[0] == 2:
+		if isinstance(item, unicode):
+			sys.stdout.write(item.encode('utf-8'))
+		else:
+			sys.stdout.write(item)
+	else:
+		if isinstance(item, unicode):
+			sys.stdout.buffer.write(item.encode('utf-8'))
+		else:
+			sys.stdout.buffer.write(item)
+
+
 ##############################################################################
 # Browser identification for use before util modules are loaded, after they 
 # are loaded util.io.g_lNotDas2App is used.  If you update this list, *also*
@@ -75,7 +98,7 @@ g_dDefHandlers = {
 ##############################################################################
 # Cut down version of error handling for use before the module path is loaded
 
-def preLoadError(uOut):
+def preLoadError(sOut):
 	"""Cut down error handling for use before the util modules are loaded,
 	script must exit afte calling this or multiple HTTP headers will be 
 	emitted.
@@ -92,21 +115,21 @@ def preLoadError(uOut):
 			if sAgent.find(sTest) != -1:
 				bClientIsBrowser = True
 				break	
-	sys.stdout.write("Status: 500 Internal Server Error\r\n")
+	pout("Status: 500 Internal Server Error\r\n")
 	
 	if bClientIsBrowser:
-		sys.stdout.write("Content-Type: text/plain; charset=utf-8\r\n\r\n")
+		pout("Content-Type: text/plain; charset=utf-8\r\n\r\n")
 		cgitb.enable(format='text')
 		
-		sys.stdout.write(uOut.encode('utf-8'))
+		pout(sOut)
 	else:
-		sys.stdout.write("Content-Type: text/vnd.das2.das2stream\r\n\r\n")
+		pout("Content-Type: text/vnd.das2.das2stream\r\n\r\n")
 
-		uOut = uOut.replace(u'\n', u'\n\r').replace(u'"', u"'")
-		uOut = u'<exception type="%s" message="%s" />\n'%(sType, uOut)
-		sOut = uOut.encode('utf-8')
-		sys.stdout.write("[00]%06d"%len(sOut))
-		sys.stdout.write(sOut)
+		sOut = sOut.replace('\n', '\n\r').replace('"', "'")
+		sOut = '<exception type="%s" message="%s" />\n'%(sType, sOut)
+		xOut = sOut.encode('utf-8')
+		pout("[00]%06d"%len(xOut))
+		pout(xOut)
 
 
 ##############################################################################
@@ -117,10 +140,10 @@ def getConf():
 	
 	if not os.path.isfile(g_sConfPath):
 		if os.path.isfile(g_sConfPath + ".example"):
-			preLoadError(u"Move\n     %s.example\nto\n     %s\n and configure your site"%(
+			preLoadError("Move\n     %s.example\nto\n     %s\n and configure your site"%(
 			      g_sConfPath, g_sConfPath))
 		else:
-			preLoadError(u"%s is missing\n"%g_sConfPath)
+			preLoadError("%s is missing\n"%g_sConfPath)
 			
 		return None
 
@@ -141,7 +164,7 @@ def getConf():
 		
 		iEquals = sLine.find('=')
 		if iEquals < 1 or iEquals > len(sLine) - 2:
-			preLoadError(u"Error in %s line %d"%(g_sConfPath, nLine))
+			preLoadError("Error in %s line %d"%(g_sConfPath, nLine))
 			fIn.close()
 			return None
 		
@@ -163,11 +186,11 @@ def getConf():
 # since config file can change module path
 
 def setModulePath(dConf):
-	if 'MODULE_PATH' in dConf:
-		preLoadError(u"Set MODULE_PATH = /dir/containing/das2server_python_module")
+	if 'MODULE_PATH' not in dConf:
+		preLoadError("Set MODULE_PATH = /dir/containing/das2server_python_module")
 		return False	
 	
-	lDirs = dConf['MODULE_PATH'].split(os.pathsep)
+	lDirs = dConf['MODULE_PATH'].split(':') # No mater the os.pathsep setting
 	for sDir in lDirs:
 		if os.path.isdir(sDir):
 				if sDir not in sys.path:
@@ -253,12 +276,15 @@ def main(form):
 	try:
 		mTmp = __import__('das2server', globals(), locals(), ['util'], 0)
 	except ImportError as e:
-		preLoadError(u"Error importing module 'das2server'\r\n: %s"%(str(e)))
+		preLoadError(
+			"Error importing module 'das2server': %s\r\nsys.path is:\r\n%s\r\n"%(
+			str(e), sys.path
+		))
 		return 19
 	try:
 		U = mTmp.util
 	except AttributeError:
-		preLoadError(u'No module named das2server.util under %s'%dConf['MODULE_PATH'])
+		preLoadError('No module named das2server.util under %s'%dConf['MODULE_PATH'])
 		return 20
 		
 	U.misc.envPathMunge("PATH", dConf['BIN_PATH'])
@@ -304,12 +330,12 @@ def main(form):
 	# Check to see that our resource path is sent and exist, or just 
 	# exit with an error
 	if not 'RESOURCE_PATH' in dConf:
-		U.io.error(u"Set the RESOURCE_PATH keyword in %s"%g_sConfPath, fLog)
+		U.io.serverError(fLog, u"Set the RESOURCE_PATH keyword in %s"%g_sConfPath)
 		return 22
 	
 	if not os.path.isdir(dConf['RESOURCE_PATH']):
-		U.io.error(u"Can't locate resources, server path "
-		      "%s doesn't exsit"%dConf['RESOURCE_PATH'], fLog)
+		U.io.serverError(fLog, u"Can't locate resources, server path "
+		      "%s doesn't exsit"%dConf['RESOURCE_PATH'])
 		return 23
 		
 	# Handle Das2.2 style queries, except for the intro, these all have 

@@ -16,7 +16,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	interface
 	"""
 	
-	if not dConf.has_key('PEERS_FILE'):
+	if 'PEERS_FILE' not in dConf:
 		U.io.serverError(fLog, u"Create an INI file contaning known das2 servers, then "
 		      "add a PEERS_FILE key to \n%s to point to your peers list."%dConf['__file__'])
 		return 17

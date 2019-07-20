@@ -1,10 +1,13 @@
 """Grab bag of utilities for the Das2.2 server"""
 
+# make py2 code safer by preventing relative imports
+from __future__ import absolute_import
+
 import os
-import io
+from . import io
 
 ##############################################################################
-class recursionError(StandardError):
+class recursionError(Exception):
 	"""Little exception class to denote reaching a recursion limit, didn't
 	see one built into the standard library"""
 
@@ -132,7 +135,7 @@ def isTrue(sVal, dDict=None):
 	"""
 	
 	if dDict != None:
-		if not dDict.has_key(sVal):
+		if sVal not in dDict:
 			return False
 		else:
 			return dDict[sVal].lower() in g_lTrue
@@ -148,10 +151,10 @@ def envPathMunge(sEnvVar, sAdd, sAddSep=':'):
 	
 	lAdd = sAdd.split(sAddSep)
 	
-	if os.environ.has_key(sEnvVar):
+	if sEnvVar in os.environ:
 		lPath = os.environ[sEnvVar].split(os.pathsep)
 	
-		for i in xrange(len(lAdd)-1, -1, -1):
+		for i in range(len(lAdd)-1, -1, -1):
 			sAdd = lAdd[i]
 			if sAdd not in lPath:
 				lPath.insert(0, sAdd)

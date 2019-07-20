@@ -6,6 +6,13 @@ import os
 import json
 import urllib
 
+# Module moved in python3
+try:
+	from urllib import quote_plus
+except ImportError:
+	from urllib.parse import quote_plus
+
+
 ##############################################################################
 def pout(sOut):
 	sys.stdout.write(sOut)
@@ -251,7 +258,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	pout("Content-Type: application/json; charset=utf-8\r\n")
 	
-	if not dConf.has_key('DSDF_ROOT'):
+	if 'DSDF_ROOT' not in dConf:
 		U.io.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
 		return 17
 		

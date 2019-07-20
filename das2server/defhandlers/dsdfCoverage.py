@@ -40,7 +40,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 				u"module before running on windows.")
 		return 7	
 	
-	if not dConf.has_key('DSDF_ROOT'):
+	if 'DSDF_ROOT' not in dConf:
 		U.io.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
 		return 17
 					
@@ -65,7 +65,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	lTmpKey = ['start_time','end_time','resolution','interval','params']
 	lTmpVal = [sBeg, sEnd, sRes, sInterval, sParams];
-	for i in xrange(0, len(lTmpVal)):
+	for i in range(0, len(lTmpVal)):
 		if not U.dsdf.checkParam(fLog, lTmpKey[i], lTmpVal[i]):
 			return 17
 	
@@ -82,10 +82,10 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	try:
 		dsdf = U.dsdf.Dsdf(sDsdf, dConf, form, fLog)
 		
-		if dsdf.has_key(u'rename'):
+		if u'rename' in dsdf:
 			return U.dsdf.handleRedirect(fLog, sDsdf, dsdf)
 		
-		if dsdf.has_key(u'server') and dsdf[u'server'] != U.io.getScriptUrl() \
+		if u'server' in dsdf and dsdf[u'server'] != U.io.getScriptUrl() \
 		   and not U.misc.isTrue('IGNORE_REDIRECT', dConf):
 			return U.dsdf.handleRedirect(fLog, sDsdf, dsdf)
 		
@@ -102,7 +102,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		sParams = ''
 
 	# Handle authorization
-	if dsdf.has_key('readAccess'):
+	if 'readAccess' in dsdf:
 		nRet = U.auth.authorize(dConf, fLog, form, sDsdf, dsdf['readAccess'])
 
 		if nRet == U.auth.AUTH_SVR_ERR:
@@ -185,10 +185,10 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	if U.misc.isTrue(sAscii):
 		sOutCat = 'text'
 			
-		if dsdf[ u'qstream'] and dConf.has_key('QDS_TO_UTF8'):
+		if dsdf[ u'qstream'] and 'QDS_TO_UTF8' in dConf:
 			uCmd += u'| %s '%(dConf['QDS_TO_UTF8'])
 				
-		elif dsdf[u'das2Stream'] and dConf.has_key('D2S_TO_UTF8'):
+		elif dsdf[u'das2Stream'] and 'D2S_TO_UTF8' in dConf:
 			uCmd += u'| %s '%(dConf['D2S_TO_UTF8'])
 	else:
 		sOutCat = 'bin'

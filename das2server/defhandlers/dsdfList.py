@@ -114,7 +114,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	"""
 	pout = sys.stdout.write
 	
-	if not dConf.has_key('DSDF_ROOT'):
+	if 'DSDF_ROOT' not in dConf:
 		U.io.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
 		return 17
 	
@@ -142,7 +142,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	# Loop through once to make sure directories are in use, don't include
 	# empty directories in the output
-	for i in xrange(0, len(lOut)):
+	for i in range(0, len(lOut)):
 	
 		# Not a directory, keep it
 		if lOut[i][0][-1] != u'/':
@@ -159,7 +159,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 					break
 				j += 1
 	
-	for i in xrange(0, len(lOut)):
+	for i in range(0, len(lOut)):
 		if not lIgnore[i]:
 			if lOut[i][1] != None:
 				s = u"%s|%s\r\n"%(lOut[i][0], lOut[i][1])

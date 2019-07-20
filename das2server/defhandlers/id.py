@@ -17,7 +17,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	pout = sys.stdout.write
 	
-	if dConf.has_key('SITE_NAME') and len(dConf['SITE_NAME'].strip()) > 0:
+	if 'SITE_NAME' in dConf and len(dConf['SITE_NAME'].strip()) > 0:
 		pout("Content-Type: text/plain; charset=utf-8\r\n\r\n")
 		pout("%s\r\n"%dConf['SITE_NAME'])
 		return 0

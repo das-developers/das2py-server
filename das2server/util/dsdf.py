@@ -2,6 +2,8 @@
 
 Much of this functionality should be moved to a streamsource file
 """
+# make py2 code safer by preventing relative imports
+from __future__ import absolute_import
 
 import codecs
 import os
@@ -14,11 +16,18 @@ import urllib
 from os.path import join as pjoin
 from os.path import basename as bname
 
-from urllib import quote_plus
-from urllib import unquote_plus
+# Module moved in python3
+try:
+	from urllib import quote_plus
+	from urllib import unquote_plus
+except ImportError:
+	from urllib.parse import quote_plus
+	from urllib.parse import unquote_plus
+
 import das2
-import io
-from errors import *
+
+from . import io
+from . import errors
 
 ##############################################################################
 def pout(sOut):
@@ -187,7 +196,7 @@ class Dsdf(object):
 			self.sPath = self.sPath + '.dsdf'
 
 		if not os.path.isfile(self.sPath):
-			raise QueryError(u"Data source %s doesn't exist on this server"%sDsdf)
+			raise errors.QueryError(u"Data source %s doesn't exist on this server"%sDsdf)
 
 		fLog.write("   Reading: %s"%self.sPath)
 
@@ -196,7 +205,7 @@ class Dsdf(object):
 		try:
 			self.d = readDsdf(fIn, fLog)
 		except ValueError as e:
-			raise ServerError(str(e))
+			raise errors.ServerError(str(e))
 
 		fIn.close()
 
@@ -222,9 +231,11 @@ class Dsdf(object):
 				lVars = ptrn.findall(self.d[sKey])
 				for sVar in lVars:
 					if len(sVar) == 3:
-						raise ServerError("Error in DSDF file %s. The value for"%sDsdf+\
-						      " keyword %s contains an invalid"%sKey+\
-								" substitution, '%s'"%sVar)
+						raise errors.ServerError(
+							"Error in DSDF file %s. The value for"%sDsdf+\
+							" keyword %s contains an invalid"%sKey+\
+							" substitution, '%s'"%sVar
+						)
 
 					sVarName = sVar[2:-1]
 					sDefVal = None
@@ -250,9 +261,11 @@ class Dsdf(object):
 						self.d[sKey] = self.d[sKey].replace(sVar, sDefVal)
 
 					else:
-						raise ServerError("Error in DSDF file %s, can't determine the"%sDsdf+\
-						      " value for variable %s in the string for"%sVar+\
-								" keyword"%sKey)
+						raise errors.ServerError(
+							"Error in DSDF file %s, can't determine the"%sDsdf+\
+							" value for variable %s in the string for"%sVar+\
+							" keyword"%sKey
+						)
 
 				# Now that all the subtitutions have been run, see if secondary
 				# replacements are needed.
@@ -263,8 +276,10 @@ class Dsdf(object):
 			nPass += 1
 
 		if nPass >= 50:
-			raise ServerError("Error in DSDF file %s, un-resolved subtitution "+sDsdf+\
-			      "variables remain after 50 passes")
+			raise errors.ServerError(
+				"Error in DSDF file %s, un-resolved subtitution "+sDsdf+\
+				"variables remain after 50 passes"
+			)
 
 	##############################################################################
 
@@ -272,7 +287,7 @@ class Dsdf(object):
 		"""Find out if an entry in a dsdf dictionary has the value 'true',
 		Missing entries are automatically assigned the value 'false'
 		"""
-		if not self.d.has_key(sStr):
+		if sStr not in self.d:
 			return False
 
 		#sys.stderr.write("True check: %s = %s"%(sStr, self.d[sStr]))
@@ -318,18 +333,18 @@ class Dsdf(object):
 				try:
 					nLevel = int(lKeyWord[1], 10)
 				except ValueError as e:
-					raise ServerError(str(e))
+					raise errors.ServerError(str(e))
 			else:
-				raise ServerError("Invalid Keyword: %s"%sKey)
+				raise errors.ServerError("Invalid Keyword: %s"%sKey)
 
 			sVal = self.d[sKey]
 
 			lItems = [s.strip() for s in sVal.split('|') ]
 
 			if len(lItems) < 2:
-				raise ServerError("Missing information in DSDF keyword %s"%sKey)
+				raise errors.ServerError("Missing information in DSDF keyword %s"%sKey)
 			if len(lItems) > 3:
-				raise ServerError("Extra information in DSDF keyword %s"%sKey)
+				raise errors.ServerError("Extra information in DSDF keyword %s"%sKey)
 
 			if lItems[0] == 'intrinsic':
 				rRes = 0
@@ -337,12 +352,16 @@ class Dsdf(object):
 			else:
 				lDatum = lItems[0].split()
 				if len(lDatum) != 2:
-					raise ServerError("Poorly formed datum, '%s', "%lItems[0] +\
-					                  " in value for DSDF keyword %s"%sKey)
+					raise errors.ServerError(
+						"Poorly formed datum, '%s', "%lItems[0] +\
+						" in value for DSDF keyword %s"%sKey
+					)
 				try:
 					rRes = float(lDatum[0])
 				except ValueError as e:
-					raise ServerError("Can't convert resolution %s to an integer"%lDatum[0])
+					raise errors.ServerError(
+						"Can't convert resolution %s to an integer"%lDatum[0]
+					)
 				sUnits = lDatum[1]
 
 				# Normalize seconds and milliseconds units
@@ -390,20 +409,22 @@ class Dsdf(object):
 		"""
 
 		# The reader argument is ALWAYS required
-		if not self.d.has_key(u'reader'):
-			raise ServerError(u"'reader' keyword is not present in %s"%self.sName)
+		if u'reader' not in self.d:
+			raise errors.ServerError(
+				u"'reader' keyword is not present in %s"%self.sName
+			)
 
 		# Make sure the stream-type keys are specified
-		if not self.d.has_key(u'das2Stream'):
+		if u'das2Stream' not in self.d:
 			self.d[u'das2Stream'] = False
 
-		if not self.d.has_key(u'qstream'):
+		if u'qstream' not in  self.d:
 			self.d[u'qstream'] = False
 
 		# Re-write the reader value for das1 streams to make them das2 streams
 		# and set the interval required parameter if 'items' is present
 		if not self.d[u'das2Stream'] and not self.d[u'qstream']:
-			if dConf.has_key('DAS1_TO_DAS2'):
+			if 'DAS1_TO_DAS2' in dConf:
 				sDas1ToDas2 = dConf['DAS1_TO_DAS2']
 			else:
 				sDas1ToDas2 = 'das2_from_das1'
@@ -413,29 +434,29 @@ class Dsdf(object):
 
 			# Trigger off of the items tag to set a flag saying the reader resolution
 			# is a required parameter
-			if self.d.has_key(u'items'):
+			if u'items' in self.d:
 				self.d[u'requiresInterval'] = True
 		else:
 			self.d[u'requiresInterval'] = self.isTrue(u'requiresInterval')
 
 		# Re-write the groupAccess key to the current form, if no entry in the
 		# current form is present
-		if self.d.has_key(u'groupAccess') and not self.d.has_key(u'readAccess'):
+		if u'groupAccess' in self.d and u'readAccess' not in self.d:
 			self.d[u'readAccess'] = u'GROUP:%s'%self.d[u'groupAccess']
 
 		# Make sure that a default security realm is always included
-		if not self.d.has_key(u'securityRealm') and not dConf.has_key('SECURITY_REALM'):
+		if u'securityRealm' not in self.d and 'SECURITY_REALM' not in dConf:
 			self.d[u'securityRealm'] = '%s/%s'%(os.getenv('SCRIPT_NAME'), self.sName)
 
 		# If no reducer has been specified, fill in a default
-		if not self.d.has_key(u'reducer'):
+		if u'reducer' not in self.d:
 
 			sDefQreduce = None
-			if dConf.has_key('QDS_REDUCER'):
+			if 'QDS_REDUCER' in dConf:
 				sDefQreduce = dConf['QDS_REDUCER']
 
 			sDefReduce = 'das2_bin_avgsec'
-			if dConf.has_key('D2S_REDUCER'):
+			if 'D2S_REDUCER' in dConf:
 				sDefReduce = dConf['D2S_REDUCER']
 
 			if self.d[u'qstream']:
@@ -443,24 +464,26 @@ class Dsdf(object):
 			else:
 				self.d[u'reducer'] = sDefReduce
 
-		if not self.d.has_key(u'requiresInterval'):
+		if u'requiresInterval' not in self.d:
 			self.d[u'requiresInterval'] = True
 
 		# Set the cache levels
 		try:
 			self.d['cacheLevel'] = self.getCacheLevels()
 		except ValueError as e:
-			raise ServerError(u"Misconfigured Data Source %s: %s"%(self.sName, str(e)))
+			raise errors.ServerError(
+				u"Misconfigured Data Source %s: %s"%(self.sName, str(e))
+			)
 
 		# Set a default cache reader if none was provided
-		if not self.d.has_key(u'cacheReader'):
+		if u'cacheReader' not in self.d:
 			sDefCacheRdr = 'das2_cache_rdr'
 
 			if self.d[u'qstream']:
-				if dConf.has_key('QDS_CACHE_RDR'):
+				if 'QDS_CACHE_RDR' in dConf:
 					sDefCacheRdr = dConf['QDS_CACHE_RDR']
 			else:
-				if dConf.has_key('D2S_CACHE_RDR'):
+				if 'D2S_CACHE_RDR' in dConf:
 					sDefCacheRdr = dConf['D2S_CACHE_RDR']
 
 			self.d[u'cacheReader'] = sDefCacheRdr
@@ -505,8 +528,10 @@ class Dsdf(object):
 			sRng = sRng.replace('UTC','')
 			lRng = [x.strip() for x in sRng.split('to')]
 			if len(lRng) != 2:
-				raise ServerError(u"Datasource %s, key %s has an invalid value"%(
-					                  self.sName, key))
+				raise errors.ServerError(
+					u"Datasource %s, key %s has an invalid value"%(
+					self.sName, key
+				))
 
 			if bDas23:
 				dParams['time.min'] = lRng[0]
@@ -540,8 +565,10 @@ class Dsdf(object):
 					for pair in lPairs:
 						l = [x.strip() for x in pair.split('=')]
 						if len(l) != 2:
-							raise ServerError("Datasource %s, key %s malformed GET query pair"%(
-							                   self.sName, key))
+							raise errors.ServerError(
+								"Datasource %s, key %s malformed GET query pair"%(
+								self.sName, key
+							))
 						dParams[l[0]] = l[1]
 				else:
 					sParamKey = sKey.replace('exampleRange','exampleParams')
@@ -586,7 +613,7 @@ class Dsdf(object):
 		now otherwise
 		"""
 
-		if self.d.has_key('validRange'):
+		if 'validRange' in self.d:
 			sVal = self.d['validRange']
 			sVal = sVal.replace('UTC','')
 			lTmp = [x.strip() for x in sVal.split('to') ]
@@ -659,7 +686,9 @@ class Dsdf(object):
 				if key.startswith('subSource'):
 					l = [s.strip() for s in self.d[key].split('|')]
 					if len(l) <2:
-						raise ServerError(u"At least a key and description need to be provided for %s"%key)
+						raise errors.ServerError(
+							u"At least a key and description need to be provided for %s"%key
+						)
 
 					if len(l) == 2:
 						self.dSubSource[l[0]] = [ l[1].strip(), '', '']
@@ -673,20 +702,28 @@ class Dsdf(object):
 					# Set interval to 0.0 if empty and we don't require an interval
 					if len(lSrc) == 0:
 						if self.isTrue(u'requiresInterval'):
-							raise ServerError(u"Error in key %s, resolution cannot be"%key+\
-							                  u" 0 for interval based readers");
+							raise errors.ServerError(
+								u"Error in key %s, resolution cannot be"%key+\
+								u" 0 for interval based readers"
+							)
 						lSrc[1] = 0.0
 					else:
 						try:
 							lSrc[1] = float(lSrc[1])
 						except ValueError:
-							raise ServerError(u"Float conversion error for the resolution "
-							                  "value %s in DSDF key %s"%(lSrc[1], key))
+							raise errors.ServerError(
+								u"Float conversion error for the resolution "
+								"value %s in DSDF key %s"%(lSrc[1], key)
+							)
 						if lSrc[1] < 0.0:
-							raise ServerError(u"Resolution value <= 0.0 for DSDF key %s"%key)
+							raise errors.ServerError(
+								u"Resolution value <= 0.0 for DSDF key %s"%key
+							)
 
 						if (lSrc[1] == 0.0) and self.isTrue(u'requiresInterval'):
-							raise ServerError(u"Interval can not be 0.0 for DSDF key %s"%key)
+							raise errors.ServerError(
+								u"Interval can not be 0.0 for DSDF key %s"%key
+							)
 
 		if sKey in self.dSubSource:
 			return self.dSubSource[sKey]
@@ -707,7 +744,7 @@ class Dsdf(object):
 		if 'reducerCmd' in self.d:
 			return True
 
-		if self.d.has_key('qstream'):
+		if 'qstream' in self.d:
 			if 'QDS_REDUCER' in dConf:
 				return True
 		else:
@@ -763,7 +800,7 @@ class Dsdf(object):
 
 		dParams['max'] = dMax
 
-		if self.d.has_key('requiresInterval') and \
+		if 'requiresInterval' in self.d and \
 		   self.d['requiresInterval'] in self.lTrue:
 
 			dInt = {
@@ -847,12 +884,16 @@ class Dsdf(object):
 		for sEntry in lInfo:
 			n = sEntry.find(':')
 			if n == -1:
-				raise ServerError("Missing ':' in value description in paramValInfo_%s"%nParam)
+				raise errors.ServerError(
+					"Missing ':' in value description in paramValInfo_%s"%nParam
+				)
 
 			sValKey = sEntry[:n].strip()
 			sValDesc = sEntry[n+1:].strip()
 			if len(sValKey) == 0 or len(sValDesc) == 0:
-				raise ServerError("Miss formed entry in paramValInfo_%s, %s"%(nParam, sEntry))
+				raise errors.ServerError(
+					"Miss formed entry in paramValInfo_%s, %s"%(nParam, sEntry)
+				)
 
 			dInfo[sValKey] = sValDesc
 
@@ -893,7 +934,7 @@ class Dsdf(object):
 				dParamDef['REQUIRED'] = False
 
 			sKey = 'paramInfo_%s'%nParam
-			if self.d.has_key(sKey):
+			if sKey in self.d:
 				dParamDef['SUMMARY'] = self.d[sKey]
 
 			# Extra handling by parameter type
@@ -998,20 +1039,26 @@ class Dsdf(object):
 			lTrans = escSplitStr(self.d[sDsdfKey], '|', '\\')
 
 			if len(lTrans) < 2:
-				raise ServerError("Key %s, expected at least a 2-element list"%sDsdfKey)
+				raise errors.ServerError(
+					"Key %s, expected at least a 2-element list"%sDsdfKey
+				)
 
 			sParam = lTrans[0]
 
 			if sParam not in dParams:
-				raise ServerError("Key %s, invalid translation, parameter %s not defined"%(
-				                  sDsdfKey, sParam))
+				raise errors.ServerError(
+					"Key %s, invalid translation, parameter %s not defined"%(
+					sDsdfKey, sParam
+				))
 
 			dParam = dParams[sParam]  # This param
 
 			# Only substitutions are allowed for real value items
 			if (len(lTrans) > 2) and dParam['VAL_TYPE'] == 'real':
-				raise ServerError("Key %s looks like a value map, but"%sDsdfKey+\
-				           "only substituion patterns allowed for real value parameters")
+				raise errors.ServerError(
+					"Key %s looks like a value map, but"%sDsdfKey+\
+					"only substituion patterns allowed for real value parameters"
+				)
 
 			# Patterns...
 			if len(lTrans) == 2:
@@ -1023,15 +1070,16 @@ class Dsdf(object):
 				lOut = [ s.strip() for s in lTrans[2].split(',') ]
 
 				if len(lIn) != len(lOut):
-					raise ServerError("key %s, number of input states"%sDsdfKey +\
-					            "is %d but there are %d command line output states"%(
-									len(lIn), len(lOut))
-								)
+					raise errors.ServerError(
+						"key %s, number of input states"%sDsdfKey +\
+						"is %d but there are %d command line output states"%(
+						len(lIn), len(lOut)
+					))
 				dMap = {}
 				# Booleans maps are special, values can only be true or false
 				if dParam['VAL_TYPE'] == 'boolean':
 					nChk = 0
-					for i in xrange(0, 2):
+					for i in range(0, 2):
 						if lIn[i] in self.lTrue:
 							dMap['true'] = lOut[i]
 							nChk |= 1
@@ -1040,11 +1088,13 @@ class Dsdf(object):
 							nChk |= 2
 
 					if nChk != 3:
-						raise ServerError("Key %s, expected both a true and false "+\
-						"flag in item 2 of the value, ex: 'true,false'"%sDsdfKey)
+						raise errors.ServerError(
+							"Key %s, expected both a true and false "+\
+							"flag in item 2 of the value, ex: 'true,false'"%sDsdfKey
+						)
 
 				else:
-					for i in xrange(0, len(lIn)):
+					for i in range(0, len(lIn)):
 						dMap[lIn[i]] = lOut[i]
 
 
@@ -1062,7 +1112,7 @@ class Dsdf(object):
 
 
 		if 'OPTIONS' not in dSrc['QUERY_PARAMS']:
-			raise ServerError("OPTIONS section missing from QUERY_PARAMS")
+			raise errors.ServerError("OPTIONS section missing from QUERY_PARAMS")
 		dOpts = dSrc['QUERY_PARAMS']['OPTIONS']
 
 
@@ -1094,7 +1144,7 @@ class Dsdf(object):
 
 			elif 'reducer' not in self.d:
 				# Get default reducer based on the stream type
-				if self.d.has_key('qstream'):
+				if 'qstream' in self.d:
 					if 'QDS_REDUCER' in dConf:
 						dImpl['_reducer'] = {'_cmd':"%s %%{time.res}"%dConf['QDS_REDUCER']}
 				else:
@@ -1106,7 +1156,7 @@ class Dsdf(object):
 			sCacheRdrArgs = "%s %s ${NORM_OPTIONS} %%{time.beg} %%{time.end} %%{time.res}"%(
 				self.sPath, sCacheDir)
 
-			if self.d.has_key('qstream'):
+			if 'qstream' in self.d:
 				if 'QDS_CACHE_RDR' in dConf:
 					dImpl['_cache_reader'] = {'_cmd':"%s %s"%(dConf['QDS_CACHE_RDR'], sCacheRdrArgs)}
 			else:
@@ -1132,7 +1182,9 @@ class Dsdf(object):
 		dRawLvls = self.getCacheLevels()
 		if len(dRawLvls) > 0:
 			if 'time' not in dSrc['COORDINATES']:
-				raise ServerError("Time based cache blocks defined for non-time datasource")
+				raise errors.ServerError(
+					"Time based cache blocks defined for non-time datasource"
+				)
 
 			dCachInCoords = {'_block_by':lCacheCoords}
 			dLvls = {}
@@ -1158,12 +1210,14 @@ class Dsdf(object):
 			lMethods = [s.strip() for s in self.d['readAccess'].split('|')]
 			if len(lMethods) > 0:
 				lMethOut = []
-				for i in xrange(0, len(lMethods)):
+				for i in range(0, len(lMethods)):
 
 					lMeth = [s.strip() for s in lMethods[i].split(':')]
 					#fLog.write("DEBUG: auth methods %s"%lMeth)
 					if len(lMeth) < 2:
-						raise ServerError("Syntax error in readAccess key value")
+						raise errors.ServerError(
+							"Syntax error in readAccess key value"
+						)
 
 					sCheckType = lMeth[0].upper().strip()
 
@@ -1213,11 +1267,11 @@ class Dsdf(object):
 
 		dSrc['CONTACTS'] = self._getContacts()
 
-		if self.d.has_key('summary'):
+		if 'summary' in self.d:
 			dSrc['DESC'] = self.d['summary']
 
 
-		if self.d.has_key('das2Stream'):
+		if 'das2Stream' in self.d:
 			dSrc['FORMATS'] = {'DEFAULT': {'MIME':'application/vnd.das2.das2stream',
 			                  'VERSION':'2.2'}}
 		else:
@@ -1288,7 +1342,7 @@ class Dsdf(object):
 					lPair = [s.strip() for s in sSel.split(':')]
 					if (len(lPair) != 2) or (lPair[0] not in ('MIN','MAX','RES','INT')) \
 					   or (len(lPair[1]) == 0):
-						raise ServerError("Malformed value for key %s"%sSelKey)
+						raise errors.ServerError("Malformed value for key %s"%sSelKey)
 					if 'SELECT' not in dCoord:
 						dCoord['SELECT'] = {lPair[0] : lPair[1]}
 					else:
@@ -1364,9 +1418,6 @@ class Dsdf(object):
 	def __contains__(self, key):
 		return dict.__contains__(self.d, key)
 
-	def has_key(self, key):
-		return self.d.has_key(key)
-
 	def keys(self):
 		return self.d.keys()
 
@@ -1403,7 +1454,9 @@ def sourceGetParamDict(dSrc):
 	Given a source get a flattened dictionary of all query parameters
 	"""
 	if 'QUERY_PARAMS' not in dSrc:
-		raise ServerError("Required section QUERY_PARAMS missing in data source object")
+		raise errors.ServerError(
+			"Required section QUERY_PARAMS missing in data source object"
+		)
 
 	dQuerySection = dSrc['QUERY_PARAMS']
 
@@ -1451,7 +1504,7 @@ def checkParam(fLog, sKey, sValue):
 			io.queryError(
 				fLog,
 				"Illegal character(s): '%s', in value: '%s' for query parmeter: %s"%(
-			                sTest, sValue, sKey)
+			   sTest, sValue, sKey)
 			)
 			return False
 
@@ -1467,7 +1520,7 @@ def handleRedirect(fLog, sOldName, dsdf):
 	if sServer.endswith('/'):
 		sServer = sServer[:-1]
 
-	if dsdf.has_key(u'server'):
+	if u'server' in dsdf:
 		sNewServer = dsdf[u'server'].encode('ascii', 'replace')
 		if sNewServer.endswith('/'):
 			sNewServer = sNewServer[:-1]
@@ -1480,7 +1533,7 @@ def handleRedirect(fLog, sOldName, dsdf):
 
 	# 2: Potentially get a new query string
 	sQuery = unquote_plus(os.getenv('QUERY_STRING'))
-	if sQuery != None and dsdf.has_key(u'rename'):
+	if sQuery != None and u'rename' in dsdf:
 
 		sNewQuery = sQuery.replace(sOldName, dsdf[u'rename'], 1)
 		if sNewQuery != sQuery:
@@ -1491,7 +1544,7 @@ def handleRedirect(fLog, sOldName, dsdf):
 
 	# 3: Potentially get a new path
 	sPath = os.getenv('PATH_INFO')
-	if sPath != None and dsdf.has_key(u'rename'):
+	if sPath != None and u'rename' in dsdf:
 
 		sNewPath = sPath.replace(sOldName, dsdf[u'rename'], 1)
 		if sPath != sNewPath:

@@ -109,7 +109,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	This handler will recreate the entire catalog for a server, if it 
 	doesn't exist.  Otherwise it will use the cached version (TODO)
 	"""	
-	if not dConf.has_key('DSDF_ROOT'):
+	if 'DSDF_ROOT' not in dConf:
 		U.io.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
 		return 17
 	

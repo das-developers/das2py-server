@@ -21,7 +21,7 @@ def getLogVec(nX, iX, nY, rZmin, rZmax):
 	
 	lVec = [None]*nY
 	
-	for iY in xrange(0, nY):
+	for iY in range(0, nY):
 		
 		rNum = (iY - iYcent)*(iY - iYcent)
 		
@@ -65,7 +65,7 @@ def sendHdr(dtBeg, dtEnd, fOut):
 	buf.send(fOut)
 	
 	lYTags = [1]*100
-	for i in xrange(0,100):
+	for i in range(0,100):
 		lYTags[i] = "%.4g"%(pow(10, (3*i)/100.0) + 66.0)
 	
 	sYTags = ', '.join(lYTags)
@@ -108,9 +108,9 @@ def main(argv):
 	
 	# Randomly pick 3 sets of ten vectors to skip
 	lSkip = []
-	for i in xrange(0, 3):
+	for i in range(0, 3):
 		n = random.randrange(300)
-		for j in xrange(0,10):
+		for j in range(0,10):
 			if n < 289:
 				lSkip.append(n + j)
 			else:
@@ -118,14 +118,14 @@ def main(argv):
 	
 	# Randomly pick 30 other vectors to contain fill
 	lFill = []
-	for i in xrange(0, 30):
+	for i in range(0, 30):
 		lFill.append( random.randrange(300) )
 	
 	lSkip.sort()
 	
 	# Okay, start producing data
 	dt = dtBeg.copy()
-	for iX in xrange(0, 300):
+	for iX in range(0, 300):
 		
 		dt.adjust(0, 0, 0, 0, 0, rCadence)  # Yea this can get round off errors
 		                                    # but it's only a test function
@@ -141,7 +141,7 @@ def main(argv):
 		buf.add(dt.round(dt.MILLISEC))
 		buf.add(" ")
 		
-		for iY in xrange(0, 100):
+		for iY in range(0, 100):
 			if iY < 99:
 				buf.add("%10.3e "%lVec[iY])
 			else:

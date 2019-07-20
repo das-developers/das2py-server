@@ -30,7 +30,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 				u"module before running on windows.")
 		return 7	
 	
-	if not dConf.has_key('DSDF_ROOT'):
+	if 'DSDF_ROOT' not in dConf:
 		U.io.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
 		return 17
 					
@@ -56,9 +56,9 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		return 17
 		
 	# Handle redirects, if these are not being ignored	
-	if not dConf.has_key('IGNORE_REDIRECT') or \
+	if 'IGNORE_REDIRECT' not in dConf or \
 	   not U.dsdf.isTrue('IGNORE_REDIRECT', dConf):
-		if dDsdf.has_key(u'server'):	
+		if u'server' in dDsdf:	
 			sScriptStr = U.io.getScriptUrl()
 			sDsdfScriptStr = dDsdf[u'server'].encode('ascii', 'replace')
 			if sScriptStr != sDsdfScriptStr:
@@ -69,7 +69,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 			
 				return 0
 	
-	if not dConf.has_key('PNG_MAKER'):
+	if 'PNG_MAKER' not in dConf:
 		U.io.todoError(fLog, u"Set the keyword PNG_MAKER in %s to "%dConf['__file__'] +\
 		               u"generate server side images.")
 		return 17

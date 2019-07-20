@@ -5,7 +5,7 @@ import base64
 import crypt
 import os.path
 
-from das2.dastime import DasTime
+import das2
 
 AUTH_SUCCESS = 0
 AUTH_FAIL    = 1
@@ -17,7 +17,7 @@ AUTH_SVR_ERR  = 2
 def _ageToTime(fLog, sResource, sAge):
 	sAge = sAge.strip()
 	
-	dtLockPt = DasTime.now()
+	dtLockPt = das2.DasTime.now()
 	bAdjusted = False
 	
 	try:
@@ -66,7 +66,7 @@ def _ageToTime(fLog, sResource, sAge):
 
 def _getUserPasswd(fLog):
 	
-	if os.environ.has_key('HTTP_AUTHORIZATION'):
+	if 'HTTP_AUTHORIZATION' in os.environ:
 		sAuth = os.environ['HTTP_AUTHORIZATION']
 		
 		if sAuth.startswith('Basic') and len(sAuth) > 12:
@@ -86,7 +86,7 @@ def _getUserPasswd(fLog):
 
 def authenticate(dConf, fLog, sUser, sPasswd):
 	
-	if not dConf.has_key('USER_PASSWD'): 
+	if 'USER_PASSWD' not in dConf: 
 		fLog.write("   Authorization: ERROR! Configuration entry 'USER_PASSWD' "+\
 		           "missing, can't authenticate Das2 users")
 		return AUTH_SVR_ERR
@@ -138,7 +138,7 @@ def getUserGroups(dConf, fLog, sUser):
 	Note: It is possible that the user isn't in any groups, so lGroups may
 	      be a zero length list
 	"""
-	if not dConf.has_key('USER_GROUP'): 
+	if 'USER_GROUP' not in dConf: 
 		fLog.write("   Authorization: ERROR! Configuration entry 'USER_GROUP'"+\
 		           " missing, can't authenticate Das2 users")
 		return (AUTH_SVR_ERR, None)
@@ -200,8 +200,8 @@ def checkAgeAccess(dConf, fLog, form, sResource, sValue):
 			return AUTH_FAIL
 	
 	try:
-		dtBeg = DasTime(sBeg)
-		dtEnd = DasTime(sEnd)
+		dtBeg = das2.DasTime(sBeg)
+		dtEnd = das2.DasTime(sEnd)
 	except ValueError as e:
 		fLog.write("   Authorization: Bad Query can't parse time range (%s to %s)"%(sBeg, sEnd))
 		return AUTH_FAIL
@@ -315,9 +315,9 @@ def authorize(dConf, fLog, form, sResource, sAccess):
 		
 		# See if the request comes from a system that has been configured with
 		# auto-allow access:
-		if dConf.has_key('TEST_FROM') and os.environ.has_key('REMOTE_ADDR'):
+		if 'TEST_FROM' in dConf and 'REMOTE_ADDR' in os.environ:
 			lHosts = dConf['TEST_FROM'].split()
-			for i in xrange(0, len(lHosts)):
+			for i in range(0, len(lHosts)):
 				lHosts[i] = lHosts[i].strip()
 			
 			if os.environ['REMOTE_ADDR'] in lHosts:
