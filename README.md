@@ -27,55 +27,49 @@ Compilation and installation of das2-pyserver has only been tested in Linux
 environments and depends on the following tools:
 
 1. Python >= 2.6, or Python >= 3.4
-2. Apache2, any remotely recent version configured with at least one CGI
-   directory
-3. [Redis](https://redis.io), known to work with version 3.2.12, will
-   likely work with older versions as well.
-4. python-redis - the python bindings for Redis
-5. [libdas2](https://saturn.physics.uiowa.edu/svn/das2/core/stable/libdas2_3) - efficent
-   das2 stream processors written in C and their python bindings
+2. Apache2, any remotely recent version
+3. [Redis](https://redis.io), known to work with version 3.2 or higher
+4. [redis-py](https://redislabs.com/lp/python-redis/), known to work with version 2.10 or higher
+5. [libdas2](https://saturn.physics.uiowa.edu/svn/das2/core/stable/libdas2_3), latest version
+   recommended
 
 Since libdas2 provides small binaries needed by das2-pyserver, and since there
-are no pre-built libdas2.3 packages, installing instructions for both sets of
-software are included below.  In these instructions the '$' character is used
-at the beginning of a line to indicate commands that you'll need to run in a 
-bourne compatible shell (bash, ksh, etc.).
+are no pre-built libdas2.3 packages, installation instructions for both libdas2
+and das2-pyserver are included below.  In these instructions the '$' character
+is used at the beginning of a line to indicate commands that you'll need to run
+in a bourne compatible shell (bash, ksh, etc.).
 
-For convienience, package installation commands for das2-pyserver and libdas2.3
-are provided below for CentOS 7:
+Example prerequisite package installation commands are provided below for CentOS 7 \.\.\.
 ```bash
-$ sudo yum install gcc subversion git                     # for source downloads
-$ sudo yum install expat-devel fftw-devel openssl-devel   # needed to build libdas2.3
-$ sudo yum install python3 python3-numpy python3-devel    # needed to bulid das2py
-$ sudo yum install --enablerepo=epel install redis        # needed for caching
-
-$ sudo yum install --enablerepo=epel install python2-redis 
-# -- or --
-$ sudo pip3 install redis                                   
+$ sudo yum install gcc subversion git                               
+$ sudo yum install expat-devel fftw-devel openssl-devel             
+$ sudo yum install python3 python3-numpy python3-devel              # or python2 equivalents
+$ sudo yum install redis                    
+$ sudo pip3 install redis                                           # if using python3
+# --or--
+$ sudo yum install python2-redis                                    # if using python2
 ```
-and Debian 9.1:
+\.\.\. and Debian 9:
 ```bash
-$ sudo apt-get install gcc subversion git                     # for source downloads
-$ sudo apt-get install libexpat-dev libfftw3-dev libssl-dev   # needed to bulid libdas2.3
-$ sudo apt-get install python3-dev python3-distutils python3-numpy  # to build das2py
-$ sudo apt-get install redis-server                           # needed for cacheing
-
-$ sudo apt-get install python-redis
-# -- or --
-$ sudo apt-get install python3-redis
+$ sudo apt-get install gcc subversion git                           
+$ sudo apt-get install libexpat-dev libfftw3-dev libssl-dev          
+$ sudo apt-get install python3-dev python3-distutils python3-numpy  # or python2 equivalents
+$ sudo apt-get install redis-server                                 
+$ sudo apt-get install python3-redis                                # or python2 equivalent
 ```
 
-## Getting the sources
+## Get the Source
 
-For now some of the sources are in a University of Iowa SVN and some are on
-github.com.  All sources will be moved to github.com as time permits.
+For now, some of the sources are in a University of Iowa SVN server and
+some are on github.com.  All sources will be moved to github.com as time
+permits.
 
 ```bash
 $ svn co https://saturn.physics.uiowa.edu/svn/das2/core/stable/libdas2_3
 $ git clone https://github.com/das-developers/das2-pyserver.git
 ```
 
-## Build and install libdas2.3, das2py, and das2-pyserver
+## Build and Install
 
 Decide where your das2-pyserver code and configuration information will reside. 
 In the example below I've  selected `/usr/local/das2srv` but you can choose
@@ -86,8 +80,8 @@ save time.
 ```bash
 $ export PREFIX=/usr/local/das2srv   # Adjust to taste
 $ export PYVER=3.6                   # or 2.7, or 3.7 etc.
-$ export N_ARCH=/                    # no need for per-OS directories
-$ export SERVER_ID=solar_orbiter     # for example. no whitespace
+$ export N_ARCH=/                    # omit per-OS sub-directories
+$ export SERVER_ID=solar_orbiter_2   # for example.  ID should not contain whitespace
 ```
 
 Test your `PYVER` setting by making sure the following command brings up a
@@ -111,8 +105,9 @@ $ make pylib_install
 ```
 
 Now build and install the python module and example configuration files.
-The commands below will also setup a example data sources that you can
-delete later.
+Set `--install-lib` and `--prefix` as indicated, unless you want to hand
+edit das2server.conf after installation.  There is no need to run `build`
+before this step.
 
 ```bash
 $ cd ../das2-pyserver
