@@ -1,6 +1,6 @@
 # das2-pyserver
 
-Das2 servers typically provide data relevant to space plasma and magnetospheric
+[Das2](https://das2.org) servers typically provide data relevant to space plasma and magnetospheric
 physics research.  To retrieve data, an HTTP GET request is posted to a das2 
 server by a client program and a self-describing stream of data values covering
 the requested time range, at the requested time resolution, is provided in the
@@ -23,10 +23,8 @@ invoked on the server and the standard output stream from the
 
 ## Installation Prequisites
 
-Compilation and installation of das2-pyserver currently requires a Linux
-environment.  That can change -- it's just not been tested.  Here are the build and
-test steps.  In the instructions below the '$' character is used at the
-beginning of a line to indicate commands to run in a shell.
+Compilation and installation of das2-pyserver has only been tested in Linux
+environments and depends on the following tools:
 
 1. Python >= 2.6, or Python >= 3.4
 
@@ -46,10 +44,12 @@ beginning of a line to indicate commands to run in a shell.
 
 Since libdas2 provides small binaries needed by das2-pyserver, and since there
 are no pre-built libdas2.3 packages, installing instructions for both sets of
-software are included below.
+software are included below.  In these instructions the '$' character is used
+at the beginning of a line to indicate commands that you'll need to run in a 
+bourne compatible shell (bash, ksh, etc.).
 
-For convienience, dependent package installation commands for das2-pyserver
-and libdas2.3 are provided below for CentOS 7:
+For convienience, package installation commands for das2-pyserver and libdas2.3
+are provided below for CentOS 7:
 ```bash
 $ yum install gcc subversion git                     # for source downloads
 $ yum install expat-devel fftw-devel openssl-devel   # needed to build libdas2.3
@@ -69,23 +69,27 @@ $ apt-get install python-hiredis                         # needed by pyserver
 
 ## Getting the sources
 
-For now some of the sources are in SVN and some in git repositories, this 
-well change as time permits.
+For now some of the sources are in a University of Iowa SVN and some are on
+github.com.  All sources will be moved to github.com as time permits.
+
 ```bash
 $ svn co https://saturn.physics.uiowa.edu/svn/das2/core/stable/libdas2_3
 $ git clone https://github.com/das-developers/das2-pyserver.git
 ```
 
-## Build and install libdas2.3 and das2py
+## Build and install libdas2.3, das2py, and das2-pyserver
 
-Decide where your das2 server code and configuration information will reside. 
+Decide where your das2-pyserver code and configuration information will reside. 
 In the example below I've  selected `/usr/local/das2srv` but you can choose
-any location you like.
+any location you like.  These environment variables will be used through out
+the setup, so leaving your terminal window open though the testing stage will
+save time.
 
 ```bash
 $ export PREFIX=/usr/local/das2srv   # Adjust to taste
 $ export PYVER=3.6                   # or 2.7, or 3.7 etc.
 $ export N_ARCH=/                    # no need for per-OS directories
+$ export SERVER_ID=solar_orbiter     # for example. no whitespace
 ```
 
 Test your `PYVER` setting by making sure the following command brings up a
@@ -108,32 +112,16 @@ $ make install
 $ make pylib_install
 ```
 
-## Build and install das2-pyserver
-
-To allow the server software to automatically find das2py, use the same
-environment as above:
-
-```bash
-$ cd das2-pyserver
-$ export PREFIX=/usr/local/das2srv   # Use same location as above
-$ export PYVER=3.6                   # Use same version as above
-```
-
-Set an identifier for the server.  This is used to distinguish multiple servers
-at the same site.  This can be any UTF-8 string without whitespace or 
-punctuation, for example:
-```bash
-$ export SERVER_ID=solar_orbiter_testbed
-```
-
-Now build and install the python module and example configuration files.  The
-commands below will also setup a test data source that you can delete later.
+Now build and install the python module and example configuration files.
+The commands below will also setup a example data sources that you can
+delete later.
 
 ```bash
+$ cd ../das2-pyserver
 $ python${PYVER} setup.py install --prefix=${PREFIX} --install-lib=${PREFIX}/lib/python${PYVER}
 ```
 
-Finally rename the example configuration file:
+Finally, copy over the example configuration file:
 
 ```bash
 $ cd $PREFIX/etc
@@ -211,22 +199,25 @@ sudo systemctl restart httpd.service
 sudo systemctl status httpd.service
 ```
 
-## Testing
+## Test the server
 
 Test the server by pointing your web browser at:
+
 ```
 https://localhost/das/server
 https://localhost/das/log
 ```
-If this works try browesing your new server with Autoplot.  To do so, copy the
-following URI in to the Autoplot address bar and hit the green arrow "Go" button:
+If this works try browsing your new server with Autoplot.  To do so, copy the
+following URI in to the Autoplot address bar and hit the green "Go" button:
+
 ```
 vap+das2server:https://localhost/das/server
 ```
 
 ## Next steps
 
-The das2-pyserver programs read configuration data from the file:
+The CGI scripts and worker programs read thier configuration data from the
+file:
 
 ```bash
 $PREFIX/etc/das2server.conf
@@ -237,28 +228,29 @@ Take time to customize a few items in your config file such as the
 `${PREFIX}/static/logo.png` or even the style sheet at 
 `${PREFIX}/static/das2server.css` to something a little nicer.
 
-Das2-pyserver is a caching and web-transport layer for das2 readers.  Readers are
-the programs that generate the initial data streams.  The entire purpose of the
-das2 ecosystem is to leverage the output of das2 readers to produce efficient
-interactive science data displays.  To assist you with the task of creating
-readers for your own data, examples are included in the `$PREFIX/examples` 
-directory.  These examples happen to be written in python, however there is no
-requirement to use python for your data reading programs, in fact much more 
-efficent compiled languages such as Java, D and C++ are more suitable for the
-task.  Any language can be used so long as data streams are only written to 
-standard output and all error messages are only written to standard error.
+Das2-pyserver is a caching and web-transport layer for das2 readers.  Readers
+are the programs that generate the initial full resolution data streams.  The
+entire purpose of das2-pyserver and das2 clients is to leverage the output of
+your reader programs to produce efficient, interactive science data displays.
+To assist you with the task of creating readers for your own data, examples
+are included in the `$PREFIX/examples` directory.  These examples happen to be
+written in python, however there is no requirement to use python for your
+programs, in fact much more efficent compiled languages such as Java,
+[D](https://dlang.org/) and C++ are more suitable for the task.  Any language
+may be used so long as:
 
-For further customization and configuration of your das2-pyserver installation,
-including:
+  1) all data are written to standard output
+  2) all error messages are written to standard error
 
-  * Das2 Stream Formats
-  * Authentication 
-  * Request Caching and Pre-caching
-  * [Federated Catalog](https://das2.org/browse) Integration
-  * Automatic [HAPI](https://github.com/hapi-server/data-specification) Format Conversion
+For further information on your das2-pyserver instance, including:
 
-consult the users guide document  `das2_pyserver_ug.odt` included in the root of
-the repository.
+  * reader programs
+  * authentication 
+  * request caching
+  * [federated catalog](https://das2.org/browse) integration
+  * automatic [HAPI](https://github.com/hapi-server/data-specification) conversion
 
+consult the users guide document  `das2_pyserver_ug.odt` included in the root
+of the repository.
 
 
