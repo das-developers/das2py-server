@@ -21,7 +21,7 @@ from cache blocks.  If not, the associated reader program and data reducer are
 invoked on the server and the standard output stream from the 
 `"reader_prog | reducer_prog"` pipeline is delivered as the request body.
 
-## Dependencies
+## Installation Prequisites
 
 Compilation and installation of das2-pyserver currently requires a Linux
 environment.  That can change -- it's just not been tested.  Here are the build and
@@ -44,7 +44,7 @@ beginning of a line to indicate commands to run in a shell.
    github, for now you'll have to consult the libdas2 [INSTALL.txt](https://saturn.physics.uiowa.edu/svn/das2/core/stable/libdas2_3/INSTALL.txt) 
    file and build from SVN sources.
 
-Since libdas2 provides small binaries needed by das2 pyserver, and since there
+Since libdas2 provides small binaries needed by das2-pyserver, and since there
 are no pre-built libdas2.3 packages, installing instructions for both sets of
 software are included below.
 
@@ -226,7 +226,7 @@ vap+das2server:https://localhost/das/server
 
 ## Next steps
 
-The das2 pyserver programs read configuration data from the file:
+The das2-pyserver programs read configuration data from the file:
 
 ```bash
 $PREFIX/etc/das2server.conf
@@ -237,15 +237,27 @@ Take time to customize a few items in your config file such as the
 `${PREFIX}/static/logo.png` or even the style sheet at 
 `${PREFIX}/static/das2server.css` to something a little nicer.
 
+Das2-pyserver is a caching and web-transport layer for das2 readers.  Readers are
+the programs that generate the initial data streams.  The entire purpose of the
+das2 ecosystem is to leverage the output of das2 readers to produce efficient
+interactive science data displays.  To assist you with the task of creating
+readers for your own data, examples are included in the `$PREFIX/examples` 
+directory.  These examples happen to be written in python, however there is no
+requirement to use python for your data reading programs, in fact much more 
+efficent compiled languages such as Java, D and C++ are more suitable for the
+task.  Any language can be used so long as data streams are only written to 
+standard output and all error messages are only written to standard error.
+
 For further customization and configuration of your das2-pyserver installation,
-including: 
+including:
 
+  * Das2 Stream Formats
   * Authentication 
-  * Request caching
-  * [Federated catalog](https://das2.org/browse) integration
-  * Enabling [HAPI](https://github.com/hapi-server/data-specification) output
+  * Request Caching and Pre-caching
+  * [Federated Catalog](https://das2.org/browse) Integration
+  * Automatic [HAPI](https://github.com/hapi-server/data-specification) Format Conversion
 
-consult the Users Guide document  `das2_pyserver_ug.odt` included in the root of
+consult the users guide document  `das2_pyserver_ug.odt` included in the root of
 the repository.
 
 

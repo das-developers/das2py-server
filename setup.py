@@ -362,7 +362,7 @@ lScripts = [ 'scripts/%s'%s for s in [
 
 lDataFiles = [
 	('etc', [
-		'etc/das2server.conf.in','etc/das2peers.ini.in',
+		'etc/das2server.conf.example.in','etc/das2peers.ini.in',
 		'etc/group', 'etc/passwd'
 	]),
 	('datasets/Examples', [

@@ -237,10 +237,10 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 <body>
 <div class="header">
 	<div class="hdr_left">
-		<img src="%(script)s/logo" alt="%(SERVER_ID)s" width="70" height="70" >
+		<img src="%(script)s/static/logo.png" alt="%(SERVER_ID)s" width="70" height="70" >
 	</div> 
 	<div class="hdr_center">
-	%(SERVER_ID)s, a Das 2.3 Server
+	%(SERVER_ID)s, a Das2.2+ Server
 	<h1>%(SITE_NAME)s</h1>
 	</div>
 	<div class="hdr_right">
