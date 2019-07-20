@@ -133,6 +133,12 @@ commands below will also setup a test data source that you can delete later.
 $ python${PYVER} setup.py install --prefix=${PREFIX} --install-lib=${PREFIX}/lib/python${PYVER}
 ```
 
+Finally rename the example configuration file:
+
+```bash
+$ cd $PREFIX/etc
+$ cp das2server.conf.example das2server.conf
+```
 
 ## Configure Apache
 
@@ -187,8 +193,15 @@ site:
 
 ```bash
 cd /var/www/cgi-das
-sudo ln -s ${PREFIX}/bin/das2_srvcgi_main server
-sudo ln -s ${PREFIX}/bin/das2_srvcgi_main log
+sudo ln -s $PREFIX/bin/das2_srvcgi_main server
+sudo ln -s $PREFIX/bin/das2_srvcgi_main log
+```
+
+Set the permissions of the log directory set in the `LOG_PATH` variable 
+in `das2server.conf` so that Apache can write log data.
+
+```bash
+chmod 0777 $PREFIX/log   # Or change the ownership
 ```
 
 Finally trigger a re-read of the Apache configuration data:
@@ -200,12 +213,40 @@ sudo systemctl status httpd.service
 
 ## Testing
 
-Test the server by 
-
+Test the server by pointing your web browser at:
+```
+https://localhost/das/server
+https://localhost/das/log
+```
+If this works try browesing your new server with Autoplot.  To do so, copy the
+following URI in to the Autoplot address bar and hit the green arrow "Go" button:
+```
+vap+das2server:https://localhost/das/server
+```
 
 ## Next steps
-For further customization and configuration of your das2-pyserver installation, including
-authentication, worker processes and caching and consult the Users Guide document
-`das2_pyserver_ug.odt` included in the root of the reository
+
+The das2 pyserver programs read configuration data from the file:
+
+```bash
+$PREFIX/etc/das2server.conf
+```
+
+Take time to customize a few items in your config file such as the 
+`site_name` and the `contact_email`.   You may also want change the file
+`${PREFIX}/static/logo.png` or even the style sheet at 
+`${PREFIX}/static/das2server.css` to something a little nicer.
+
+For further customization and configuration of your das2-pyserver installation,
+including: 
+
+  * Authentication 
+  * Request caching
+  * [Federated catalog](https://das2.org/browse) integration
+  * Enabling [HAPI](https://github.com/hapi-server/data-specification) output
+
+consult the Users Guide document  `das2_pyserver_ug.odt` included in the root of
+the repository.
+
 
 

@@ -63,11 +63,8 @@ MAIN_SRV_URL = "server"
 
 
 # Restricting the das2_srvcgi_logrdr program to only allow local LAN
-# traffic is part of your Apache setup.  The line below is not an access
-# control mechanisim.  This merely prevents the das2_srvcgi_main from
-# sending links to the log program that can't be viewed at the client's
-# IP address. 
-# VIEW_LOG_ALLOW = your.site.edu
+# traffic is part of your Apache setup.
+VIEW_LOG_ALLOW = 127.0.0.1
 
 # A sample dataset to use when testing the front page.  Pick your favorite
 # dataset to highlight.

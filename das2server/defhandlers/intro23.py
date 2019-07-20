@@ -245,7 +245,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	</div>
 	<div class="hdr_right">
 		<a href="http://das2.org">
-		<img src="%(script)s/static/das2logo_rv.png" alt="Das2" width="80" height="80">
+		<img src="%(script)s/static/das2logo_rv.png" alt="das2" width="80" height="80">
 		</a>
 	</div>
 	</a>
@@ -289,29 +289,117 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
                     HAPI 1.1</a> protocol, a simplified time series cube service
 					     defined by the heliophysics API group. </li></ul>"""
 	else:
-		sTmp = """This is a Das 2.3 (prototype) Server, it provides access to
-		          space physics data sources using a two distinct HTTP GET based
-					 query protocols, the established Das 2.2 protocol and the
-					 evolving path based 2.3 protocol."""
+		sTmp = """This is a Das 2.3 Server, it provides access to space physics data 
+		          sources using a two distinct HTTP GET based query protocols, the
+					 established Das 2.2 protocol and the evolving path based 2.3 
+					 protocol."""
 	
 	pout("""
 <p>%s %s
 </p>
 
 <p>Full use of this site requires a client progam capable of reading data in
-Das2 stream or QStream format.  <a href="http://autoplot.org">Autoplot</a> is a
-general client for plotting many types of space physics data, including
-streams from this server, and the 
-<a href="http://www-pw.physics.uiowa.edu/das2/demo-apps.html">Das2 Clients</a>
-from the University of Iowa provide specific interfaces tailored to certian
-data sets.
+das2.2 stream format.  <a href="http://autoplot.org">Autoplot</a> is a
+full-featured graphical for plotting many types of space physics data, including
+streams from this server.  In addition custom applications, or data analysis 
+programs can be written in IDL via the <a href="https://github.com/das-developers/das2pro">das2pro</a>
+package, Python using the <a href="https://das2.org/das2py">das2py</a> module,
+or C using <a href="https://saturn.physics.uiowa.edu/svn/das2/core/stable/libdas2_3/">
+libdas2</a>.
 <p>
 </p>
-Since this server delivers information over HTTP, limited functionality
+Since this server delivers information over HTTP, limited functionality thus
 is available using any standard web browser.  Some example queries are 
 provided below.
 </p>
 """%(sTmp, sViewLog))
+
+	pout("""
+<h2>Das 2.2 Service Queries</h2>
+<ul>
+
+<li><b>Data Source List</b> -- To download a list of all data sources known to
+this server use the following URL:
+<br /><br />
+<a href="%(script)s?server=list">%(script)s?server=list</a>
+<br /><br />
+</li>"""%dReplace)
+
+	pout("""
+<li><b>Peer List</b> -- To download a list of other Das2 Servers known to this
+site use the following URL:
+<br /><br />
+<a href="%(script)s?server=peers">%(script)s?server=peers</a>
+<br /><br />
+</li>
+"""%dReplace)
+
+	pout("""
+<li><b>Dataset Definition</b> -- To gather basic information on a datasource
+enter a URL with the pattern:
+<br /><br />
+%(script)s?server=info&dataset=<i>DATA_SET_NAME</i>
+<br /><br />
+Where the <i>DATA_SET_NAME</i> is one of the file paths provided by a 
+data source list query.
+"""%dReplace)
+
+	if 'dataset' in dReplace:
+		pout("""
+For example:
+<br /><br />
+<a href="%(script)s?server=dsdf&dataset=%(dataset)s">
+%(script)s?server=dsdf&dataset=%(dataset)s</a>
+		"""%dReplace)
+	
+	pout("<br /><br /></li>")
+	
+	pout("""
+<li><b>Data Download</b> -- To download data as either 
+a Das2Stream or QStream enter a URL with the pattern:
+<br /><br />
+%(script)s?server=dataset&dataset=<i>DATA_SET_NAME</i>&start_time=<i>BEGIN</i>&end_time=<i>END</i>
+<br /><br />
+Where the <i>START</i> and <i>END</i> are time strings.  Though may time 
+formats will work with most data sources, ISO-8601 format strings are 
+recommended, in general these look like YYYY-MM-DDTHH:MM:SS.sss where 
+uneeded time fields may be omitted.
+"""%dReplace)
+
+	if 'start_time' in dReplace and 'end_time' in dReplace:
+		pout("""
+For example:
+<br /><br />
+<a href="%(script)s?server=dataset&dataset=%(dataset)s&start_time=%(start_time)s&end_time=%(end_time)s">
+%(script)s?server=dataset&dataset=%(dataset)s&start_time=%(start_time)s&end_time=%(end_time)s</a>
+		"""%dReplace)
+	
+	pout("<br /><br /></li>")
+	
+	if 'PNG_MAKER' in dConf:
+		pout("""
+<li><b>Plot Download</b> -- This server has been extended with a server side
+plotter which delivers data as PNG images.  To use this functionality enter a
+URL with the pattern:
+<br /><br />
+%(script)s?server=image&dataset=<i>DATA_SET_NAME</i>&start_time=<i>BEGIN</i>&end_time=<i>END</i>		
+<br /><br />
+"""%dReplace)
+
+		if 'start_time' in dReplace and 'end_time' in dReplace and \
+		   'dataset' in dReplace:
+			pout("""
+For example:
+<br /><br />
+<a href="%(script)s?server=image&dataset=%(dataset)s&start_time=%(start_time)s&end_time=%(end_time)s">
+%(script)s?server=image&dataset=%(dataset)s&start_time=%(start_time)s&end_time=%(end_time)s</a>
+		"""%dReplace)
+			
+		pout("<br /><br /></li>")
+		
+
+	pout("</ul>")
+
 
 	pout("""
 <h2>Das 2.3 Service Queries</h2>
@@ -332,7 +420,7 @@ this server use the following URL:
 </li>"""%dReplace)
 
 	pout("""
-<li><b>Peers List</b> -- To download a list of other Das2 servers known to this
+<li><b>Peers List</b> -- To download a list of other das2 servers known to this
 site use the following URL:
 <br /><br />
 <a href="%(script)s/peers.xml">%(script)s/peers</a>
@@ -364,7 +452,7 @@ For example:
 	
 	pout("""
 <li><b>Data Download</b> -- To download data as either 
-a Das2 stream or QStream enter a URL with the pattern:
+a das2 stream or QStream enter a URL with the pattern:
 <br /><br />
 DATA_SOURCE_URL</i>&start_time=<i>BEGIN</i>&end_time=<i>END</i>
 <br /><br />
@@ -384,39 +472,7 @@ For example:
 		"""%dReplace)
 	
 	pout("<br /><br /></li>")
-	
-	#if 'PNG_MAKER' in dConf:
-	#	pout("""
-#<li><b>Plot Download</b> -- This server has been extended with a server side
-#plotter which delivers data as PNG images.  To use this functionality enter a
-#URL with the pattern:
-#<br /><br />
-#%(script)s?server=image&dataset=<i>DATA_SET_NAME</i>&start_time=<i>BEGIN</i>&end_time=<i>END</i>		
-#<br /><br />
-#"""%dReplace)
-#
-#		if 'start_time' in dReplace and 'end_time' in dReplace and \
-#		   'dataset' in dReplace:
-#			pout("""
-#For example:
-#<br /><br />
-#<a href="%(script)s?server=image&dataset=%(dataset)s&start_time=%(start_time)s&end_time=%(end_time)s">
-#%(script)s?server=image&dataset=%(dataset)s&start_time=%(start_time)s&end_time=%(end_time)s</a>
-#		"""%dReplace)
-#			
-#		pout("</li>")
 		
-
-	pout("</ul>")
-	
-	pout("""
-<h2>Das 2.2 Service Queries</h2>
-<p>Though no examples are provided here, the 2.2 service protocol is supported
-by this server and will be <em>supported indefinitly</em> for the benefit of current
-client programs.
-</p>""")
-
-	
 	
 	if bHSubSys:
 		pout("""
