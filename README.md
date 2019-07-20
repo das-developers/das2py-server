@@ -27,20 +27,13 @@ Compilation and installation of das2-pyserver has only been tested in Linux
 environments and depends on the following tools:
 
 1. Python >= 2.6, or Python >= 3.4
-
 2. Apache2, any remotely recent version configured with at least one CGI
    directory
-
 3. [Redis](https://redis.io), known to work with version 3.2.12, will
    likely work with older versions as well.
-
-4. python-redis, the python bindings for Redis.
-
-5. [libdas2](https://saturn.physics.uiowa.edu/svn/das2/core/stable/libdas2_3), 
-   both the base C tools and Python bindings must be built.  In the future
-   libdas2 will be split into **das2c** and **das2py** and moved to
-   github, for now you'll have to consult the libdas2 [INSTALL.txt](https://saturn.physics.uiowa.edu/svn/das2/core/stable/libdas2_3/INSTALL.txt) 
-   file and build from SVN sources.
+4. python-redis - the python bindings for Redis
+5. [libdas2](https://saturn.physics.uiowa.edu/svn/das2/core/stable/libdas2_3) - efficent
+   das2 stream processors written in C and their python bindings
 
 Since libdas2 provides small binaries needed by das2-pyserver, and since there
 are no pre-built libdas2.3 packages, installing instructions for both sets of
@@ -51,20 +44,25 @@ bourne compatible shell (bash, ksh, etc.).
 For convienience, package installation commands for das2-pyserver and libdas2.3
 are provided below for CentOS 7:
 ```bash
-$ yum install gcc subversion git                     # for source downloads
-$ yum install expat-devel fftw-devel openssl-devel   # needed to build libdas2.3
-$ yum install python3 python3-numpy python3-devel    # needed to bulid das2py
-$ yum install --enablerepo=epel install redis        # needed by pyserver
-$ yum install --enablerepo=epel install hiredis      # needed by pyserver
-$ yum install --enablerepo=epel install python-redis # needed by pyserver
+$ sudo yum install gcc subversion git                     # for source downloads
+$ sudo yum install expat-devel fftw-devel openssl-devel   # needed to build libdas2.3
+$ sudo yum install python3 python3-numpy python3-devel    # needed to bulid das2py
+$ sudo yum install --enablerepo=epel install redis        # needed for caching
+
+$ sudo yum install --enablerepo=epel install python2-redis 
+# -- or --
+$ sudo pip3 install redis                                   
 ```
 and Debian 9.1:
 ```bash
-$ apt-get install gcc subversion git                     # for source downloads
-$ apt-get install libexpat-dev libfftw3-dev libssl-dev   # needed to bulid libdas2.3
-$ apt-get install python3-dev python3-distutils python3-numpy  # to build das2py
-$ apt-get install redis-server                           # needed by pyserver
-$ apt-get install python-hiredis                         # needed by pyserver
+$ sudo apt-get install gcc subversion git                     # for source downloads
+$ sudo apt-get install libexpat-dev libfftw3-dev libssl-dev   # needed to bulid libdas2.3
+$ sudo apt-get install python3-dev python3-distutils python3-numpy  # to build das2py
+$ sudo apt-get install redis-server                           # needed for cacheing
+
+$ sudo apt-get install python-redis
+# -- or --
+$ sudo apt-get install python3-redis
 ```
 
 ## Getting the sources
