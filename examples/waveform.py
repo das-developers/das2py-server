@@ -251,7 +251,7 @@ class VgrFileReader(object):
 	def __init__(self, log, sFile):
 		log.info("Reading %s"%sFile)
 		self.sFile = sFile
-		self.fIn = file(sFile, 'rb')
+		self.fIn = open(sFile, 'rb')
 		self.dtFrame = None
 		
 	def __iter__(self):

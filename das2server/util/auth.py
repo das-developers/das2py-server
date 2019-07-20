@@ -96,7 +96,7 @@ def authenticate(dConf, fLog, sUser, sPasswd):
 		return AUTH_SVR_ERR
 	
 	try:
-		fIn = file(dConf['USER_PASSWD'], 'rb')
+		fIn = open(dConf['USER_PASSWD'], 'r')
 	except IOError:
 		fLog.write("   Authorization: ERROR! Can't open password file, '%s'"%dConf['USER_PASSWD'])
 		return AUTH_SVR_ERR
@@ -150,7 +150,7 @@ def getUserGroups(dConf, fLog, sUser):
 	lGroups = []
 
 	try:
-		fIn = file(dConf['USER_GROUP'], 'rb')
+		fIn = open(dConf['USER_GROUP'], 'r')
 	except IOError:
 		fLog.write("   Authorization: ERROR! Can't open group file, '%s'"%dConf['USER_GROUP'])
 		return (AUTH_SVR_ERR, None)

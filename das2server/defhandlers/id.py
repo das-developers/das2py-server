@@ -22,7 +22,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		pout("%s\r\n"%dConf['SITE_NAME'])
 		return 0
 
-	U.io.serverError(fLog, u"Bad Server Configuration, SITE_IDENTITY missing")
+	U.webio.serverError(fLog, u"Bad Server Configuration, SITE_IDENTITY missing")
 	return 17
 	
 

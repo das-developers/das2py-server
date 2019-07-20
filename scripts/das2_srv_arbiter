@@ -210,8 +210,8 @@ def daemonize(fLog, sPidFile):
 	# redirect standard file descriptors
 	sys.stdout.flush()
 	sys.stderr.flush()
-	si = file('/dev/null', 'r')
-	so = file('/dev/null', 'a+')
+	si = open('/dev/null', 'r')
+	so = open('/dev/null', 'a+')
 	
 	# Just incase we are accidentally writing to stdout/stderr somewhere
 	# in a library call...
@@ -222,7 +222,7 @@ def daemonize(fLog, sPidFile):
 	# write pidfile
 	atexit.register(delPid, sPidFile)
 	pid = str(os.getpid())
-	file(sPidFile,'w+').write("%s\n" % pid)
+	open(sPidFile,'w+').write("%s\n" % pid)
 	
 	fLog.newPrefix()
 	fLog.write("das2_srv_arbiter started, PID written to %s"%sPidFile)
@@ -351,7 +351,7 @@ The current version can't process more than one job at a time.
 	if dConf.has_key('LOG_PATH') and opts.sPidFile:
 	
 		# The switch to using fLog over stderr happens within daemonize
-		fLog = U.io.DasLogFile(dConf['LOG_PATH'], 
+		fLog = U.webio.DasLogFile(dConf['LOG_PATH'], 
 		       "arbiter_%s"%socket.gethostname())
 		nRet = daemonize(fLog, opts.sPidFile)	
 		if nRet != 0:

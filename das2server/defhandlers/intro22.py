@@ -45,7 +45,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		         non-embedded testing
 					
 	   fLog - Log your errors or other information in fLog, or better yet use
-		       the error output functions in U.io.
+		       the error output functions in U.webio.
 		
 	Return Value:
 	
@@ -59,7 +59,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		client type.
 	"""
 	
-	dReplace = {"script":U.io.getScriptUrl()}
+	dReplace = {"script":U.webio.getScriptUrl()}
 	
 	sExQuery = ""
 	if 'SAMPLE_DSDF' in dConf:

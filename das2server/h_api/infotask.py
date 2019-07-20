@@ -213,7 +213,7 @@ class Task(T.TaskHandler):
 		
 		sJsonOut = json.dumps(dOut, ensure_ascii=False, sort_keys=True, indent=3)
 				
-		fOut = file(self.sOutPath, 'wb')
+		fOut = open(self.sOutPath, 'w')
 		fOut.write(sJsonOut)
 		fOut.close()
 		fLog.write("Cache file %s written"%self.sOutPath)

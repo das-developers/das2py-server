@@ -28,7 +28,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 			sPasswd = lAuth[1]
 			
 			if 'USER_PASSWD' in dConf and os.path.isfile(dConf['USER_PASSWD']):
-				fIn = file(dConf['USER_PASSWD'], 'rb')
+				fIn = open(dConf['USER_PASSWD'], 'r')
 			
 				for sLine in fIn:
 					sLine = sLine.strip()

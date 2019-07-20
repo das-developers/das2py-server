@@ -25,7 +25,7 @@ def getDataDirs(U, dConf, fLog, sRelPath):
 	           information for the top of the dsid root
 	"""
 
-	sScriptURL = U.io.getScriptUrl()
+	sScriptURL = U.webio.getScriptUrl()
 	
 	# Keep a list of directories
 
@@ -62,7 +62,7 @@ def getDataDirs(U, dConf, fLog, sRelPath):
 		sDirDsdf = pjoin(sPath, sDir, '_dirinfo_.dsdf')
 		if os.path.isfile(sDirDsdf):
 			try:
-				fIn = file(sDirDsdf, 'rb')
+				fIn = open(sDirDsdf, 'r')
 				for sLine in fIn:
 					if sLine.find('#') != -1:
 						sLine = sLine[: sLine.find('#') ]
@@ -101,7 +101,7 @@ def allowViewLog(dConf, fLog, sIP):
 
 def _dataNavHeader(U, sReqType, dConf, fLog, form, sPathInfo):
 	
-	sScriptURL = U.io.getScriptUrl()
+	sScriptURL = U.webio.getScriptUrl()
 	
 	sDataSet = sPathInfo.replace('/source/', '')
 	
@@ -139,7 +139,7 @@ def _dataNavHeader(U, sReqType, dConf, fLog, form, sPathInfo):
 # A general header for browser based access to the das22 server
 def browserHeader(U, sReqType, dConf, fLog, form, sPathInfo):
 
-	sScriptURL = U.io.getScriptUrl()
+	sScriptURL = U.webio.getScriptUrl()
 	
 	if 'SITE_NAME' in dConf:
 		sSiteId = dConf['SITE_NAME']

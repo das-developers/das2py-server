@@ -26,7 +26,7 @@ except ImportError:
 
 import das2
 
-from . import io
+from . import webio
 from . import errors
 
 ##############################################################################
@@ -1441,7 +1441,7 @@ def _sourceGetParamDictHelper(dParams, dRet, sPrefix=None):
 		if 'TYPE' in dParams[sParam]:
 			dRet[sTmp] = dParams[sParam]
 		else:
-			#U.io.serverError(fLog, u"DEBUG: sub params are %s"%dParams[sParam].keys())
+			#U.webio.serverError(fLog, u"DEBUG: sub params are %s"%dParams[sParam].keys())
 			#return None
 			_sourceGetParamDictHelper(dParams[sParam], dRet, sParam)
 

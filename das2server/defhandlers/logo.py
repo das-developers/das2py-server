@@ -31,13 +31,16 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	(sType, sEncode) = mimetypes.guess_type(lLogos[0])
 	if sType == None:
-		U.io.serverError(fLog, u"Unrecognized mime type for %s"%lLogos[0])
+		U.webio.serverError(fLog, u"Unrecognized mime type for %s"%lLogos[0])
 		return 17
 	
 	pout("Content-Type: %s\r\n\r\n"%sType)
 	
 	fLog.write("\nLogo Handler\n   Sending: %s"%lLogos[0])
-	fIn = file(lLogos[0], 'rb')
-	sys.stdout.write(fIn.read())
+	fIn = open(lLogos[0], 'rb')
+	if sys.version_info[0] == 2:
+		sys.stdout.write(fIn.read())
+	else:
+		sys.stdout.buffer.write(fIn.read())
 	return 0
 	

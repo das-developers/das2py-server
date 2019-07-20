@@ -19,7 +19,7 @@ def _getDataDirs(U, dConf, fLog, sRelPath):
 	           information for the top of the dsid root
 	"""
 
-	sScriptURL = U.io.getScriptUrl()
+	sScriptURL = U.webio.getScriptUrl()
 	
 	# Keep a list of directories
 
@@ -56,7 +56,7 @@ def _getDataDirs(U, dConf, fLog, sRelPath):
 		sDirDsdf = pjoin(sPath, sDir, '_dirinfo_.dsdf')
 		if os.path.isfile(sDirDsdf):
 			try:
-				fIn = file(sDirDsdf, 'rb')
+				fIn = open(sDirDsdf, 'r')
 				for sLine in fIn:
 					if sLine.find('#') != -1:
 						sLine = sLine[: sLine.find('#') ]
@@ -95,7 +95,7 @@ def allowViewLog(dConf, fLog, sIP):
 
 def _dataNavHeader(U, sReqType, dConf, fLog, form, sPathInfo):
 	
-	sScriptURL = U.io.getScriptUrl()
+	sScriptURL = U.webio.getScriptUrl()
 	
 	sDataSet = sPathInfo.replace('/source/', '')
 	
@@ -165,7 +165,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		         non-embedded testing
 					
 	   fLog - Log your errors or other information in fLog, or better yet use
-		       the error output functions in U.io.
+		       the error output functions in U.webio.
 		
 	Return Value:
 	
@@ -182,7 +182,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	pout('Content-Type: text/html; charset=utf-8\r\n')
 	pout('<!DOCTYPE html>')
 	
-	dReplace = {"script":U.io.getScriptUrl()}
+	dReplace = {"script":U.webio.getScriptUrl()}
 	
 	sExQuery = ""
 	if 'SAMPLE_DSDF' in dConf:
@@ -206,7 +206,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 			           'activity logs</a> for your IP address are available.'
 			sViewLogNav = '<hr><a href="%s">Activity Log</a>'%dConf['VIEW_LOG_URL'] 
 	
-	sScriptURL = U.io.getScriptUrl()
+	sScriptURL = U.webio.getScriptUrl()
 	
 	if 'SITE_NAME' in dConf:
 		sSiteId = dConf['SITE_NAME']
@@ -221,9 +221,9 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	dReplace['SERVER_ID'] = sServerId
 
 	if 'STYLE_SHEET' in dConf:
-		sCssLink = "%s/resource/%s"%(sScriptURL, dConf['STYLE_SHEET'])
+		sCssLink = "%s/static/%s"%(sScriptURL, dConf['STYLE_SHEET'])
 	else:
-		sCssLink = "%s/resource/das2server.css"%sScriptURL
+		sCssLink = "%s/static/das2server.css"%sScriptURL
 	
 	pout('''
 <html>
@@ -245,7 +245,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	</div>
 	<div class="hdr_right">
 		<a href="http://das2.org">
-		<img src="%(script)s/resource/das2logo_rv.png" alt="Das2" width="80" height="80">
+		<img src="%(script)s/static/das2logo_rv.png" alt="Das2" width="80" height="80">
 		</a>
 	</div>
 	</a>

@@ -259,7 +259,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	pout("Content-Type: application/json; charset=utf-8\r\n")
 	
 	if 'DSDF_ROOT' not in dConf:
-		U.io.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
+		U.webio.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
 		return 17
 		
 	dsdf = U.dsdf.Dsdf(sDsdf, dConf, form, fLog)
@@ -267,7 +267,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	dOut = _dsdfJson(dsdf)
 	dOut['id'] = sDsdf
 	
-	sScript = U.io.getScriptUrl()
+	sScript = U.webio.getScriptUrl()
 	sUrl = _exampleUrl(U, dConf, sScript, sDsdf, dOut, bMkPathUrl)
 	if sUrl:
 		dOut['example'] = sUrl

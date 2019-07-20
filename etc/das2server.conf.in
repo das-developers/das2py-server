@@ -47,7 +47,7 @@ BIN_PATH = "%(PREFIX)s/bin"
 LIB_PATH = "%(PREFIX)s/lib"
 
 # Where to put log files.  You should probably pick an alternate location
-LOG_PATH = "$(PREFIX)s/log"
+LOG_PATH = "%(PREFIX)s/log"
 
 # The URL to the das2_srvcgi_logrdr program.  If this value doesn't
 # contain '//' then it is assumed to be relative to the path to the 
@@ -80,7 +80,7 @@ IGNORE_REDIRECT = false
 
 # Path to various resource files, such as style sheets, logos, etc
 # Should contain das2server.xsl, and a logo.*.
-RESOURCE_PATH = "%(PREFIX)s/resource"
+RESOURCE_PATH = "%(PREFIX)s/static"
 
 # Old 2.2 support.  Prior to das 2.3 there was no concept of a central catalog
 # thus servers could only find each other via peers lists.  To support older

@@ -79,7 +79,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	interface"""
 	
 	if 'DSDF_ROOT' not in dConf:
-		U.io.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
+		U.webio.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
 		return 17
 		
 	pout("Content-Type: text/plain; charset=utf-8\r\n")

@@ -69,7 +69,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	sHapiParam = form.getfirst('parameters','')
 	U.dsdf.checkParam(fLog, 'parameters', sHapiParam)
 	
-	sScript = U.io.getScriptUrl()
+	sScript = U.webio.getScriptUrl()
 	
 	if 'DSDF_ROOT' not in dConf:
 		error.sendUnkId(fLog, "Server misconfigured, DSDF_ROOT not specified", True)

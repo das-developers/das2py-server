@@ -13,7 +13,7 @@ def getCatalog(U, fLog, sInDir, sDirUrl, sDirUri):
 	list.  Next, """
 	
 	if not os.path.isdir(sInDir):
-		U.io.serverError(fLog, "Directory %s does not exist"%sInDir)
+		U.webio.serverError(fLog, "Directory %s does not exist"%sInDir)
 		return 17
 	
 	# Try to get a URI if I was not given one
@@ -24,7 +24,7 @@ def getCatalog(U, fLog, sInDir, sDirUrl, sDirUri):
 			fIn = open(sDirInfo, "rb")
 			dDsdf = U.dsdf.readDsdf(fIn, fLog)
 		except Error as e:
-			U.io.serverError(fLog, str(e))
+			U.webio.serverError(fLog, str(e))
 		
 		if 'uri' in dDsdf:
 			sDirUri = dDsdf['uri'].strip("\"' \r\n\t")
@@ -34,7 +34,7 @@ def getCatalog(U, fLog, sInDir, sDirUrl, sDirUri):
 		fIn.close()
 		
 	elif sDirUri is None:
-		U.io.serverError(fLog, """Can not determine catalog URI's.
+		U.webio.serverError(fLog, """Can not determine catalog URI's.
 Please create file %s and include the 'uri' keyword."""%sDirInfo )
 		return 17
 	
@@ -45,7 +45,7 @@ Please create file %s and include the 'uri' keyword."""%sDirInfo )
 	
 	i = sDirUri.rfind('/')
 	if i < 0:
-		U.io.serverError(fLog, "Bad catalog URI '%s', no slashes before the end"%sDirUri)
+		U.webio.serverError(fLog, "Bad catalog URI '%s', no slashes before the end"%sDirUri)
 		return 17
 		
 	# My name
@@ -110,7 +110,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	doesn't exist.  Otherwise it will use the cached version (TODO)
 	"""	
 	if 'DSDF_ROOT' not in dConf:
-		U.io.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
+		U.webio.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
 		return 17
 	
 	# _dirOut and _fileOut append a list of tuples to lOut
@@ -130,7 +130,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	for sRoot in lRoots:
 		pass
 	
-	dCatalog = getCatalog(U, fLog, dConf['DSDF_ROOT'], U.io.getScriptUrl(), None)
+	dCatalog = getCatalog(U, fLog, dConf['DSDF_ROOT'], U.webio.getScriptUrl(), None)
 	if dCatalog != None:	
 		uCat = json.dumps(dCatalog, ensure_ascii=False, encoding='utf8', 
 		                  sort_keys=True, indent=3)

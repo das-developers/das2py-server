@@ -10,7 +10,7 @@ from os.path import join as pjoin
 
 from . import errors as E
 
-# Ugg, the python 2/3 mess.  Would be fine if I was paid overtime...
+# Ugg, the python 2/3 mess, would be fine if I was paid overtime...
 try:
 	unicode         # in python2 only unicode class has .encode
 except NameError:
@@ -299,7 +299,7 @@ class DasLogFile(object):
 			nSuffix = (int(time.time()) / 86400) % 3
 			sLogFile = 'das2.%s_%d.log'%(sRmtAddr, nSuffix)
 			sLogPath = pjoin( sDir, sLogFile)
-			self._file = file(sLogPath, 'ab')
+			self._file = open(sLogPath, 'a')
 			
 		self.sPrefix = "%s %d"%(time.asctime(), os.getpid())
 		self.nLine = 0

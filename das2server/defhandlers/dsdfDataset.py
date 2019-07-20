@@ -42,19 +42,19 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 			sDsdf = sDsdf[len('/data/'):]
 	
 	if sDsdf.find('_dirinfo_') != -1:
-		U.io.queryError(fLog, u"Invalid das2.3 query")
+		U.webio.queryError(fLog, u"Invalid das2.3 query")
 		return 17
 	
 	fLog.write("\nDas 2.3 Dataset Handler")
 	
 	if sys.platform.startswith('win'):
-		U.io.todoError(fLog, u"Not yet compatible with windows:\n"+\
+		U.webio.todoError(fLog, u"Not yet compatible with windows:\n"+\
 		      u"Change the shell pipelines to use the python subprocess "+\
 				u"module before running on windows.")
 		return 7	
 	
 	if 'DSDF_ROOT' not in dConf:
-		U.io.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
+		U.webio.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
 		return 17
 					
 	# All das2.2 queries require a start and end time
@@ -73,7 +73,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		try:
 			rRes = float(sRes)
 		except ValueError as e:
-			U.io.queryError(fLog, u"Invalid das2.2 query, resolution '%s'"%sRes+\
+			U.webio.queryError(fLog, u"Invalid das2.2 query, resolution '%s'"%sRes+\
 			                "is not convertable to a floating point number")
 			return 17			
 		
@@ -90,10 +90,10 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 			return 17
 	
 	if sBeg == '':
-		U.io.queryError(fLog, u"Invalid das2.2 query, start_time was not specified")
+		U.webio.queryError(fLog, u"Invalid das2.2 query, start_time was not specified")
 		return 17
 	if sEnd == '':
-		U.io.queryError(fLog, u"Invalid das2.2 query, end_time was not specified")
+		U.webio.queryError(fLog, u"Invalid das2.2 query, end_time was not specified")
 		return 17
 		
 	# Okay this looks like a decent query, load the dsdf, and fill in defaults
@@ -105,7 +105,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		if u'rename' in dsdf:
 			return U.dsdf.handleRedirect(fLog, sDsdf, dsdf)
 		
-		if u'server' in dsdf and dsdf[u'server'] != U.io.getScriptUrl() \
+		if u'server' in dsdf and dsdf[u'server'] != U.webio.getScriptUrl() \
 		   and not U.misc.isTrue('IGNORE_REDIRECT', dConf):
 			return U.dsdf.handleRedirect(fLog, sDsdf, dsdf)
 		
@@ -114,7 +114,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		(_sBeg, _sEnd) = dsdf.trimToValidRange(fLog, sBeg, sEnd)
 		
 		if (_sBeg == None) or (_sEnd == None):
-			U.io.dasExcept("NoDataInInterval", u"No data in the range %s to %s"%(
+			U.webio.dasExcept("NoDataInInterval", u"No data in the range %s to %s"%(
 			                sBeg, sEnd), fLog, False)
 			return 0
 		else:
@@ -122,7 +122,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 			sEnd = _sEnd
 	
 	except U.errors.DasError as e:
-		U.io.dasErr2HttpMsg(fLog, e)
+		U.webio.dasErr2HttpMsg(fLog, e)
 		return 17
 		
 		
@@ -207,7 +207,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		if sInterval == '':
 			# The reader requires an interval setting but none was provided
 			if dsdf[u'requiresInterval']:
-				U.io.queryError(fLog, u"Invalid das2.2 query, parameter 'interval' was not specified")
+				U.webio.queryError(fLog, u"Invalid das2.2 query, parameter 'interval' was not specified")
 				return 17
 		
 		
@@ -229,7 +229,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	fLog.write(u"   Exec Host: %s"%platform.node())
 	fLog.write(u"   Exec Cmd: %s"%uCmd)
 		
-	(sMimeType, sContentDis, sFileExt) = U.io.getOutputMime(sOutCat, sOutFmt)
+	(sMimeType, sContentDis, sFileExt) = U.webio.getOutputMime(sOutCat, sOutFmt)
 		
 	# Generate a filename
 	sFnBeg = sBeg.replace(":","-").replace(".000Z", "").replace("T00-00-00","")
@@ -243,7 +243,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		fLog, uCmd, sMimeType, sContentDis, sOutFile)
 
 	if nRet != 0:
-		U.io.serverError(
+		U.webio.serverError(
 			fLog, 
 			u"exec: %s\n%s\nNon-zero exit value, %d from pipeline"%(uCmd, sStdErr, nRet ), 
 			bHdrSent

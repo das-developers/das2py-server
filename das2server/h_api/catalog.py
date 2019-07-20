@@ -209,7 +209,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	pout("Content-Type: application/json; charset=utf-8")
 	
 	if 'DSDF_ROOT' not in dConf:
-		U.io.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
+		U.webio.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
 		return 17
 	
 	if not error.paramCheck(fLog, 'catalog', [], form):
@@ -217,7 +217,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 			
 	pout("Status: 200 OK\r\n")  
 	
-	sScript = U.io.getScriptUrl()
+	sScript = U.webio.getScriptUrl()
 
 	
 	# _dirOut and _fileOut append a list of tuples to lOut

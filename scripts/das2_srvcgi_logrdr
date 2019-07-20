@@ -120,7 +120,7 @@ def main():
 		return 13
 
 	
-	sViewLogUrl = U.io.getScriptUrl()
+	sViewLogUrl = U.webio.getScriptUrl()
 	sMainSrvUrl = 'server'
 	if 'MAIN_SRV_URL' in dConf:
 		sMainSrvUrl = dConf['MAIN_SRV_URL']
@@ -274,7 +274,7 @@ def getConf(sConfFile):
 			
 		return None
 
-	fIn = file(sConfFile, 'rb')
+	fIn = open(sConfFile, 'r')
 	
 	dConf = {}
 	nLine = 0
@@ -320,7 +320,7 @@ def deleteAll(sLogDir, type,ip):
 		pjoin(sLogDir, '%s.%s_2.log'%(type,ip)),
 	]
 	
-	fOut = file("%s/das2.%s_loghndlr.log"%(sLogDir, ip), "wb")
+	fOut = open("%s/das2.%s_loghndlr.log"%(sLogDir, ip), "w")
 	fOut.write("Removing %s"%files)
 	fOut.close()
 

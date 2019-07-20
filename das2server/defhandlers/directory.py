@@ -57,7 +57,7 @@ def getDirUri(U, fLog, dConf, dDirInfo, sCatDir):
 	
 	# Still here huh, okay
 	if "SITE_PATHURI" not in dConf:
-		U.io.serverError(fLog, 
+		U.webio.serverError(fLog, 
 			"No pathUri setting along the path of _dirinfo_.dsdf files leading "+\
 		   "the path to file %s and fall back value SITE_PATHURI not set in %s"%(
 							  pjoin(_sOrigCatDir, '_dirinfo_.dsdf'), dConf['__file__']))
@@ -188,7 +188,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	pout = sys.stdout.write
 	
 	if 'DSDF_ROOT' not in dConf:
-		U.io.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
+		U.webio.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
 		return 17
 	
 	# _dirOut and _fileOut append a list of tuples to lOut
@@ -212,7 +212,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	sDirInfo = pjoin(sPath, '_dirinfo_.dsdf')
 	if not os.path.isfile(sDirInfo):
 		# _dirinfo_.dsdf files are now required
-		U.io.serverError(fLog, """Catalog directory file %s missing"""%sDirInfo)
+		U.webio.serverError(fLog, """Catalog directory file %s missing"""%sDirInfo)
 		return 17
 	fIn = open(sDirInfo, 'rb')
 	dDirInfo = U.dsdf.readDsdf(fIn, fLog)
@@ -239,9 +239,9 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	# We are not a remote catalog, find all sub items of this directory
 	if len(sCatPath) > 0:
-		sMyUrl = pjoin( U.io.getScriptUrl(), "source", sCatPath)
+		sMyUrl = pjoin( U.webio.getScriptUrl(), "source", sCatPath)
 	else:
-		sMyUrl = pjoin( U.io.getScriptUrl(), "source")
+		sMyUrl = pjoin( U.webio.getScriptUrl(), "source")
 	dBody = getCatBody(U, fLog, dConf, sUri, sMyUrl, sPath)
 	if dBody == None:
 		return 17

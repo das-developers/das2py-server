@@ -4,7 +4,7 @@
 from __future__ import absolute_import
 
 import os
-from . import io
+from . import webio
 
 ##############################################################################
 class recursionError(Exception):

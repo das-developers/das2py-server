@@ -17,14 +17,14 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	"""
 	
 	if 'PEERS_FILE' not in dConf:
-		U.io.serverError(fLog, u"Create an INI file contaning known das2 servers, then "
+		U.webio.serverError(fLog, u"Create an INI file contaning known das2 servers, then "
 		      "add a PEERS_FILE key to \n%s to point to your peers list."%dConf['__file__'])
 		return 17
 	
 	sPeersFile = dConf['PEERS_FILE']
 	
 	if not os.path.isfile(sPeersFile):
-		U.io.serverError(fLog, u"Peers file %s is missing"%sPeersFile)
+		U.webio.serverError(fLog, u"Peers file %s is missing"%sPeersFile)
 		return 17
 	
 	psr = ConfigParser.SafeConfigParser()

@@ -25,13 +25,13 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	fLog.write("\nDas 2.1 Dataset Handler")
 	
 	if sys.platform.startswith('win'):
-		U.io.todoError(fLog, u"Not yet compatible with windows:\n"+\
+		U.webio.todoError(fLog, u"Not yet compatible with windows:\n"+\
 		      u"Change the shell pipelines to use the python subprocess "+\
 				u"module before running on windows.")
 		return 7	
 	
 	if 'DSDF_ROOT' not in dConf:
-		U.io.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
+		U.webio.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
 		return 17
 					
 	# All das2.1 queries require a start and end time
@@ -44,10 +44,10 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		sRes = form.getfirst('interval', '')
 		
 	if sBeg == '':
-		U.io.queryError(fLog, u"Invalid das2.1 query, start_time was not specified")
+		U.webio.queryError(fLog, u"Invalid das2.1 query, start_time was not specified")
 		return 17
 	if sEnd == '':
-		U.io.queryError(fLog, u"Invalid das2.1 query, end_time was not specified")
+		U.webio.queryError(fLog, u"Invalid das2.1 query, end_time was not specified")
 		return 17
 	
 	# Okay this looks like a decent query, load the dsdf
@@ -59,7 +59,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	if 'IGNORE_REDIRECT' not in dConf or \
 	   not U.dsdf.isTrue('IGNORE_REDIRECT', dConf):
 		if u'server' in dDsdf:	
-			sScriptStr = U.io.getScriptUrl()
+			sScriptStr = U.webio.getScriptUrl()
 			sDsdfScriptStr = dDsdf[u'server'].encode('ascii', 'replace')
 			if sScriptStr != sDsdfScriptStr:
 				sRefer = getUrl().replace(sScriptStr, sDsdfScriptStr)
@@ -70,7 +70,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 				return 0
 	
 	if 'PNG_MAKER' not in dConf:
-		U.io.todoError(fLog, u"Set the keyword PNG_MAKER in %s to "%dConf['__file__'] +\
+		U.webio.todoError(fLog, u"Set the keyword PNG_MAKER in %s to "%dConf['__file__'] +\
 		               u"generate server side images.")
 		return 17
 		
@@ -85,7 +85,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	sDiskImage = pjoin(sTmpDir, sDiskImage)
 
 	uCmd = u"%s server=%s dataset=%s start_time=%s end_time=%s image=%s 'params=%s'"%(
-		      sMaker, U.io.getScriptUrl(), sDsdf, sBeg, sEnd, 
+		      sMaker, U.webio.getScriptUrl(), sDsdf, sBeg, sEnd, 
 				sDiskImage, sParams)
 	
 	
@@ -98,12 +98,12 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	sLog = proc.communicate()[1]
 		
 	if proc.returncode != 0:
-		U.io.serverError(fLog, u"%s\nNon-zero exit value, %d from image generator %s"%(
+		U.webio.serverError(fLog, u"%s\nNon-zero exit value, %d from image generator %s"%(
 				sLog, proc.returncode, sMaker))
 		return 17
 		
 	if not os.path.isfile(sDiskImage):
-		U.io.serverError(fLog, u"%s\nExpected image file %s is not present."%(
+		U.webio.serverError(fLog, u"%s\nExpected image file %s is not present."%(
 		                 sLog, sDiskImage))
 		return 17
 			
@@ -114,8 +114,11 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	pout("Expires: now")
 	pout("Content Disposition: inline; filename=%s.png\r\n"%sOutImage)
 	
-	fImg = file(sDiskImage, 'rb')
-	sys.stdout.write(fImg.read())
+	fImg = open(sDiskImage, 'rb')
+	if sys.version_info[0] == 2:
+		sys.stdout.write(fImg.read())
+	else:
+		sys.stdout.buffer.write(fImg.read())
 	fImg.close()
 	
 	# Could build up a cache of these, at least temporarily...

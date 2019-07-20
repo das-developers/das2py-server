@@ -50,7 +50,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	sHapiParam = form.getfirst('parameters','')
 	U.dsdf.checkParam(fLog, 'parameters', sHapiParam)
 	
-	sScript = U.io.getScriptUrl()
+	sScript = U.webio.getScriptUrl()
 	
 	if 'DSDF_ROOT' not in dConf:
 		error.sendUnkId(fLog, "Server misconfigured, DSDF_ROOT not specified")
@@ -66,7 +66,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		pout("Expires: now")
 		pout("Status: 200 OK\r\n")
 		try:
-			fTmp = file(sInfoFile, 'rb')
+			fTmp = open(sInfoFile, 'r')
 			sJson = fTmp.read()
 			sys.stdout.write(sJson)
 		except IOError as e:

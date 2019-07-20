@@ -21,14 +21,14 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	if sDsdf.startswith('/source/'):
 		sDsdf = sDsdf[len('/source/'):]
 	else:
-		U.io.serverError(fLog, u"PATH_INFO did not start with /source/")
+		U.webio.serverError(fLog, u"PATH_INFO did not start with /source/")
 		
 	sDsdf = sDsdf.replace(".json", '')
 	
 	fLog.write("\nDas 2.3 Source definition Handler")
 	
 	if 'DSDF_ROOT' not in dConf:
-		U.io.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
+		U.webio.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
 		return 17
 	
 	# Hidden debug switch
@@ -37,7 +37,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		bInternal = True
 	
 	dsdf = U.dsdf.Dsdf(sDsdf, dConf, form, fLog)
-	sRootUrl = "%s/data"%U.io.getScriptUrl() 
+	sRootUrl = "%s/data"%U.webio.getScriptUrl() 
 	dDef = dsdf.getInterfaceDef(dConf, fLog, dConf['SITE_PATHURI'], sRootUrl, bInternal)
 	
 	# Add in our own options.
@@ -57,7 +57,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	pout("Content-Type: application/json; charset=utf-8\r\n")
 	
-	#sScript = U.io.getScriptUrl()
+	#sScript = U.webio.getScriptUrl()
 	#sUrl = _exampleUrl(U, dConf, sScript, sDsdf, dOut, bMkPathUrl)
 	#if sUrl:
 	#	dOut['example'] = sUrl

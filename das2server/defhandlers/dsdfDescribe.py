@@ -74,7 +74,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	fLog.write("\nDas 2.2 Description Handler")
 	
 	if 'DSDF_ROOT' not in dConf:
-		U.io.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
+		U.webio.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
 		return 17
 		
 	dsdf = U.dsdf.Dsdf(sDsdf, dConf, form, fLog)
@@ -85,7 +85,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	sOut = _dsdfToStreamHdr(dsdf)
 	
 	# Set a mime-type that allows this to be visible in a browser
-	if U.io.isBrowser():
+	if U.webio.isBrowser():
 		pout('Content-Type: text/plain; charset=utf-8\r\n')
 	else:
 		pout("Content-Type: text/vnd.das2.das2stream\r\n")

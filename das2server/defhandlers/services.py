@@ -15,7 +15,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	interface
 	"""
 	
-	sScript = U.io.getScriptUrl()
+	sScript = U.webio.getScriptUrl()
 	
 	# list the things this server can do
 	fLog.write("\nDas 2.3 Capabilities handler")

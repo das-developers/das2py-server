@@ -82,7 +82,7 @@ def _addRequired(U, fLog, dParams, lReq, sPrefix=None):
 				sTmp = sParam
 				if sPrefix:
 					sTmp = "%s.%s"%(sPrefix, sParam)
-				U.io.serverError(fLog, "Error in data source definition, "+\
+				U.webio.serverError(fLog, "Error in data source definition, "+\
 				                 "keyword 'REQUIRED' missing for parameter %s"%sTmp)
 				return None
 				
@@ -92,7 +92,7 @@ def _addRequired(U, fLog, dParams, lReq, sPrefix=None):
 				else:
 					lReq.append(sParam)
 		else:
-			#U.io.serverError(fLog, u"DEBUG: sub params are %s"%dParams[sParam].keys())
+			#U.webio.serverError(fLog, u"DEBUG: sub params are %s"%dParams[sParam].keys())
 			#return None
 			_addRequired(U, fLog, dParams[sParam], lReq, sParam)
 			
@@ -113,18 +113,18 @@ def _xlateArgPtrn(U, fLog, sPattern, sFormVal):
 	if sPattern.find("%{FLAG,") != -1:
 		j = sPattern.find("}")
 		if (j == -1) or (j < i) or (i + 7 == j):
-			U.io.serverError("Error in datasource FLAG_SET translation pattern %s"%sPattern)
+			U.webio.serverError("Error in datasource FLAG_SET translation pattern %s"%sPattern)
 			return None
 		sSep = sPattern[i+7:j].strip().upper()
 		if sSep not in g_dSep:
-			U.io.serverError("Error in datasource FLAG_SET translation pattern, unknown separator %s"%sSep)
+			U.webio.serverError("Error in datasource FLAG_SET translation pattern, unknown separator %s"%sSep)
 			return None
 		lFormVal = sFormVal.split(',')
 		sFormVal = g_dSep[sSep].join(lFormVal)
 		
 		return "%s%s%s"%(sPattern[:i], sFormVal, sPattern[j+1:])
 	
-	U.io.serverError("Error in datasource argument translation %s, pattern not recognized"%sPattern)
+	U.webio.serverError("Error in datasource argument translation %s, pattern not recognized"%sPattern)
 	return None
 
 ##############################################################################
@@ -169,10 +169,10 @@ def _normParams(U, fLog, dSrc, sType, lOmitt, dForm):
 		# Parameter should always have a '_translate' and '_what' keys
 		# even if nothing else is present
 		if '_translate' not in dParam:
-			U.io.serverError("Internal error, key _translate not present for"+\
+			U.webio.serverError("Internal error, key _translate not present for"+\
 			                 " parameter " + sKey)
 		if '_what' not in dParam['_translate']:
-			U.io.serverError("Internal error, definiton _what not present for"+\
+			U.webio.serverError("Internal error, definiton _what not present for"+\
 			                 " parameter " + sKey)
 		
 		if dParam['_translate']['_what'] != sType:
@@ -190,7 +190,7 @@ def _normParams(U, fLog, dSrc, sType, lOmitt, dForm):
 		elif '_map' in dParam['_translate']:
 			dMap = dParam['_translate']['_map']
 			if dForm[sKey] not in dMap:
-				U.io.queryError("Form value %s for key %s not in data source argument map"%(
+				U.webio.queryError("Form value %s for key %s not in data source argument map"%(
 				                dForm[sKey], sKey))
 				return None
 			
@@ -290,26 +290,26 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 			sLocalId = sLocalId[len('/data/'):]
 	
 	if sLocalId.find('_dirinfo_') != -1:
-		U.io.queryError(fLog, u"Invalid das2.3 query")
+		U.webio.queryError(fLog, u"Invalid das2.3 query")
 		return 17
 	
 	fLog.write("\nDas 2.3 Data Query Handler")
 	
 	if sys.platform.startswith('win'):
-		U.io.todoError(fLog, u"Not yet compatible with windows:\n"+\
+		U.webio.todoError(fLog, u"Not yet compatible with windows:\n"+\
 		      u"Change the shell pipelines to use the python subprocess "+\
 				u"module before running on windows.")
 		return 7	
 	
 	if 'DSDF_ROOT' not in dConf:
-		U.io.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
+		U.webio.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
 		return 17
 	
 	# Get the datasource object
 	dsdf = U.dsdf.Dsdf(sLocalId, dConf, form, fLog)
 	
 	# Get the interface definition
-	sRootUrl = "%s/data"%U.io.getScriptUrl() 
+	sRootUrl = "%s/data"%U.webio.getScriptUrl() 
 	dDef = dsdf.getInterfaceDef(dConf, fLog, dConf['SITE_PATHURI'], sRootUrl, True)
 	
 	# See if this is just a redirection, it will look like a catalog node
@@ -319,13 +319,13 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	# Get the interface definition and make sure that all required parameters
 	# are specified
 	if 'SOURCE' not in dDef:
-		U.io.serverError(fLog, "'SOURCE' key missing in source definition")
+		U.webio.serverError(fLog, "'SOURCE' key missing in source definition")
 		return 17
 	else:
 		dSrc = dDef['SOURCE']
 	
 	if 'QUERY_PARAMS' not in dSrc:
-		U.io.serverError(fLog, "'QUERY_PARAMS' missing in source definition")
+		U.webio.serverError(fLog, "'QUERY_PARAMS' missing in source definition")
 		return 17
 	else:
 		dParams = dSrc['QUERY_PARAMS']
@@ -340,14 +340,14 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 			
 	for sReq in lReq:
 		if sReq not in dForm:
-			U.io.queryError(fLog, u"Invalid query, required GET key %s is missing"%sReq)
+			U.webio.queryError(fLog, u"Invalid query, required GET key %s is missing"%sReq)
 			return 17
 			
 	# Loop through all parameter values looking for wierd stuff such as shell
 	# injection attacks (U.dsdf.checkParam, U.dsdf.normalizeParams(sRdrCmd))
 	for sKey in dForm:
 		if not dForm[sVal] or len(dForm[sVal]) == 0:
-			U.io.queryError(fLog, u"Invalid query, GET key %s contains no value", sKey)
+			U.webio.queryError(fLog, u"Invalid query, GET key %s contains no value", sKey)
 			return 17
 			
 		if not U.dsdf.checkParam(fLog, sKey, sVal):
@@ -412,7 +412,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		fLog, uCmd, sMimeType, sContentDis, sOutFile)
 
 	if nRet != 0:
-		U.io.serverError(
+		U.webio.serverError(
 			fLog, 
 			u"exec: %s\n%s\nNon-zero exit value, %d from pipeline"%(uCmd, sStdErr, nRet ), 
 			bHdrSent

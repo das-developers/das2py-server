@@ -10,7 +10,7 @@ import codecs
 import traceback
 
 #from io import BytesIO     # handles bytes strings
-from io import StringIO    # handles unicode strings
+from io import StringIO     # handles unicode strings
 
 from os.path import join as pjoin
 
@@ -38,10 +38,9 @@ def pout(item):
 		else:
 			sys.stdout.buffer.write(item)
 
-
 ##############################################################################
 # Browser identification for use before util modules are loaded, after they 
-# are loaded util.io.g_lNotDas2App is used.  If you update this list, *also*
+# are loaded util.webio.g_lNotDas2App is used.  If you update this list, *also*
 # update the list is util.io
 
 _g_BrowserAgent = ['firefox','explorer','chrome','safari']
@@ -217,7 +216,7 @@ def getHandler(U, fLog, dConf, sReqType):
 		sModule = dConf[sReqType]
 		
 	if sModule == None or sModule == '':
-		U.io.queryError(fLog, u"No handler for requset type %s"%sReqType)
+		U.webio.queryError(fLog, u"No handler for requset type %s"%sReqType)
 		return None
 	
 	if sModule.find('.') != -1:
@@ -226,7 +225,7 @@ def getHandler(U, fLog, dConf, sReqType):
 		
 		iLastDot = sModule.rfind('.')
 		if iLastDot >= len(sModule) - 2:
-			U.io.svrError("Bad handler for request %s: '%s'"%(
+			U.webio.svrError("Bad handler for request %s: '%s'"%(
 			                    sReqType, sModule), fLog)
 			return None
 				
@@ -239,7 +238,7 @@ def getHandler(U, fLog, dConf, sReqType):
 			module = sys.modules[sModule]
 			
 		except ImportError as e:
-			U.io.serverError(fLog, "Error loading module %s from %s: %s"%(
+			U.webio.serverError(fLog, "Error loading module %s from %s: %s"%(
 			                 sModName, sModPath, e))
 			return None
 		
@@ -249,7 +248,7 @@ def getHandler(U, fLog, dConf, sReqType):
 		try:
 			module = __import__(sModule, globals(), locals(), [], 0)
 		except ImportError as e:
-			U.io.serverError(fLog, "Error loading module %s: %s"%(sModule, e))
+			U.webio.serverError(fLog, "Error loading module %s: %s"%(sModule, e))
 			return None
 	
 	if sReqType != 'HANDLE_RESOURCE':
@@ -291,10 +290,10 @@ def main(form):
 	U.misc.envPathMunge("LD_LIBRARY_PATH", dConf['LIB_PATH'])
 	
 	if 'LOG_PATH' in dConf:
-		fLog = U.io.DasLogFile(dConf['LOG_PATH'], os.getenv('REMOTE_ADDR'))
+		fLog = U.webio.DasLogFile(dConf['LOG_PATH'], os.getenv('REMOTE_ADDR'))
 		#fLog.write("INFO: Logging to %s"%dConf['LOG_PATH'])
 	else:
-		fLog = U.io.DasLogFile()
+		fLog = U.webio.DasLogFile()
 
 	#for sKey in dConf.keys():
 	#	fLog.write("%s = %s"%(sKey, dConf[sKey]))	
@@ -309,13 +308,13 @@ def main(form):
 		sPathInfo = os.getenv("PATH_INFO")
 		
 	if sPathInfo.find('..') != -1:
-		U.io.queryError(fLog, u"Bad Path")
+		U.webio.queryError(fLog, u"Bad Path")
 		return 25
 	
-	# Don't log resource requests, this just clutters up the logs
-	if not sPathInfo.startswith('/resource'):
+	# Don't log static resource requests, this just clutters up the logs
+	if not sPathInfo.startswith('/static'):
 		fLog.write("Input")
-		fLog.write("   Request URL: %s"%U.io.getUrl())
+		fLog.write("   Request URL: %s"%U.webio.getUrl())
 		fLog.write("   On Host: %s"%os.getenv('SERVER_NAME'))
 		fLog.write("   For Program: %s"%os.getenv('SCRIPT_NAME'))
 		fLog.write("   For Path: %s"%sPathInfo)
@@ -330,11 +329,11 @@ def main(form):
 	# Check to see that our resource path is sent and exist, or just 
 	# exit with an error
 	if not 'RESOURCE_PATH' in dConf:
-		U.io.serverError(fLog, u"Set the RESOURCE_PATH keyword in %s"%g_sConfPath)
+		U.webio.serverError(fLog, u"Set the RESOURCE_PATH keyword in %s"%g_sConfPath)
 		return 22
 	
 	if not os.path.isdir(dConf['RESOURCE_PATH']):
-		U.io.serverError(fLog, u"Can't locate resources, server path "
+		U.webio.serverError(fLog, u"Can't locate resources, server path "
 		      "%s doesn't exsit"%dConf['RESOURCE_PATH'])
 		return 23
 		
@@ -377,17 +376,17 @@ def main(form):
 		
 		elif sServer in ['id','authenticator']:
 			# 'authenticator' and 'id' are not yet handled
-			U.io.todoError(fLog, u"The queries: server=authenticator and "+\
+			U.webio.todoError(fLog, u"The queries: server=authenticator and "+\
 			               u"server=id have not been implemented")
 		else:
-			U.io.queryError(fLog, u"Bad server keyword.  Server must be "
+			U.webio.queryError(fLog, u"Bad server keyword.  Server must be "
 	   	      "[dataset|dsdf|logo|list|discovery]\n")
 					
 	# If the path starts with '/hapi' send requests to subsystem handlers
 	elif sPathInfo.startswith('/hapi'):
 		sKey = "ENABLE_HAPI_SUBSYS"
 		if (sKey not in dConf) or (dConf[sKey].lower() not in ('true','yes','1')):
-			U.io.queryError(fLog, u"Heliophysics API Subsystem not enabled, "+\
+			U.webio.queryError(fLog, u"Heliophysics API Subsystem not enabled, "+\
 			 u"contact the server administrator if this feature is needed")
 		
 		else: 
@@ -425,7 +424,7 @@ def main(form):
 		elif sPathInfo.startswith('/logo'):
 			sReqType = 'HANDLE_LOGO'
 				
-		elif sPathInfo.startswith('/resource'):
+		elif sPathInfo.startswith('/static'):
 			sReqType = 'HANDLE_RESOURCE'		
 		
 		elif sPathInfo.startswith('/source'):
@@ -445,7 +444,7 @@ def main(form):
 	if sReqType == None:
 		return 24
 	
-	if not sPathInfo.startswith('/resource'):
+	if not sPathInfo.startswith('/static'):
 		fLog.write("\nRouting")
 	
 	H = getHandler(U, fLog, dConf, sReqType)
@@ -458,7 +457,7 @@ def main(form):
 		fString = StringIO.StringIO()
 		traceback.print_exc(file=fString)
 		sMsg = "\nException in handler: %s\n%s"%(H.__name__, fString.getvalue())
-		U.io.serverError(fLog, sMsg)
+		U.webio.serverError(fLog, sMsg)
 		nRet = 26
 	
 	sys.stdout.flush()

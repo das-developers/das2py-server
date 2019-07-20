@@ -11,7 +11,7 @@ def pout(sOut):
 def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	pout("Content-Type: text/html; charset=utf-8\r\n")
 	
-	sScript = U.io.getScriptUrl()
+	sScript = U.webio.getScriptUrl()
 	
 	dRep = {
 		"caps": "%s/hapi/capabilities"%sScript,
