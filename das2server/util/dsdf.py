@@ -212,7 +212,7 @@ class Dsdf(object):
 		if len(self.d) == 0:
 			raise ServerError(u"Data source file is empty")
 
-		lDsdfKeys = self.d.keys()
+		lDsdfKeys = list(self.d.keys())
 
 		# Note that Variables can appear right in the middle of a value string,
 		# so we have to replace just those parts of the string with the variable
@@ -315,7 +315,7 @@ class Dsdf(object):
 		string is needed used the normalizeParams function below.
 		"""
 
-		lKeys = self.d.keys()
+		lKeys = list(self.d.keys())
 		lKeys.sort()
 
 		dOut = {}
@@ -906,7 +906,7 @@ class Dsdf(object):
 		options are returned that are useful when calling readers
 		"""
 
-		lKeys = self.d.keys()
+		lKeys = list(self.d.keys())
 		lKeys.sort()
 		dOpts = {}
 		for key in lKeys:
@@ -1028,7 +1028,7 @@ class Dsdf(object):
 		"""
 		sPre = "%sTrans"%sCategory
 
-		lKeys = self.d.keys()
+		lKeys = list(self.d.keys())
 		lKeys.sort()
 		dTrans = {}
 		dParams = sourceGetParamDict(dSource)
@@ -1316,7 +1316,7 @@ class Dsdf(object):
 				dCoords['time']['SELECT']['INT'] = "time.int"
 
 
-		lKeys = self.d.keys()
+		lKeys = list(self.d.keys())
 		lKeys.sort()
 		for key in lKeys:
 			if not key.startswith('coord_'):

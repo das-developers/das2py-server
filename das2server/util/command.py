@@ -6,10 +6,7 @@ import select
 import fcntl
 import os
 
-##############################################################################
-def pout(sOut):
-	sys.stdout.write(sOut)
-	sys.stdout.write('\r\n')
+from . import webio
 
 ##############################################################################
 def sendCmdOutput(fLog, uCmd, sMimeType, sContentDis, sOutFile):
@@ -54,6 +51,7 @@ def sendCmdOutput(fLog, uCmd, sMimeType, sContentDis, sOutFile):
 	bBreakNext = False
 	bHttpHdrsSent = False
 	lStdErr = []
+		
 	while True:
 		lReads = [fdStdOut, fdStdErr]
 		lReady = select.select(lReads, [], [])
@@ -61,26 +59,26 @@ def sendCmdOutput(fLog, uCmd, sMimeType, sContentDis, sOutFile):
 		for fd in lReady[0]:
 			
 			if fd == fdStdOut:
-				sRead = proc.stdout.read()
-				if len(sRead) != 0:
+				xRead = proc.stdout.read()
+				if len(xRead) != 0:
 					
 					if not bHttpHdrsSent:
-						pout("Content-Type: %s"%sMimeType)
-						pout("Status: 200 OK")
-						pout("Expires: now")
-						pout('Content-Disposition: %s; filename="%s"\r\n'%(
+						webio.pout("Content-Type: %s\r\n"%sMimeType)
+						webio.pout("Status: 200 OK\r\n")
+						webio.pout("Expires: now\r\n")
+						webio.pout('Content-Disposition: %s; filename="%s"\r\n\r\n'%(
 						      sContentDis, sOutFile))
-						sys.stdout.flush()
+						webio.flushOut()
 						bHttpHdrsSent = True
 					
-					sys.stdout.write(sRead)
-					sys.stdout.flush()
+					webio.pout(xRead)
+					webio.flushOut()
 				
 			if fd == fdStdErr:
-				sRead = proc.stderr.read()
-				if len(sRead) != 0:
-					fLog.write(sRead)
-					lStdErr.append(sRead)
+				xRead = proc.stderr.read()
+				if len(xRead) != 0:
+					fLog.write(xRead)
+					lStdErr.append(xRead)
 		
 		if bBreakNext:
 			break
@@ -92,7 +90,7 @@ def sendCmdOutput(fLog, uCmd, sMimeType, sContentDis, sOutFile):
 	
 	fLog.write("Finished Read")
 	
-	sStdErr = "".join(lStdErr)
+	sStdErr = b"".join(lStdErr)
 	
 	return (proc.returncode, sStdErr, bHttpHdrsSent)
 
@@ -127,15 +125,15 @@ def getCmdOutput(fLog, uCmd):
 		for fd in lReady[0]:
 			
 			if fd == fdStdOut:
-				sRead = proc.stdout.read()
-				if len(sRead) != 0:
-					lStdOut.append(sRead)
+				xRead = proc.stdout.read()
+				if len(xRead) != 0:
+					lStdOut.append(xRead)
 				
 			if fd == fdStdErr:
-				sRead = proc.stderr.read()
-				if len(sRead) != 0:
-					fLog.write(sRead)
-					lStdErr.append(sRead)
+				xRead = proc.stderr.read()
+				if len(xRead) != 0:
+					fLog.write(xRead)
+					lStdErr.append(xRead)
 		
 		if bBreakNext:
 			break

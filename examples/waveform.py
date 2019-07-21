@@ -1,13 +1,9 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 """This is a full featured python reader script demonstrating:
   
-  1. How to send a mostly binary das2 stream
+  1. How to send a mostly binary das2 stream in python2 or 3
   2. How to efficently transmit waveform data
   3. How to send error and progerss messages out to client programs 
   4. How to send messages to the server log
-  5. How to include version information from SVN
   
 Much of this code is general to any python based das2 reader and could be setup
 as part of the das2 library.  Instead it has been included here to provide a 
@@ -38,27 +34,39 @@ from os.path import join as pjoin
 import das2
 
 ##############################################################################
+# boiler plate to deal with python2/3 and unicode/bytes
+
+try:
+	unicode
+except NameError:
+	unicode = str
+	
+def write(thing):
+	"""Python 2/3 safe function that encodes all unicode objects as utf-8,
+	leaves raw byte arrays alone, and doesn't try to "help" with line endings.
+	"""
+	if sys.version_info[0] == 2:
+		if isinstance(thing, unicode): 
+			sys.stdout.write(thing.encode('utf-8'))
+		else:
+			sys.stdout.write(thing)
+	else:
+		if isinstance(thing, unicode):    
+			sys.stdout.buffer.write(thing.encode('utf-8'))
+		else:
+			sys.stdout.buffer.write(thing)
+
+def flush():
+	if sys.version_info[0] == 2: sys.stdout.flush()
+	else: sys.stdout.buffer.flush()
+
+##############################################################################
 # Select native byte order for 4-byte IEEE reals
 
 if sys.byteorder == 'little':
 	_g_sFloatType = "little_endian_real4" 
 else:
 	_g_sFloatType = "sun_real4"
-
-##############################################################################
-# Reusable SVN version tagging
-
-def stripSVNkey(s):
-	if s.find(':') == -1:
-		return s.strip(" $") + ": unknown"
-	else:
-		return s.strip(' $')
-
-g_sRev = stripSVNkey("$Rev: 4950 $")
-g_sURL = stripSVNkey("$URL: https://ec.physics.uiowa.edu/control/rbsp/GSE/trunk/GDS/scripts/emf_events_streamer $")
-g_sWho = stripSVNkey("$LastChangedBy: cwp $")
-g_sWhen = stripSVNkey("$LastChangedDate: 2012-12-11 14:08:14 -0600 (Tue, 11 Dec 2012) $")
-
 
 ##############################################################################
 # Reusable python logging Setup
@@ -118,7 +126,7 @@ class TimeProgressTracker(object):
 		
 		sMsg = '<comment type="taskSize" value="%d" source="%s" />\n'%(
 		        self.nIncrements, self.sWho)
-		sys.stdout.write( "[xx]%06d%s"%(len(sMsg), sMsg) )
+		write( "[xx]%06d%s"%(len(sMsg), sMsg) )
 
 	def status(self, dtCurrent):
 		if self.rTotal == 0.0:
@@ -129,7 +137,7 @@ class TimeProgressTracker(object):
 			
 			sMsg = '<comment type="taskProgress" value="%d" source="%s" />\n'%(
 			         nProg, self.sWho)
-			sys.stdout.write( "[xx]%06d%s"%(len(sMsg), sMsg) )
+			write( "[xx]%06d%s"%(len(sMsg), sMsg) )
 			
 			self.dtLastReport = dtCurrent.copy()
 
@@ -159,9 +167,9 @@ def _das2Except(sType, sMsg):
 	
 	if not g_bStrmHdrWritten:
 		sSmHdr = '<stream version="2.2" />'
-		sys.stdout.write("[00]%06d%s"%(len(sSmHdr), sSmHdr))
+		write("[00]%06d%s"%(len(sSmHdr), sSmHdr))
 	
-	sys.stdout.write("[xx]%06d%s"%(len(sOut), sOut))
+	write("[xx]%06d%s"%(len(sOut), sOut))
 
 def sendNoData(log, dtBeg, dtEnd):
 	sMsg = "No data in interval %s to %s UTC"%(str(dtBeg)[:-3], str(dtEnd)[:-3])
@@ -345,10 +353,13 @@ maximum time value.
 		'DatumRange:xCacheRange': "%s to %s UTC"%(str(dtBeg)[:-3], str(dtEnd)[:-3]),
 		'String:xLabel' : 'SCET (UTC)'
 	})
-	sys.stdout.write(sHdr)
+	write(sHdr)
 	g_bStrmHdrWritten = True
-	sys.stdout.write( VgrWfrmRecord.das2HeaderPacket(1) )
+	write( VgrWfrmRecord.das2HeaderPacket(1) )
 	
+	flush()  # It's good to flush stdout output right after sending headers so
+            # Autoplot get's something right a way.
+
 	
 	# File search range starts 48 seconds before given time range since Voyager
 	# waveform frame files contain 48 seconds worth of data
@@ -386,7 +397,7 @@ maximum time value.
 				break
 			
 			if rec.dtBeg < dtEnd and rec.dtEnd > dtBeg:
-				sys.stdout.write(rec.das2DataPacket(1))
+				write(rec.das2DataPacket(1))
 				nSent += 1
 		
 			# Check/Send progress

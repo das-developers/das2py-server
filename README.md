@@ -114,7 +114,7 @@ $ cd ../das2-pyserver
 $ python${PYVER} setup.py install --prefix=${PREFIX} --install-lib=${PREFIX}/lib/python${PYVER}
 ```
 
-Finally, copy over the example configuration file:
+Copy over the example configuration file:
 
 ```bash
 $ cd $PREFIX/etc
@@ -145,8 +145,8 @@ ScriptAlias /cgi-bin/ "/var/www/cgi-bin/"
 inside the `<IfModule alias_module>` section of httpd.conf.  
 
 Then provide configuration information for your `/var/www/cgi-das` directory
-inside the `/etc/httpd/conf.d/ssl.conf` file.  We're editing the ssl.conf 
-instead of the httpd.conf file because das2 clients may transmit passwords. 
+inside the `/etc/httpd/conf.d/ssl.conf` file.  We're editing the *ssl.conf*
+instead of httpd.conf because das2 clients may transmit passwords. 
 
 
 ```apache
@@ -163,29 +163,29 @@ instead of the httpd.conf file because das2 clients may transmit passwords.
 </Directory>
 ```
 
-By default, authorization headers are not made available to CGI scripts.  The
-re-write rule above allows the `Authorization` header to be based down to the
-`das2_srvcgi_main` script.  This is needed to allow your das2 server to
-support password protected datasets.  
+By default, authorization headers are not made available to CGI scripts.
+The re-write rule above allows the `Authorization` header to be passed down
+to the `das2_srvcgi_main` script.  This is needed to allow your server to
+support password protected datasets.
 
-Now symlink the \*_srvcgi_\* scripts into your new CGI directory.  Choose the
-name of the symlink carefully as it will be part of the public URL for your
-site:
+Now symlink the top level CGI scripts into your new CGI directory.  Choose
+the name of the symlink carefully as it will be part of the public URL for
+your site:
 
 ```bash
 cd /var/www/cgi-das
 sudo ln -s $PREFIX/bin/das2_srvcgi_main server
-sudo ln -s $PREFIX/bin/das2_srvcgi_main log
+sudo ln -s $PREFIX/bin/das2_srvcgi_logrdr log
 ```
 
-Set the permissions of the log directory set in the `LOG_PATH` variable 
-in `das2server.conf` so that Apache can write log data.
+Set the permissions of the log directory so that Apache can write logging
+information:
 
 ```bash
-chmod 0777 $PREFIX/log   # Or change the ownership
+chmod 0777 $PREFIX/log   # Or change the directory ownership
 ```
 
-Finally trigger a re-read of the Apache configuration data:
+Finally, trigger a re-read of the Apache's configuration data:
 
 ```bash
 sudo systemctl restart httpd.service
@@ -221,13 +221,13 @@ Take time to customize a few items in your config file such as the
 `${PREFIX}/static/logo.png` or even the style sheet at 
 `${PREFIX}/static/das2server.css` to something a little nicer.
 
-Das2-pyserver is a caching and web-transport layer for das2 readers.  Readers
+**Das2-pyserver** is a caching and web-transport layer for das2 readers.  Readers
 are the programs that generate the initial full resolution data streams.  The
 entire purpose of das2-pyserver and das2 clients is to leverage the output of
 your reader programs to produce efficient, interactive science data displays.
-To assist you with the task of creating readers for your own data, examples
-are included in the `$PREFIX/examples` directory.  These examples happen to be
-written in python, however there is no requirement to use python for your
+Example readers are included in the `$PREFIX/examples` directory to assist you
+with the task of creating readers for your own data.  These examples happen to
+be written in python, however there is no requirement to use python for your
 programs, in fact much more efficent compiled languages such as Java,
 [D](https://dlang.org/) and C++ are more suitable for the task.  Any language
 may be used so long as:

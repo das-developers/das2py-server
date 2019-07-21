@@ -295,7 +295,7 @@ def main(form):
 	else:
 		fLog = U.webio.DasLogFile()
 
-	#for sKey in dConf.keys():
+	#for sKey in list(dConf.keys()):
 	#	fLog.write("%s = %s"%(sKey, dConf[sKey]))	
 	
 	for sEnv in ['SCRIPT_NAME', 'SERVER_NAME', 'QUERY_STRING']:
@@ -454,7 +454,7 @@ def main(form):
 	try:
 		nRet = H.handleReq(U, sReqType, dConf, fLog, form, sPathInfo)
 	except:
-		fString = StringIO.StringIO()
+		fString = StringIO()
 		traceback.print_exc(file=fString)
 		sMsg = "\nException in handler: %s\n%s"%(H.__name__, fString.getvalue())
 		U.webio.serverError(fLog, sMsg)
@@ -476,7 +476,7 @@ def main(form):
 	else:
 		sDuration = "%.2f minutes"%(rDuration / 60.0)
 	
-	if not sPathInfo.startswith('/resource'):
+	if not sPathInfo.startswith('/static'):
 		fLog.write("\nQuery handled without error in %s."%sDuration)
 	return 0
 

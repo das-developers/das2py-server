@@ -31,6 +31,12 @@ def pout(item):
 			sys.stdout.buffer.write(item.encode('utf-8'))
 		else:
 			sys.stdout.buffer.write(item)
+			
+def flushOut():
+	if sys.version_info[0] == 2:
+		sys.stdout.flush()
+	else:
+		sys.stdout.buffer.flush()
 
 ##############################################################################
 def getScriptUrl():

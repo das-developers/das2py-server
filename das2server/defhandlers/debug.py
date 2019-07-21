@@ -62,7 +62,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 """%dConf['__file__'])
 
 	print("<ul>")
-	lKeys = dConf.keys()
+	lKeys = list(dConf.keys())
 	lKeys.sort()
 	for sKey in lKeys:
 		if sKey != '__file__':
@@ -71,7 +71,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		
 	print("<p>Here's the script environment</p>")
 	print("<ul>")
-	lKeys = os.environ.keys()
+	lKeys = list(os.environ.keys())
 	lKeys.sort()
 	for sKey in lKeys:
 		print("<li>%s = %s</li>"%(sKey, os.getenv(sKey)))

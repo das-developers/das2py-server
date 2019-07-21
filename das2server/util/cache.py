@@ -304,7 +304,7 @@ def missList(fLog, dConf, dsdf, sNormParam, rRes, sBeg, sEnd, bCoverage=True):
 	if len(dRes) == 0:
 		raise E.ServerError("missList called for data that are not cacheable")
 	
-	lRes = dRes.keys()
+	lRes = list(dRes.keys())
 	lRes.sort()
 	
 	iRes = 0

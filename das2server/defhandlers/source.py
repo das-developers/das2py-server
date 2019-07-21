@@ -1,6 +1,7 @@
 """Default handler for sending data source information as JSON description"""
 
-import StringIO
+from io import StringIO     # handles unicode strings
+
 import sys
 import os
 import json

@@ -1,13 +1,9 @@
 """Default handler for sending data source information as a das2 packet"""
 
-import StringIO
+from io import StringIO     # handles unicode strings
+
 import sys
 import os
-
-##############################################################################
-def pout(sOut):
-	sys.stdout.write(sOut)
-	sys.stdout.write('\r\n')
 
 ##############################################################################
 
@@ -23,7 +19,7 @@ tDrop = (
 
 def _dsdfToStreamHdr(dsdf):
 	"""Write a utf-8 string that contains the stream"""
-	fOut = StringIO.StringIO()
+	fOut = StringIO()
 	
 	fOut.write(u"<stream>\r\n")
 	fOut.write(u"  <properties")
@@ -86,12 +82,12 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	# Set a mime-type that allows this to be visible in a browser
 	if U.webio.isBrowser():
-		pout('Content-Type: text/plain; charset=utf-8\r\n')
+		U.webio.pout('Content-Type: text/plain; charset=utf-8\r\n\r\n')
 	else:
-		pout("Content-Type: text/vnd.das2.das2stream\r\n")
-		
-	nLen = len( sOut.encode('utf-8') )
+		U.webio.pout("Content-Type: text/vnd.das2.das2stream\r\n\r\n")
 	
-	sAllOut = u"[00]%06d%s"%(nLen, sOut)
-	sys.stdout.write(sAllOut.encode('utf-8'))
+	xOut = sOut.encode('utf-8')
+	nLen = len( xOut )
+	U.webio.pout("[00]%06d"%nLen)
+	U.webio.pout(xOut)
 	return 0

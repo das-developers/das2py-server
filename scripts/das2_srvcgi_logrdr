@@ -7,13 +7,17 @@ import sys
 import os.path
 from os.path import join as pjoin
 
-import cgitb; cgitb.enable()
+import cgitb;
 
 g_sConfPath = REPLACED_ON_BUILD
 
 
-# $URL: https://saturn.physics.uiowa.edu/svn/das2/servers/devel/pyserver/scripts/das2_srvcgi_logrdr.in $
-# $Revision: 10913 $
+##############################################################################
+# Browser identification for use before util modules are loaded, after they 
+# are loaded util.webio.g_lNotDas2App is used.  If you update this list, *also*
+# update the list is util.io
+
+_g_BrowserAgent = ['firefox','explorer','chrome','safari']
 
 
 DAYS="(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)"
@@ -21,13 +25,36 @@ MONTHS="(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
 TIME="\d\d:\d\d:\d\d"
 PREFIX=re.compile("\[(%s %s [ \d]\d) (%s) (\d{4}) (\d+)\s+\d+\](.+)"%(DAYS,MONTHS,TIME))
 
-#PREFIX=re.compile("\[(%s %s \d\d?) (%s) (\d{4}) (\d+) .+\](.+)"%(DAYS,MONTHS,TIME)); 
+PREFIX=re.compile("\[(%s %s \d\d?) (%s) (\d{4}) (\d+) .+\](.+)"%(DAYS,MONTHS,TIME)); 
 
+# handle output, python 2/3 compatible
+try:
+	unicode
+except NameError:
+	unicode = str
+
+def pout(item):
+	"""Write bytes or strings, in python 2 or 3
+	If input item is bytes, write them, if item is a unicode string encode as
+	utf-8 first"""
+		
+	if sys.version_info[0] == 2:
+		if isinstance(item, unicode):
+			sys.stdout.write(item.encode('utf-8'))
+		else:
+			sys.stdout.write(item)
+	else:
+		if isinstance(item, unicode):
+			sys.stdout.buffer.write(item.encode('utf-8'))
+		else:
+			sys.stdout.buffer.write(item)
+
+#pout("Content-Type: text/plain; charset=utf-8\r\n\r\n")
 
 ##############################################################################
 # Cut down version of error handling for use before the module path is loaded
 
-def preLoadError(uOut):
+def preLoadError(sOut):
 	"""Cut down error handling for use before the util modules are loaded,
 	script must exit afte calling this or multiple HTTP headers will be 
 	emitted.
@@ -36,7 +63,7 @@ def preLoadError(uOut):
 	sType = 'InternalServerError'
 	
 	bClientIsBrowser = False
-	if os.environ.has_key("HTTP_USER_AGENT"):
+	if "HTTP_USER_AGENT" in os.environ:
 		
 		sAgent = os.environ['HTTP_USER_AGENT'].lower()
 	
@@ -44,20 +71,22 @@ def preLoadError(uOut):
 			if sAgent.find(sTest) != -1:
 				bClientIsBrowser = True
 				break	
-	stdout.write("Status: 500 Internal Server Error\r\n")
+	pout("Status: 500 Internal Server Error\r\n")
 	
 	if bClientIsBrowser:
-		stdout.write("Content-Type: text/plain; charset=utf-8\r\n\r\n")
+		pout("Content-Type: text/plain; charset=utf-8\r\n\r\n")
+		cgitb.enable(format='text')
 		
-		stdout.write(uOut.encode('utf-8'))
+		pout(sOut)
 	else:
-		stdout.write("Content-Type: text/vnd.das2.das2stream\r\n\r\n")
+		pout("Content-Type: text/vnd.das2.das2stream\r\n\r\n")
 
-		uOut = uOut.replace(u'\n', u'\n\r').replace(u'"', u"'")
-		uOut = u'<exception type="%s" message="%s" />\n'%(sType, uOut)
-		sOut = uOut.encode('utf-8')
-		stdout.write("[00]%06d"%len(sOut))
-		stdout.write(sOut)
+		sOut = sOut.replace('\n', '\n\r').replace('"', "'")
+		sOut = '<exception type="%s" message="%s" />\n'%(sType, sOut)
+		xOut = sOut.encode('utf-8')
+		pout("[00]%06d"%len(xOut))
+		pout(xOut)
+
 
 
 ##############################################################################
@@ -65,7 +94,7 @@ def preLoadError(uOut):
 # since config file can change module path
 
 def setModulePath(dConf):
-	if not dConf.has_key('MODULE_PATH'):
+	if 'MODULE_PATH' not in dConf:
 		preLoadError(u"Set MODULE_PATH = /dir/containing/das2server_python_module")
 		return False	
 	
@@ -84,7 +113,7 @@ def setModulePath(dConf):
 def main():
 	form = cgi.FieldStorage()
 
-	if form.has_key("type"):
+	if 'type' in form:
 		type=form["type"].value
 	else:
 		type="das2"
@@ -114,7 +143,7 @@ def main():
 		preLoadError(u'No module named das2server.util under %s'%dConf['MODULE_PATH'])
 		return 20
 	
-	if not dConf.has_key('LOG_PATH'):
+	if 'LOG_PATH' not in dConf:
 		error(u"Can't locate das2 service log files, set the LOG_PATH "+\
 		       u"value in %s."%(g_sConfPath))
 		return 13
@@ -127,20 +156,19 @@ def main():
 
 	# TODO: filter type content
 
-	if form.has_key("ip"):
+	if "ip" in form:
 		ip=form["ip"].value
 	else:
 		ip=os.environ["REMOTE_ADDR"]
 
-	if form.has_key('action'):
+	if 'action' in form:
 		if form['action'].value == 'deleteAll':
 			deleteAll(dConf['LOG_PATH'], type,ip)
 			
-			if form.has_key("ip"):
+			if "ip" in form:
 				sViewLogUrl += '?ip=' + ip
-			print 'Status: 302'
-			print 'Location: '+sViewLogUrl
-			print
+			pout('Status: 302\r\n')
+			pout('Location: %s\r\n\r\n'%sViewLogUrl)
 			return 0
 			
 
@@ -162,36 +190,36 @@ def main():
 	            'server-sig':os.getenv('SERVER_SIGNATURE')}
 	
 	# Get replacement parameters for HTML text output
-	if dConf.has_key('SITE_NAME'):
+	if 'SITE_NAME' in dConf:
 		dReplace['site-id'] = dConf['SITE_NAME']
 	else:
 		dReplace['site-id'] = "Set SITE_NAME in %s"%dConf['__file__']
 
-	if dConf.has_key('SERVER_ID'):
+	if 'SERVER_ID' in dConf:
 		dReplace['server-id'] = dConf['SERVER_ID'].upper()
 	else:
 		dReplace['server-id'] = "{Set SERVER_ID in %s}"%dConf['__file__']
 	
 
-	if dConf.has_key('STYLE_SHEET'):
-		dReplace['css-link'] = "%s/resource/%s"%(sMainSrvUrl, dConf['STYLE_SHEET'])
+	if 'STYLE_SHEET' in dConf:
+		dReplace['css-link'] = "%s/static/%s"%(sMainSrvUrl, dConf['STYLE_SHEET'])
 	else:
-		dReplace['css-link'] = "%s/resource/das2server.css"%sMainSrvUrl
+		dReplace['css-link'] = "%s/static/das2server.css"%sMainSrvUrl
 		
-	if dConf.has_key('CONTACT_EMAIL'):
+	if 'CONTACT_EMAIL' in dConf:
 		dReplace['contact-email'] = dConf['CONTACT_EMAIL']
 	else:
 		dReplace['contact-email'] = "update&#45;das2server&#46;conf&#64;nowhere&#45;ed&#117;"
 
-	if dConf.has_key('CONTACT_url'):
+	if 'CONTACT_url' in dConf:
 		dReplace['contact-url'] = dConf['CONTACT_URL']
 	else:
 		dReplace['contact-url'] = "https://update-das2server.conf.nowhere.edu/~someone/"
 	
-	stdout.write("Content-Type: text/html; charset=utf-8\r\n")
-	stdout.write("Cache-Control: no-cache\r\n\r\n")
+	pout("Content-Type: text/html; charset=utf-8\r\n")
+	pout("Cache-Control: no-cache\r\n\r\n")
 	
-	print """<html>
+	pout("""<html>
 <head>
    <title>%(site-id)s</title>
    <link rel="stylesheet" type="text/css" media="screen" href="%(css-link)s" />
@@ -199,7 +227,7 @@ def main():
 <body>
 <div class="header">
 	<div class="hdr_left">
-		<img src="%(main-script)s/resource/logo.png" alt="%(server-id)s" width="70" height="70" >
+		<img src="%(main-script)s/static/logo.png" alt="%(server-id)s" width="70" height="70" >
 	</div> 
 	<div class="hdr_center">
 	%(server-id)s, a Das 2.3 Server
@@ -207,35 +235,35 @@ def main():
 	</div>
 	<div class="hdr_right">
 		<a href="http://das2.org">
-		<img src="%(main-script)s/resource/das2logo_rv.png" alt="Das2" width="80" height="80">
+		<img src="%(main-script)s/static/das2logo_rv.png" alt="Das2" width="80" height="80">
 		</a>
 	</div>
 	<br> <br>
 </div>
-"""%dReplace
+"""%dReplace)
 		
 	
-	print '<div class="navlinks"> &nbsp; <b>Actions:</b>'
-	print '  <a href="%(main-script)s">%(server-id)s top</a>'%dReplace
+	pout('<div class="navlinks"> &nbsp; <b>Actions:</b>')
+	pout('  <a href="%(main-script)s">%(server-id)s top</a>'%dReplace)
 	for k in sorted(dRequests.keys(), key=lambda s: s[3:]):
-		print '<a href="#%s">View %s</a>'%(k,k)
-	print '<a class="caution" href="?action=deleteAll">Delete All</a>'
-	print '</div>'
+		pout('<a href="#%s">View %s</a>'%(k,k))
+	pout('<a class="caution" href="?action=deleteAll">Delete All</a>')
+	pout('</div>')
 	
 	if len(dRequests.keys()) > 0:
 		for key in sorted(dRequests.keys(), key=lambda s: s[3:]):
 			oneDay(ip,key,dRequests[key])
 	else:
-		print '''
+		pout('''
 	<div class="day">
 		<div class="dayheader">
 		  Request logs are empty for IP %(ip)s
 	   </div>
 	</div>
-'''%{'ip':ip}
+'''%{'ip':ip})
 	
 		
-	print """
+	pout("""
 <div class="footer">
   	<address>
 		<a href="%(contact-url)s"> %(contact-email)s </a> 
@@ -243,22 +271,21 @@ def main():
   <div>More information about das2 can be found at:
   <a href="http://das2.org/">http://das2.org/</a>.</div>
   <div>%(server-sig)s</div>
-</div>"""%dReplace
+</div>"""%dReplace)
 
-	print """
+	pout("""
 </body>
 </html>
-"""%dReplace
+"""%dReplace)
 	
 	return 0
 
 ##############################################################################
 # gather configuration data 
 ##############################################################################
-def error(uText):
-	pout = stdout.write
+def error(sText):
 	pout("Content-Type: text/plain; charset=utf-8\r\n\r\n")
-	pout(uText.encode('utf-8'))
+	pout(sText)
 	
 
 def getConf(sConfFile):
@@ -339,9 +366,9 @@ def processFile(file, dRequests):
 			continue
 		key1 = "%s %s"%(m.group(1),m.group(3))
 		key2 = "%s %s"%(m.group(2),m.group(4))
-		if dRequests.has_key(key1):
+		if key1 in dRequests:
 			day=dRequests[key1]
-			if day.has_key(key2):
+			if key2 in day:
 				day[key2].append(m.group(5))
 			else:
 				day[key2] = [m.group(5)]
@@ -354,38 +381,38 @@ def processFile(file, dRequests):
 
 def oneDay(ip,title,day):
 
-	print '''
+	pout('''
 	<div class="day">
 		<div class="dayheader">
 		  <a name="%(date)s">Request log for IP %(ip)s for %(date)s</a>
 	   </div>
-'''%{'date':title,'ip':ip}
+'''%{'date':title,'ip':ip})
 	
 	for key in sorted(day.keys()):
 		oneRequest(key,day[key])
 		
-	print '''
+	pout('''
 	</div>
-'''
+''')
 
 ##############################################################################
 # Output one request section
 ##############################################################################
 def oneRequest(title,info):
 
-	print '''
+	pout('''
 	<div class="request">
 		<h3>%(time)s</h3>
 		<pre class="request">
-'''%{'time':title}
+'''%{'time':title})
 
 	for line in info:
-		print  line.replace('&','&amp;')
+		pout("%s\n"%line.replace('&','&amp;'))
 		
-	print '''
+	pout('''
 		</pre>
 	</div>
-'''
+''')
 
 ##############################################################################
 ##############################################################################
@@ -394,4 +421,7 @@ def oneRequest(title,info):
 # Start script execution
 ##############################################################################
 if __name__ == "__main__":
-	sys.exit( main() )
+	try:
+		sys.exit( main() )
+	except Exception as e:
+		preLoadError("Exception encountered %s"%str(e))

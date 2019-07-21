@@ -474,7 +474,7 @@ TASKS:
 	
 """)
 
-		lTasks = g_dTemplates.keys()
+		lTasks = list(g_dTemplates.keys())
 		lTasks.sort()
 		for sTask in lTasks:
 			file.write("      '%s' - %s\n"%(sTask, g_dTemplates[sTask].sSummary))

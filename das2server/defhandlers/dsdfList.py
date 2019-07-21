@@ -8,11 +8,6 @@ import json
 from os.path import join as pjoin
 
 ##############################################################################
-def pout(sOut):
-	sys.stdout.write(sOut)
-	sys.stdout.write('\r\n')
-
-##############################################################################
 def _dirOut(sDirName, tData):
 	
 	sPrefix = tData[0]
@@ -112,7 +107,6 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	"""See das2server.defhandlers.intro.py for a decription of this function
 	interface
 	"""
-	pout = sys.stdout.write
 	
 	if 'DSDF_ROOT' not in dConf:
 		U.webio.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
@@ -129,8 +123,8 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	else:
 		bJsonOut = False
 	
-	pout("Status: 200 OK\r\n")
-	pout("Content-Type: text/plain; charset=utf-8\r\n\r\n")
+	U.webio.pout("Status: 200 OK\r\n")
+	U.webio.pout("Content-Type: text/plain; charset=utf-8\r\n\r\n")
 	
 	# Walk the tree, following symlinks
 	U.misc.symWalk(fLog, dConf['DSDF_ROOT'], _fileOut, _dirOut, tData)
@@ -166,6 +160,6 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 			else:
 				s = u"%s\r\n"%lOut[i][0]
 						
-			pout(s.encode("utf8"))
+			U.webio.pout(s)
 	
 	return 0
