@@ -257,7 +257,7 @@ class build_scripts_wconf(build_scripts):
 
 ##############################################################################
 class install_data_wconf(install_data):
-	"""Copies data files any files that have the extension *.fmt are 
+	"""Copies data files any files that have the extension *.in are 
 	treated as a python format string and a dictionary consisting of the
 	current environment plus the 
 	"""
@@ -370,7 +370,7 @@ lDataFiles = [
 		'examples/Waveform.dsdf.in', 'examples/_dirinfo_.dsdf'
 	]),
 	('examples', [
-		'examples/random.py','examples/spectra.sh', 'examples/waveform.py'
+		'examples/randata.py','examples/spectra.sh', 'examples/waveform.py'
 	]),
 	('examples/vgr_data', [
 		'examples/VG1_1979-03-01_12-26-11-956.DAT',
