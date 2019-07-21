@@ -373,10 +373,10 @@ lDataFiles = [
 		'examples/randata.py','examples/spectra.sh', 'examples/waveform.py'
 	]),
 	('examples/vgr_data', [
-		'examples/VG1_1979-03-01_12-26-11-956.DAT',
-		'examples/VG1_1979-03-01_12-26-59-956.DAT',
-		'examples/VG1_1979-03-01_12-27-47-956.DAT',
-		'examples/VG1_1979-03-01_12-28-35-956.DAT'
+		'examples/vgr_data/VG1_1979-03-01_12-26-11-956.DAT',
+		'examples/vgr_data/VG1_1979-03-01_12-26-59-956.DAT',
+		'examples/vgr_data/VG1_1979-03-01_12-27-47-956.DAT',
+		'examples/vgr_data/VG1_1979-03-01_12-28-35-956.DAT'
 	]),
 	
 	# the resource files
