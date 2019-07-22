@@ -20,9 +20,9 @@ the server and the standard output stream from the  `"reader_prog | reducer_prog
 pipeline is delivered as the request body.
 
 Das2-pyserver itself is released under the GPL, but the we have intentionally
-separated the core server software from the data reading programs so that 
-software written in **any** programming language, released under almost
-**any** license, can plug into the system.
+separated the core server software from the data readers so that programs
+written in **any** programming language, released under almost **any** license,
+can plug into the system.
 
 ## Installation Prequisites
 
