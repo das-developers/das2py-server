@@ -19,6 +19,8 @@ from distutils.command.build		 import build
 from distutils.command.build_scripts import build_scripts
 from distutils.command.install_data  import install_data
 
+from distutils.errors import DistutilsFileError
+
 
 g_sPrefix = os.getenv('PREFIX')
 
@@ -362,7 +364,7 @@ lScripts = [ 'scripts/%s'%s for s in [
 
 lDataFiles = [
 	('etc', [
-		'etc/das2server.conf.example.in','etc/das2peers.ini.in',
+		'etc/das2server.conf.example.in','etc/das2peers.ini.example.in',
 		'etc/group', 'etc/passwd'
 	]),
 	('datasets/Examples', [

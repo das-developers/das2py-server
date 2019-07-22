@@ -2,13 +2,12 @@
 
 import sys
 import os
-import ConfigParser
 
-##############################################################################
-def pout(sOut):
-	sys.stdout.write(sOut)
-	sys.stdout.write('\r\n')
-
+# Python 2/3 change
+try:
+	from ConfigParser import SafeConfigParser
+except ImportError:
+	from configparser import SafeConfigParser
 
 ##############################################################################
 def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
@@ -24,33 +23,33 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	sPeersFile = dConf['PEERS_FILE']
 	
 	if not os.path.isfile(sPeersFile):
-		U.webio.serverError(fLog, u"Peers file %s is missing"%sPeersFile)
+		U.webio.serverError(fLog, u"Move etc/das2peers.ini.example to %s and customize"%sPeersFile)
 		return 17
 	
-	psr = ConfigParser.SafeConfigParser()
+	psr = SafeConfigParser()
 	psr.read(dConf['PEERS_FILE'])
 	
-	pout("Content-Type: text/xml; charset=utf-8\r\n")
+	U.webio.pout("Content-Type: text/xml; charset=utf-8\r\n\r\n")
 			
-	pout('<?xml version="1.0" encoding="UTF-8" ?>')
-	pout('<?xml-stylesheet type="text/xsl" href='
-	     '"%s/resource/das2server.xsl"?>'%os.environ['SCRIPT_NAME'])
-	pout('<das2server>')
-	pout('  <peers>')
+	U.webio.pout('<?xml version="1.0" encoding="UTF-8" ?>\n')
+	U.webio.pout('<?xml-stylesheet type="text/xsl" href='
+	     '"%s/static/das2server.xsl"?>\n'%os.environ['SCRIPT_NAME'])
+	U.webio.pout('<das2server>\n')
+	U.webio.pout('  <peers>\n')
 	
 	lSec = psr.sections()
 	lSec.sort()
 	
 	for sSec in lSec:
-		pout('    <server>')
-		pout('      <name>%s</name>'%sSec)
+		U.webio.pout('    <server>\n')
+		U.webio.pout('      <name>%s</name>\n'%sSec)
 		if psr.has_option(sSec, 'url'):
-			pout('      <url>%s</url>'%psr.get(sSec, 'url'))
+			U.webio.pout('      <url>%s</url>\n'%psr.get(sSec, 'url'))
 		if psr.has_option(sSec, 'description'):
-			pout('      <description>%s</description>'%psr.get(sSec, 'description'))
-		pout('    </server>')
+			U.webio.pout('      <description>%s</description>\n'%psr.get(sSec, 'description'))
+		U.webio.pout('    </server>\n')
 	
-	pout('  </peers>')
-	pout('</das2server>')
+	U.webio.pout('  </peers>\n')
+	U.webio.pout('</das2server>\n')
 	
 	return 0

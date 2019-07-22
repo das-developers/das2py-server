@@ -12,6 +12,10 @@ SITE_PATHURI = "tag:das2.org,2017:/MY_SITE"
 # file separate.
 SERVER_ID = "%(SERVER_ID)s"
 
+# Support the das2.3 prototype interface, this is a temporary config
+# item that will be removed in the future
+DAS23_PROTOTYPE = False
+
 # You can use replacement characters to obscure the address a bit, for 
 # example:
 #
@@ -68,9 +72,9 @@ VIEW_LOG_ALLOW = 127.0.0.1
 
 # A sample dataset to use when testing the front page.  Pick your favorite
 # dataset to highlight.
-#SAMPLE_DSDF = survey.dsdf
-#SAMPLE_START = 2013-10-09T15:00
-#SAMPLE_END = 2013-10-19T20:00
+SAMPLE_DSDF = "Examples/Spectra"
+SAMPLE_START = 1979-03-01T12:26:11
+SAMPLE_END = 1979-03-01T12:29:24
 
 # Ignore Redirects in DSDF files, useful for testing new servers
 IGNORE_REDIRECT = false
@@ -120,7 +124,7 @@ D2S_TO_UTF8 = das2_ascii
 #
 # WARNING:  Clients with the IP addresses listed below will never be
 #           asked to athenticate *any* dataset.
-#TEST_FROM = 
+TEST_FROM = 127.0.0.1
 
 
 # PNG Image generator script, will be provided the following command line

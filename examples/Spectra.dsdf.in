@@ -72,7 +72,7 @@ validRange = '1979-03-01T12:26:11 to 1979-03-01T12:29:24 UTC'
 ; For this small dataset we are just taking the whole range as the
 ; example.
 
-exampleRange_00 = '1979-03-01T12:26:11 to 1979-03-01T12:29:24 UTC'
+exampleRange_00 = '1979-03-01T12:26:11 to 1979-03-01T12:29:24 | Bow shock crossing'
 
 
 ; This reader can take extra parameters in the optional third argument.
@@ -81,5 +81,5 @@ exampleRange_00 = '1979-03-01T12:26:11 to 1979-03-01T12:29:24 UTC'
 ; descriptions are visible to the end user, but are somewhat cluncky at
 ; this point.
 
-param_00 = 'DFT_LEN (optional) - The length of each transform, defaults to 800'
-param_01 = 'DFT_SLIDE (optional) - The denominator of the overlap fraction, defaults to 2 (i.e. 1/2 overlap)'
+param_00 = 'DFT_LEN | The length of each transform, defaults to 800'
+param_01 = 'DFT_SLIDE | The denominator of the overlap fraction, defaults to 2 (i.e. 1/2 overlap)'

@@ -185,18 +185,29 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	dReplace = {"script":U.webio.getScriptUrl()}
 	
 	sExQuery = ""
+	
+	# Turn off all the das2.3 stuff on this page unless they want to see it
+	bDas23 = False
+	sKey = 'DAS23_PROTOTYPE'
+	if sKey in dConf:
+		bDas23 = dConf[sKey].lower() in ('true', 'yes', '1')
+	
+	
+	dReplace['SERVER_VER'] = "Das2.2"
+	if bDas23: dReplace['SERVER_VER'] = "Das2.3 (prototype)"
+		
 	if 'SAMPLE_DSDF' in dConf:
 		dReplace['dataset'] = dConf['SAMPLE_DSDF']
 			
 	if 'SAMPLE_START' in dConf and 'SAMPLE_END' in dConf:
-		dReplace['start_time'] = dConf['SAMPLE_START']
-		dReplace['end_time'] = dConf['SAMPLE_END']
+		dReplace['min'] = dConf['SAMPLE_START']
+		dReplace['max'] = dConf['SAMPLE_END']
 	
 	bHSubSys	= False
 	sKey = "ENABLE_HAPI_SUBSYS"
 	if sKey in dConf:
 		bHSubSys = dConf[sKey].lower() in ('true','yes','1')
-	
+		
 				
 	sViewLog = ""
 	sViewLogNav = ""
@@ -240,7 +251,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		<img src="%(script)s/static/logo.png" alt="%(SERVER_ID)s" width="70" height="70" >
 	</div> 
 	<div class="hdr_center">
-	%(SERVER_ID)s, a Das2.2+ Server
+	%(SERVER_ID)s, a %(SERVER_VER)s Server
 	<h1>%(SITE_NAME)s</h1>
 	</div>
 	<div class="hdr_right">
@@ -248,57 +259,86 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		<img src="%(script)s/static/das2logo_rv.png" alt="das2" width="80" height="80">
 		</a>
 	</div>
-	</a>
 </div>
 '''%dReplace)
-	pout('<div class="main">')
-
-	pout('<div class="nav">Data Sources<hr>')
-	pout('  <ul>')
 	
-	lTop = _getDataDirs(U, dConf, fLog, '/')
+	# If das2.3 add side navigation bar...
+	if bDas23:
+		pout('<div class="main">')
+		
+		pout('<div class="nav">Data Sources<hr>')
+		pout('  <ul>')
 	
-	if lTop != None:
-		for (sName, sUrl) in lTop:
-			pout('    <li><a href="%s">%s</a><br><br></li>'%(sUrl, sName))
+		lTop = _getDataDirs(U, dConf, fLog, '/')
+	
+		if lTop != None:
+			for (sName, sUrl) in lTop:
+				pout('    <li><a href="%s">%s</a><br><br></li>'%(sUrl, sName))
 
-	pout('  </ul>')
-	pout('''%s
+		pout('  </ul>')
+		pout('''%s
   <br><br>
   <a href="%s/peers">Peer Servers</a>
 </div>'''%(sViewLogNav, sScriptURL))
 	
-	pout('<div class="article">')
-	
-	if sPathInfo.startswith('/source/'):
-		if sPathInfo != '/source/':
-			_dataNavHeader(U, sReqType, dConf, fLog, form, sPathInfo)
-	
-
-	
-	if bHSubSys:
-		sTmp = """This is a Das 2.3 (prototype) Server, it provides access to
-		          space physics data sources using a three distinct HTTP GET based
-					 query protocols:
-					 <ul>
-					 <li>The <a href="http://das2.org/Das2.2.2-ICD_2017-05-09.pdf">Das 2.2</a> 
-                    service protocol</li>
-					 <li>The Das 2.3 service protocol, a more browseable path based layout
-                    using JSON metadata</li>
-					 <li>The <a href="https://github.com/hapi-server/data-specification">
-                    HAPI 1.1</a> protocol, a simplified time series cube service
-					     defined by the heliophysics API group. </li></ul>"""
+		pout('<div class="article">')
+			
+		if sPathInfo.startswith('/source/'):
+			if sPathInfo != '/source/':
+				_dataNavHeader(U, sReqType, dConf, fLog, form, sPathInfo)
 	else:
-		sTmp = """This is a Das 2.3 Server, it provides access to space physics data 
-		          sources using a two distinct HTTP GET based query protocols, the
-					 established Das 2.2 protocol and the evolving path based 2.3 
-					 protocol."""
+		pout('<div class="body">')
 	
-	pout("""
-<p>%s %s
-</p>
 
-<p>Full use of this site requires a client progam capable of reading data in
+	
+	if bDas23:
+		if bHSubSys:
+			pout("""<p>
+This is a das2.3 (prototype) Server, it provides access to
+space physics data sources using a three distinct HTTP GET based
+query protocols:
+<ul>
+  <li>The <a href="http://das2.org/Das2.2.2-ICD_2017-05-09.pdf">Das 2.2</a> 
+      service protocol</li>
+  <li>The das2.3 service protocol, a more browseable path based layout
+      using JSON metadata</li>
+  <li>The <a href="https://github.com/hapi-server/data-specification">
+      HAPI 1.1</a> protocol, a simplified time series cube service
+	   defined by the heliophysics API group. </li>
+</ul>
+%s</p>"""%sViewLog)
+		else:
+			pout("""<p>
+This is a das2.3 (prototype) Server, it provides access to space physics
+data  sources using a two distinct HTTP GET based query protocols, the
+established das2.2 protocol and the evolving das2.3 
+protocol. %s
+</p>
+"""%sViewLog)
+	else:
+		# Non das23
+		if bHSubSys:
+			pout("""<p>
+This is a das2.2 server, it provides access to space physics data sources
+using a two distinct HTTP GET based query protocols:
+<ul>
+  <li>The <a href="http://das2.org/Das2.2.2-ICD_2017-05-09.pdf">Das 2.2</a> 
+      service protocol</li>
+  <li>The <a href="https://github.com/hapi-server/data-specification">
+      HAPI 1.1</a> protocol, a simplified time series cube service
+	   defined by the heliophysics API group. </li>
+</ul>
+%s</p>"""%sViewLog)
+		else:
+			pout("""<p>
+This is a das2.2 server, it provides access to space physics data sources
+using an HTTP GET based query protocol as described below. %s
+</p>
+"""%sViewLog)
+		
+	
+	pout("""<p>
+Full use of this site requires a client progam capable of reading data in
 das2.2 stream format.  <a href="http://autoplot.org">Autoplot</a> is a
 full-featured graphical for plotting many types of space physics data, including
 streams from this server.  In addition custom applications, or data analysis 
@@ -306,13 +346,13 @@ programs can be written in IDL via the <a href="https://github.com/das-developer
 package, Python using the <a href="https://das2.org/das2py">das2py</a> module,
 or C using <a href="https://saturn.physics.uiowa.edu/svn/das2/core/stable/libdas2_3/">
 libdas2</a>.
-<p>
 </p>
-Since this server delivers information over HTTP, limited functionality thus
+<p>
+Since this server delivers information over HTTP, limited functionality
 is available using any standard web browser.  Some example queries are 
 provided below.
 </p>
-"""%(sTmp, sViewLog))
+""")
 
 	pout("""
 <h2>Das 2.2 Service Queries</h2>
@@ -326,7 +366,7 @@ this server use the following URL:
 </li>"""%dReplace)
 
 	pout("""
-<li><b>Peer List</b> -- To download a list of other Das2 Servers known to this
+<li><b>Peer List</b> -- To download a list of other das2 Servers known to this
 site use the following URL:
 <br /><br />
 <a href="%(script)s?server=peers">%(script)s?server=peers</a>
@@ -338,12 +378,12 @@ site use the following URL:
 <li><b>Dataset Definition</b> -- To gather basic information on a datasource
 enter a URL with the pattern:
 <br /><br />
-%(script)s?server=info&dataset=<i>DATA_SET_NAME</i>
+%(script)s?server=dsdf&dataset=<i>DATA_SET_NAME</i>
 <br /><br />
 Where the <i>DATA_SET_NAME</i> is one of the file paths provided by a 
 data source list query.
 """%dReplace)
-
+	
 	if 'dataset' in dReplace:
 		pout("""
 For example:
@@ -366,12 +406,12 @@ recommended, in general these look like YYYY-MM-DDTHH:MM:SS.sss where
 uneeded time fields may be omitted.
 """%dReplace)
 
-	if 'start_time' in dReplace and 'end_time' in dReplace:
+	if 'min' in dReplace and 'max' in dReplace:
 		pout("""
 For example:
 <br /><br />
-<a href="%(script)s?server=dataset&dataset=%(dataset)s&start_time=%(start_time)s&end_time=%(end_time)s">
-%(script)s?server=dataset&dataset=%(dataset)s&start_time=%(start_time)s&end_time=%(end_time)s</a>
+<a href="%(script)s?server=dataset&dataset=%(dataset)s&start_time=%(min)s&end_time=%(max)s">
+%(script)s?server=dataset&dataset=%(dataset)s&start_time=%(min)s&end_time=%(max)s</a>
 		"""%dReplace)
 	
 	pout("<br /><br /></li>")
@@ -386,13 +426,13 @@ URL with the pattern:
 <br /><br />
 """%dReplace)
 
-		if 'start_time' in dReplace and 'end_time' in dReplace and \
+		if 'min' in dReplace and 'max' in dReplace and \
 		   'dataset' in dReplace:
 			pout("""
 For example:
 <br /><br />
-<a href="%(script)s?server=image&dataset=%(dataset)s&start_time=%(start_time)s&end_time=%(end_time)s">
-%(script)s?server=image&dataset=%(dataset)s&start_time=%(start_time)s&end_time=%(end_time)s</a>
+<a href="%(script)s?server=image&dataset=%(dataset)s&start_time=%(min)s&end_time=%(max)s">
+%(script)s?server=image&dataset=%(dataset)s&start_time=%(min)s&end_time=%(max)s</a>
 		"""%dReplace)
 			
 		pout("<br /><br /></li>")
@@ -400,8 +440,10 @@ For example:
 
 	pout("</ul>")
 
+	# Turn off das2.3 style query info for now...
+	if bDas23:
 
-	pout("""
+		pout("""
 <h2>Das 2.3 Service Queries</h2>
 <ul>
 
@@ -419,7 +461,7 @@ this server use the following URL:
 <br /><br />
 </li>"""%dReplace)
 
-	pout("""
+		pout("""
 <li><b>Peers List</b> -- To download a list of other das2 servers known to this
 site use the following URL:
 <br /><br />
@@ -429,7 +471,7 @@ site use the following URL:
 </li>
 """%dReplace)
 
-	pout("""
+		pout("""
 <li><b>Source Descriptor</b> -- To obtain a JSON description of a data source
 that provides sufficent information to download data enter a URL with
 the pattern:
@@ -440,17 +482,17 @@ Where the <i>SOURCE_DEF_PATH</i> is one of the file paths provided by a
 catalog listing.
 """%dReplace)
 
-	if 'dataset' in dReplace:
-		pout("""
+		if 'dataset' in dReplace:
+			pout("""
 For example:
 <br /><br />
 <a href="%(script)s?/source%(dataset)s">
 %(script)s/source%(dataset)s</a>
 		"""%dReplace)
 	
-	pout("<br /><br /></li>")
+		pout("<br /><br /></li>")
 	
-	pout("""
+		pout("""
 <li><b>Data Download</b> -- To download data as either 
 a das2 stream or QStream enter a URL with the pattern:
 <br /><br />
@@ -463,16 +505,18 @@ recommended, in general these look like YYYY-MM-DDTHH:MM:SS.sss where
 uneeded time fields may be omitted.
 """%dReplace)
 
-	if 'start_time' in dReplace and 'end_time' in dReplace:
-		pout("""
+		if 'min' in dReplace and 'max' in dReplace:
+			pout("""
 For example:
 <br /><br />
-<a href="%(script)s?/source/%(dataset)s?time.min=%(start_time)s&time.max=%(end_time)s">
-%(script)s/source/%(dataset)s?start_time=%(start_time)s&end_time=%(end_time)s</a>
+<a href="%(script)s?/source/%(dataset)s?time.min=%(min)s&time.max=%(max)s">
+%(script)s/source/%(dataset)s?start_time=%(min)s&end_time=%(max)s</a>
 		"""%dReplace)
 	
-	pout("<br /><br /></li>")
+		pout("<br /><br /></li>")
 		
+	
+	# ... end of das2.3 intro
 	
 	if bHSubSys:
 		pout("""
@@ -482,11 +526,11 @@ helophysics API requests as documented at
 https://github.com/hapi-server/data-specification</p>
 """%(dReplace["script"], dReplace["script"]))
 		
-		
+	
+	if bDas23: pout('  </div>\n</div>\n') # If das2.3 end article and main div 
+	else:      pout('</div>\n')           # or just the body div
+	
 	pout('''
-</div>
-</div>
-
 
 <div class="footer">
   <div>More information about das2 can be found at:

@@ -93,10 +93,15 @@ div.nav a:hover, div.nav a:active
 	background-color: #663;
 }
 
+/* Used when no sidebar is printed */
+div.body {
+   padding: 1.5em;
+}
+
 div.article {
-    border-left: 1px solid gray;
-    padding: 1em;
-    overflow: hidden;
+   border-left: 1px solid gray;
+   padding: 1em;
+   overflow: hidden;
 	flex: 6;
 }
 
