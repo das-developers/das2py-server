@@ -1,25 +1,28 @@
 # das2-pyserver
 
-[Das2](https://das2.org) servers typically provide data relevant to space plasma and magnetospheric
-physics research.  To retrieve data, an HTTP GET request is posted to a das2 
-server by a client program and a self-describing stream of data values covering
-the requested time range, at the requested time resolution, is provided in the
-response body.  This software provides a caching middleware layer between 
-server-side das2 readers, which stream data at full resolution to standard out, and
-remote client programs such as [Autoplot](https://autoplot.org) or custom
-programs written in Python ([das2py](https://anaconda.org/DasDevelopers/das2py))
-or IDL ([das2pro](https://github.com/das-developers/das2pro) ).
+[Das2](https://das2.org) servers typically provide data relevant to space
+plasma and magnetospheric physics research.  To retrieve data, an HTTP GET
+request is posted to a das2 server by a client program and a self-describing
+stream of data values covering the requested time range, at the requested time
+resolution, is provided in the response body.  This software, *das2-pyserver*
+provides a caching middleware layer between server-side das2 readers, which
+stream data at full resolution to standard out, and remote client programs
+such as [Autoplot](https://autoplot.org) or custom programs written in Python
+([das2py](https://anaconda.org/DasDevelopers/das2py)) or IDL
+([das2pro](https://github.com/das-developers/das2pro) ).
 
-*das2-pyserver* consists of python scripts that run external programs, called
-readers, which provide the full resolution data streams.  Since they are
-external programs, readers may be written in **any** desired programming
-language and have **any** desired software license.  When a request for data is
-received, das2-pyserver inspects the HTTP GET URL and checks to see if its
-local cache contains the required data, at the desired time resolution or
-better.  If the request is already cached, an HTTP request body is generated
-from cache blocks.  If not, the associated reader program and data reducer are
-invoked on the server and the standard output stream from the 
+When a request for data is received, das2-pyserver inspects the HTTP GET URL
+and checks to see if its local cache contains the required data, at the desired
+time resolution or better.  If the request is already cached, an HTTP request
+body is generated from cache blocks.  If not, the associated reader program and
+data reducer listed in the DSDF (Data Source Description File) are invoked on
+the server and the standard output stream from the  
 `"reader_prog | reducer_prog"` pipeline is delivered as the request body.
+
+Das2-pyserver itself is released under the GPL, but the we have intentionally
+separated the core server software from the data reading programs so that 
+software written in **any** programming language, released under almost
+**any** license, can plug into the system.
 
 ## Installation Prequisites
 
@@ -129,7 +132,7 @@ CentOS 7.
 
 First determine which directory on your server maps to an Apache HTTPS CGI
 directory.  To do this inspect `/etc/httpd/conf/httpd.conf` (or similar).
-The default is `/var/www/cgi-bin`.  To provide a better URLs for your site add
+The default is `/var/www/cgi-bin`.  To provide better URLs for your site add
 the line:
 
 ```apache
@@ -200,8 +203,8 @@ Test the server by pointing your web browser at:
 https://localhost/das/server
 https://localhost/das/log
 ```
-If this works try browsing your new server with Autoplot.  To do so, copy the
-following URI in to the Autoplot address bar and hit the green "Go" button:
+If this works, try browsing your new server with Autoplot.  To do so, copy the
+following URI into the Autoplot address bar and hit the green "Go" button:
 
 ```
 vap+das2server:https://localhost/das/server
