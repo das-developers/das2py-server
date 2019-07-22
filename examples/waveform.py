@@ -240,16 +240,38 @@ class VgrWfrmRecord(object):
 		"""		
 		
 		sPkt = "%s "%str(self.dtBeg)[:-3]
-		lVals = []
-		for b in self.bytes[228:1020]:   # Starting at 228 instead of 220 because
-			n1 = ( ord(b) & 0xF0) >> 4    # 1st 16 samples are junk at Jupiter
-			n2 = ord(b) & 0x0F
+		if sys.version_info[0] >= 2:
+			xPkt = sPkt.encode('utf-8')
+		else:
+			xPkt = sPkt
 			
-			lVals.append( struct.pack("=f", float(n1) - 7.5) )
-			lVals.append( struct.pack("=f", float(n2) - 7.5) )
+		lVals = []
+		
+		# In python 3 iterating over bytearrays produces integers, in python 3
+		# it's 1-element character arrays.
+		if sys.version_info[0] >= 2:
+			for n in self.bytes[228:1020]:   # Starting at 228 instead of 220 because
+				n1 = (n & 0xF0) >> 4          # 1st 16 samples are junk at Jupiter
+				n2 = n & 0x0F
+
+				lVals.append( struct.pack("=f", float(n1) - 7.5) )
+				lVals.append( struct.pack("=f", float(n2) - 7.5) )
+		
+		else:
+			for b in self.bytes[228:1020]:   # Starting at 228 instead of 220 because
+				n1 = ( ord(b) & 0xF0) >> 4    # 1st 16 samples are junk at Jupiter
+				n2 = ord(b) & 0x0F
+			
+				lVals.append( struct.pack("=f", float(n1) - 7.5) )
+				lVals.append( struct.pack("=f", float(n2) - 7.5) )
 				
-		sPkt += ''.join(lVals)
-		return ":%02d:"%nPktId + sPkt	
+		xPkt += b''.join(lVals)
+		
+		if sys.version_info[0] >= 2:
+			sHdr = ":%02d:"%nPktId 
+			return sHdr.encode('utf-8') + xPkt
+		else:
+			return ":%02d:"%nPktId + sPkt	
 
 
 class VgrFileReader(object):
@@ -265,14 +287,20 @@ class VgrFileReader(object):
 	def __iter__(self):
 		self.fIn.seek(0)
 		return self
-		
+	
+	def __next__(self):
+		return self.next()
+	
 	def next(self):
 		bytes = self.fIn.read(1024)
 		if len(bytes) < 600:
 			raise StopIteration
 			
 		if self.fIn.tell() == 1024:
-			self.dtFrame = das2.DasTime(bytes[274:297])
+			if sys.version_info[0] > 2:
+				self.dtFrame = das2.DasTime(bytes[274:297].decode('utf-8'))
+			else:
+				self.dtFrame = das2.DasTime(bytes[274:297])
 			bytes = self.fIn.read(1024)
 		
 		if len(bytes) < 600:
@@ -307,7 +335,6 @@ def main(argv):
 	
 	global g_bStrmHdrWritten
 	
-	sVer = " \n".join( [g_sRev, g_sWho, g_sWhen, g_sURL] )
 	sUsage = "%s [options] DATA_DIRECTORY BEGIN END"%bname(argv[0])
 	sDesc = """
 Reads Voyager 1 High-Rate waveform values and produce a Das2 Stream.  Three
@@ -315,8 +342,7 @@ parameters are required, (1) The path to the directory where the datafiles
 reside, (2) The minmum time value of records to transmit, and (3) the
 maximum time value.
 """
-	psr = optparse.OptionParser(usage=sUsage, description=sDesc, version=sVer,
-	                            prog=bname(argv[0]))
+	psr = optparse.OptionParser(usage=sUsage, description=sDesc, prog=bname(argv[0]))
 	
 	psr.add_option('-l', "--log-level", dest="sLevel", metavar="LOG_LEVEL",
 	               help="Logging level one of [critical, error, warning, "+\
@@ -393,7 +419,7 @@ maximum time value.
 		
 			# since input data are monotonic, quit when encountering a 
 			# record that is past the end point
-			if rec.dtEnd >= dtEnd:
+			if rec.dtBeg >= dtEnd:
 				break
 			
 			if rec.dtBeg < dtEnd and rec.dtEnd > dtBeg:

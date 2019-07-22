@@ -370,7 +370,7 @@ lDataFiles = [
 		'examples/Waveform.dsdf.in', 'examples/_dirinfo_.dsdf'
 	]),
 	('examples', [
-		'examples/randata.py','examples/spectra.sh', 'examples/waveform.py'
+		'examples/randata.py','examples/spectra.sh.in', 'examples/waveform.py'
 	]),
 	('examples/vgr_data', [
 		'examples/vgr_data/VG1_1979-03-01_12-26-11-956.DAT',

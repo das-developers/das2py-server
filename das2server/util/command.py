@@ -77,7 +77,7 @@ def sendCmdOutput(fLog, uCmd, sMimeType, sContentDis, sOutFile):
 			if fd == fdStdErr:
 				xRead = proc.stderr.read()
 				if len(xRead) != 0:
-					fLog.write(xRead)
+					#fLog.write(xRead)
 					lStdErr.append(xRead)
 		
 		if bBreakNext:
@@ -90,7 +90,11 @@ def sendCmdOutput(fLog, uCmd, sMimeType, sContentDis, sOutFile):
 	
 	fLog.write("Finished Read")
 	
-	sStdErr = b"".join(lStdErr)
+	if sys.version_info[0] == 2:
+		sStdErr = ''.join(lStdErr)
+	else:
+		xStdErr = b''.join(lStdErr)
+		sStdErr = xStdErr.decode('utf-8')
 	
 	return (proc.returncode, sStdErr, bHttpHdrsSent)
 
@@ -145,7 +149,13 @@ def getCmdOutput(fLog, uCmd):
 	
 	fLog.write("Finished Read")
 	
-	sStdErr = "".join(lStdErr)
-	sStdOut = "".join(lStdOut)
+	if sys.version_info[0] == 2:
+		sStdErr = "".join(lStdErr)
+		sStdOut = "".join(lStdOut)
+	else:
+		xStdErr = b''.join(lStdErr)
+		xStdOut = b''.join(lStdOut)
+		sStdErr = xStdErr.decode('utf-8')
+		sStdOut = xStdOut.decode('utf-8')
 	
 	return (proc.returncode, sStdOut, sStdErr)

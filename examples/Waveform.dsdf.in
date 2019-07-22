@@ -42,7 +42,7 @@ summary = 'Raw Voyager PWS 4-bit waveform values.  Without correlating '+$
 ; The first two are always given, the third is only provided if supplied
 ; by the end-user client program (such as Autoplot)
 
-reader = 'python%(PYVER) %(PREFIX)s/examples/waveform.py %(PREFIX)s/examples/data'
+reader = '/usr/bin/env PYTHONPATH=%(PREFIX)s/lib/python%(PYVER)s python%(PYVER)s %(PREFIX)s/examples/waveform.py %(PREFIX)s/examples/vgr_data'
 
 
 ; The default reducer simply outputs bin averages, which are not suitable

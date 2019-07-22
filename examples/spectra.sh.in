@@ -4,9 +4,8 @@
 function prnHelp {
 	echo "$1 - Generate power spectral density values from waveform.py" 1>&2
 	echo " "  1>&2
-	echo "Usage: $1 EXAMPLE_DIR BEGIN END [LENGTH] [SLIDE]"  1>&2
+	echo "Usage: $1 BEGIN END [LENGTH] [SLIDE]"  1>&2
 	echo "       $1 [-h | --help]"  1>&2
-	echo "       $1 [-v | --version]"  1>&2
 	echo " "  1>&2
 	echo "Output power spectral density by essentially running the pipeline" 1>&2
 	echo " "  1>&2
@@ -34,41 +33,27 @@ function main {
 			prnHelp $(basename $0)
 			return 0
 		fi
-		if [ "$sArg" = "-v" -o "$sArg" = "--version" ] ; then
-			echo 'SVN Info: $Id$'
-			echo 'SVN URL: $URL$'
-			return 0
-		fi
 	done
 	
 	if [[ "$#" < "2" ]] ; then
-		echo "Usage: " $(basename $0) " EXAMPLE_DIR BEGIN END [LENGTH] [SLIDE]"  1>&2
+		echo "Usage: " $(basename $0) "BEGIN END [LENGTH] [SLIDE]"  1>&2
 		echo "        or use -h for help" 1>&2
 		return 13
 	fi
 	
-	sExDir="$1"
-	sBeg="$2"
-	sEnd="$3"
+	sBeg="$1"
+	sEnd="$2"
 	
 	#Treat last argument as just a string pile
 	
-	for sArg in $(echo ${@:4}); do 		
+	for sArg in $(echo ${@:3}); do 		
 		
-		if [[ ${sArg} =~ ^[0-9]+$ ]] ; then
-		
-			if [ "$nLen" = "0" ] ; then
-				nLen=$sArg
-				continue
-			else
-				if [ "$nDenom" = "0" ] ; then
-					nDenom=$sArg
-					continue
-				fi
-			fi
+		if [ "$nLen" = "0" ] ; then
+			nLen=$sArg
+			continue
 		else
-			if [ "$sExDir" = "" ] ; then
-				sExDir=$sArg
+			if [ "$nDenom" = "0" ] ; then
+				nDenom=$sArg
 				continue
 			fi
 		fi
@@ -84,8 +69,8 @@ function main {
 		nDenom=2
 	fi
 	
-	echo "exec: ${sExDir}/waveform.py $sExDir $sBeg $sEnd | das2_psd -c 2s $nLen $nDenom " 1>&2
-	${sExDir}/waveform.py $sExDir $sBeg $sEnd | das2_psd -c 2s $nLen $nDenom
+	echo "exec: %(PREFIX)s/examples/waveform.py %(PREFIX)s/examples/vgr_data $sBeg $sEnd | das2_psd -c 2s $nLen $nDenom " 1>&2
+	python%(PYVER)s  %(PREFIX)s/examples/waveform.py %(PREFIX)s/examples/vgr_data $sBeg $sEnd | das2_psd -c 2s $nLen $nDenom
 	return $?
 }
 

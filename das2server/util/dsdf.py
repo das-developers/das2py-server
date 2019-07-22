@@ -264,7 +264,7 @@ class Dsdf(object):
 						raise errors.ServerError(
 							"Error in DSDF file %s, can't determine the"%sDsdf+\
 							" value for variable %s in the string for"%sVar+\
-							" keyword"%sKey
+							" keyword %s"%sKey
 						)
 
 				# Now that all the subtitutions have been run, see if secondary
