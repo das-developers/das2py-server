@@ -176,23 +176,23 @@ the name of the symlink carefully as it will be part of the public URL for
 your site:
 
 ```bash
-cd /var/www/cgi-das
-sudo ln -s $PREFIX/bin/das2_srvcgi_main server
-sudo ln -s $PREFIX/bin/das2_srvcgi_logrdr log
+$ cd /var/www/cgi-das
+$ sudo ln -s $PREFIX/bin/das2_srvcgi_main server
+$ sudo ln -s $PREFIX/bin/das2_srvcgi_logrdr log
 ```
 
 Set the permissions of the log directory so that Apache can write logging
 information:
 
 ```bash
-chmod 0777 $PREFIX/log   # Or change the directory ownership
+$ chmod 0777 $PREFIX/log   # Or change the directory ownership
 ```
 
 Finally, trigger a re-read of the Apache's configuration data:
 
 ```bash
-sudo systemctl restart httpd.service
-sudo systemctl status httpd.service
+$ sudo systemctl restart httpd.service
+$ sudo systemctl status httpd.service
 ```
 
 ## Test the server
