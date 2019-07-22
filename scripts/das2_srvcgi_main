@@ -139,7 +139,7 @@ def getConf():
 	
 	if not os.path.isfile(g_sConfPath):
 		if os.path.isfile(g_sConfPath + ".example"):
-			preLoadError("Move\n     %s.example\nto\n     %s\n and configure your site"%(
+			preLoadError("Move\n     %s.example\nto\n     %s\nto enable your site"%(
 			      g_sConfPath, g_sConfPath))
 		else:
 			preLoadError("%s is missing\n"%g_sConfPath)

@@ -294,7 +294,7 @@ def getConf(sConfFile):
 	
 	if not os.path.isfile(sConfFile):
 		if os.path.isfile(sConfFile + ".example"):
-			error(u"Move\n     %s.example\nto\n     %s\n and configure your site"%(
+			error(u"Move\n     %s.example\nto\n     %s\nto enable your site"%(
 			      sConfFile, sConfFile))
 		else:
 			error(u"%s is missing\n"%sConfFile)

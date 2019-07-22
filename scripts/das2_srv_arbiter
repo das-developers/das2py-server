@@ -89,7 +89,7 @@ def getConf():
 	
 	if not os.path.isfile(g_sConfPath):
 		if os.path.isfile(g_sConfPath + ".example"):
-			perr(u"Move\n   %s.example\nto\n   %s\nand configure your site\n"%(
+			perr(u"Move\n   %s.example\nto\n   %s\nto enable your site\n"%(
 				  g_sConfPath, g_sConfPath))
 		else:
 			perr(u"%s is missing\n"%g_sConfPath)

@@ -240,9 +240,10 @@ For further information on your das2-pyserver instance, including:
   * reader programs
   * authentication 
   * request caching
-  * [federated catalog](https://das2.org/browse) integration
   * automatic [HAPI](https://github.com/hapi-server/data-specification) conversion
-
+  * [federated catalog](https://das2.org/browse) integration
+  * [EPN-TAP](http://www.europlanet-vespa.eu/standards.shtml) integration
+  
 consult the users guide document  `das2_pyserver_ug.odt` included in the root
 of the repository.
 
