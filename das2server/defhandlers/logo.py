@@ -5,11 +5,6 @@ import sys
 import mimetypes
 
 ##############################################################################
-def pout(sOut):
-	sys.stdout.write(sOut)
-	sys.stdout.write('\r\n')
-
-##############################################################################
 def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	"""See das2server.defhandlers.intro.py for a decription the handler
 	interface
@@ -22,9 +17,9 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	lLogos = glob.glob(sPtrn)
 	
 	if len(lLogos) == 0:
-		pout("Status: 404 Not Found\r\n")
-		pout("Content-Type: text/plain; charset=utf-8\r\n\r\n")
-		pout("Logo not set for this Das2.2 server\r\n")
+		U.webio.pout("Status: 404 Not Found\r\n")
+		U.webio.pout("Content-Type: text/plain; charset=utf-8\r\n\r\n")
+		U.webio.pout("Logo not set for this Das2.2 server\r\n")
 		
 		fLog.write("\nLogo Handler\n   ERROR: No files matching pattern %s"%sPtrn)
 		return 17
@@ -34,13 +29,12 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		U.webio.serverError(fLog, u"Unrecognized mime type for %s"%lLogos[0])
 		return 17
 	
-	pout("Content-Type: %s\r\n\r\n"%sType)
+	U.webio.pout("Content-Type: %s\r\n\r\n"%sType)
 	
 	fLog.write("\nLogo Handler\n   Sending: %s"%lLogos[0])
 	fIn = open(lLogos[0], 'rb')
-	if sys.version_info[0] == 2:
-		sys.stdout.write(fIn.read())
-	else:
-		sys.stdout.buffer.write(fIn.read())
+	U.webio.pout(fIn.read())
+	
+	
 	return 0
 	
