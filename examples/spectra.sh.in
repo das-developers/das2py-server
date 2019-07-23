@@ -69,7 +69,7 @@ function main {
 		nDenom=2
 	fi
 	
-	echo "exec: %(PREFIX)s/examples/waveform.py %(PREFIX)s/examples/vgr_data $sBeg $sEnd | das2_psd -c 2s $nLen $nDenom " 1>&2
+	echo "exec: python%(PYVER)s %(PREFIX)s/examples/waveform.py %(PREFIX)s/examples/vgr_data $sBeg $sEnd | das2_psd -c 2s $nLen $nDenom " 1>&2
 	python%(PYVER)s  %(PREFIX)s/examples/waveform.py %(PREFIX)s/examples/vgr_data $sBeg $sEnd | das2_psd -c 2s $nLen $nDenom
 	return $?
 }

@@ -19,7 +19,7 @@ data reducer listed in the DSDF (Data Source Description File) are invoked on
 the server and the standard output stream from the  `"reader_prog | reducer_prog"`
 pipeline is delivered as the request body.
 
-Das2-pyserver itself is released under the GPL, but the we have intentionally
+Das2-pyserver itself is released under the GPL, but we have intentionally
 separated the core server software from the data readers so that programs
 written in **any** programming language, released under almost **any** license,
 can plug into the system.
