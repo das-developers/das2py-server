@@ -1,7 +1,8 @@
 All examples included with das2-pyserver are free and unencumbered
 software released into the public domain.  Though every other directory
-in this repository is under the GPL, THIS directory (examples) and all
-contents at this level or below may be used in an any manner desired.
+in this repository is under the GPL, or in the the case of pylib, under
+the license of it's creators, the code in THIS directory (examples)
+may be used in an any manner desired.
 
 Anyone is free to copy, modify, publish, use, compile, sell, or
 distribute this software, either in source code form or as a compiled
