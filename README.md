@@ -250,4 +250,7 @@ For further information on your das2-pyserver instance, including:
 consult the users guide document  `das2_pyserver_ug.odt` included in the root
 of the repository.
 
+## Examples License
 
+All code in the examples directory (not including the temporary pycdf subdirectory)
+is release under the UNLICENSE and may be used without restrictions of any kind.
