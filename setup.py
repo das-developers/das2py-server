@@ -369,16 +369,21 @@ lDataFiles = [
 	]),
 	('datasets/Examples', [
 		'examples/Random.dsdf.in', 'examples/Spectra.dsdf.in',
-		'examples/Waveform.dsdf.in', 'examples/_dirinfo_.dsdf'
+		'examples/Waveform.dsdf.in', 'examples/Params.dsdf.in',
+		'examples/_dirinfo_.dsdf'
 	]),
 	('examples', [
-		'examples/randata.py','examples/spectra.sh.in', 'examples/waveform.py'
+		'examples/randata.py','examples/spectra.sh.in', 'examples/waveform.py',
+		'examples/cdf.py'
 	]),
 	('examples/vgr_data', [
 		'examples/vgr_data/VG1_1979-03-01_12-26-11-956.DAT',
 		'examples/vgr_data/VG1_1979-03-01_12-26-59-956.DAT',
 		'examples/vgr_data/VG1_1979-03-01_12-27-47-956.DAT',
 		'examples/vgr_data/VG1_1979-03-01_12-28-35-956.DAT'
+	]),
+	('examples/themis_data', [
+		'examples/themis_data/tha_l3_sm_20080629_171151_20080629_171152_burst_v01.cdf'
 	]),
 	
 	# the resource files

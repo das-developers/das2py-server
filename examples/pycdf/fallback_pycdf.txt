@@ -1,0 +1,33 @@
+This directory contains versions of the pycdf module from the SpacePy project.
+Minimal modules without the rest of SpacePy are included to help make the 
+"Params" example data source work.
+
+These were included due to an incompatiblity between SpacePy and libcdf.so 
+introduced when the official CDF distribution removed functions used by
+spacepy.pycdf.  If for some reason you are having trouble getting the cdf.py
+reader to run use the following proceedure to symlink one of the modules into
+your das2-pyserver library area as a work-around.
+
+
+1) Find out which version of libcdf.so is installed on your system
+
+   find /usr/local -name "libcdf.so.*"
+   find /usr/lib -name "libcdf.so.*"
+
+   You should find either libcdf.so.3.7.0 or libcdf.so.3.7.1
+
+2) Symlink ONE of the following items depending on the version of CDF
+   in use.  The 3.7.0 and 3.7.1 libraries are incompatable! :
+
+   ln -s $(pwd)/libcdf3.7.0  DAS2SRV_INSTALL/lib/pythonX.X/pycdf
+
+     --or--
+
+   ln -s $(pwd)/libcdf3.7.0  DAS2SRV_INSTALL/lib/pythonX.X/pycdf
+	
+	Where $(pwd) is the directory containing this file (fallback_pycdf.txt)
+	and DAS2SRV_INSTALL is the directory containing your das2-pyserver
+	installation.  (most likely /usr/local/das2srv).
+
+Then load the "Params" data source again and see if it works.  Best of luck!
+

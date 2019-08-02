@@ -1,7 +1,7 @@
 ; This is a DSDF file.  DSDF files define data sources.  A data source is 
 ; simply a program that the server can invoke to produce data over a given
-; parameter range in a usable format such as a Das2 stream or a QStream.  Since
-; the Das2 system is defined in terms of interfaces between programs, it does
+; parameter range in a usable format such as a das2 stream or a QStream.  Since
+; the das2 system is defined in terms of interfaces between programs, it does
 ; not matter what computer language is used to create your data producers.
 ; As long as they write a usable stream to standard output they will plug
 ; into the overall server.
@@ -62,7 +62,8 @@ techContact = 'Your Name <your.name@yourplace.edu>'
 sciContact = 'Some Scientist <some.scientist@yourplace.edu>'
 
 
-; Currently this is not used by the Das2 server
+; Max time range values that will be accepted by das2 pyserver, requests
+; outside this range will be trimmed.
 
 validRange = '1979-03-01T12:26:11 to 1979-03-01T12:29:24 UTC'
 

@@ -1,0 +1,85 @@
+; Dependency Note
+; ---------------
+; The reader for this data source requires the following libraries:
+;
+;   1. The CDF library at:  https://spdf.gsfc.nasa.gov/pub/software/cdf/dist/
+;   2. The spacepy library at:  https://github.com/spacepy/spacepy/
+;
+; Version 3.7.1 of libcdf removed a functions available in libcdf 3.7.0 that
+; spacepy depended upon for Epoch time handling.   If you cannot compatable
+; versions of spacepy and libcdf on your server, workaround libraries are 
+; included in the examples area but are not installed by setup.py.  
+;
+; Read the "fallback_pycdf.txt" file for details.
+
+
+; CDF Example Data Source with Parameters
+;
+; The following example DSDF and it's associated reader provide autocorrelation
+; and cross correlation electric and magnetic wave measurements from THEMIS
+; CDF spectral matrix files.  These files have many different measurements
+; that may be output.  In addition the reader can preform some internal 
+; calculations on the data as well.  Controlling these options is handled by
+; a third argument to the reader call 'params'.  Params are not required and
+; readers should work without them.
+
+description = 'THEMIS SCW-EFW Power Spectral Density (Sample Dataset)'
+
+summary = 'The coordinate system for these data are local magnetic '+$
+          'field-aligned coordinate system: Z-axis along static magnetic '+$
+			 'field B0, Y-axis = R x B0 (R ... radius vector of s/c), '+$
+			 'X-axis = Y x Z'
+
+reader = 'env PYTHONPATH=%(PREFIX)s/lib/python%(PYVER)s python%(PYVER)s %(PREFIX)s/examples/cdf.py %(PREFIX)s/examples/themis_data'
+das2Stream = 1
+
+techContact = 'Your Name <your.name@yourplace.edu>'
+sciContact = 'David Pisa <person@science-place.cz>'
+
+validRange = '2008-06-29T17:11:51 to 2008-06-29T17:11:53'
+
+
+; Since this reader supports parameters, example parameters 
+; may also be specified for example ranges
+
+exampleRange_00 = '2008-06-29T17:11:51 to 2008-06-29T17:11:53 | BxBx Autocorrelation'
+exampleParams_00 = 'BxBx'
+
+exampleRange_01 = '2008-06-29T17:11:51 to 2008-06-29T17:11:53 | All Autocorrelations'
+exampleParams_01 = 'BxBx ByBy BzBz ExEx EyEy EzEz'
+
+exampleRange_02 = '2008-06-29T17:11:51 to 2008-06-29T17:11:53 | BxEx Cross-correlation'
+exampleParams_02 = 'BxEx complex'
+
+exampleRange_02 = '2008-06-29T17:11:51 to 2008-06-29T17:11:53 | BxEx Cross-correlation (Polar)'
+exampleParams_02 = 'BxEx'
+
+; List the set of flags the reader understands here
+param_00 = 'complex | For cross-correlations output real and imaginary parts instead of magnitude and phase angle'
+
+param_01 = 'BxBx | Output BxBx* Autocorrelations'
+param_02 = 'ByBy | Output ByBy* Autocorrelations'
+param_03 = 'BzBz | Output BzBz* Autocorrelations'
+
+param_04 = 'BxBy | Output BxBy* Cross-correlations'
+param_05 = 'BxBz | Output BxBz* Cross-correlations'
+param_06 = 'ByBz | Output ByBz* Cross-correlations'
+
+param_11 = 'ExEx | Output ExEx* Autocorrelations'
+param_12 = 'EyEy | Output ExEx* Autocorrelations'
+param_13 = 'EzEz | Output ExEx* Autocorrelations'
+
+param_14 = 'ExEy | Output BxEy* Cross-correlations'
+param_15 = 'ExEz | Output BxEz* Cross-correlations'
+param_16 = 'EyEz | Output ByEz* Cross-correlations'
+
+param_21 = 'BxEx | Output BxEx* Cross-correlations'
+param_22 = 'BxEy | Output BxEy* Cross-correlations'
+param_23 = 'BxEz | Output BxEz* Cross-correlations'
+param_24 = 'ByEx | Output ByEx* Cross-correlations'
+param_25 = 'ByEy | Output ByEy* Cross-correlations'
+param_26 = 'ByEz | Output ByEz* Cross-correlations'
+param_27 = 'BzEx | Output BzEx* Cross-correlations'
+param_28 = 'BzEy | Output BzEy* Cross-correlations'
+param_29 = 'BzEz | Output BzEz* Cross-correlations'
+		 

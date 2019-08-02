@@ -2,7 +2,7 @@
   
   1. How to send a mostly binary das2 stream in python2 or 3
   2. How to efficently transmit waveform data
-  3. How to send error and progerss messages out to client programs 
+  3. How to send error and progress messages out to client programs 
   4. How to send messages to the server log
   
 Much of this code is general to any python based das2 reader and could be setup
@@ -369,7 +369,7 @@ maximum time value.
 	except:
 		return queryErr(log, "Couldn't parse time value '%s'"%lArgs[2])
 	
-	# Send the stream header as soon as you can, this way if data loading
+	# Send the stream header as soon as you can. This way if data loading
 	# takes a while the client program knows the reader is alive and will
 	# not shutoff the connection.  
 	sHdr = streamHeader({
