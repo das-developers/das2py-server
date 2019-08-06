@@ -23,11 +23,11 @@ your das2-pyserver library area as a work-around.
 
      --or--
 
-   ln -s $(pwd)/libcdf3.7.0  DAS2SRV_INSTALL/lib/pythonX.X/pycdf
-	
-	Where $(pwd) is the directory containing this file (fallback_pycdf.txt)
-	and DAS2SRV_INSTALL is the directory containing your das2-pyserver
-	installation.  (most likely /usr/local/das2srv).
+   ln -s $(pwd)/libcdf3.7.1  DAS2SRV_INSTALL/lib/pythonX.X/pycdf
+   
+   Where $(pwd) is the directory containing this file (fallback_pycdf.txt)
+   and DAS2SRV_INSTALL is the directory containing your das2-pyserver
+   installation.  (most likely /usr/local/das2srv).
 
 Then load the "Params" data source again and see if it works.  Best of luck!
 
