@@ -4,7 +4,7 @@ SITE_NAME = "My Data Source Site"
 # The default path prefix for sources on this server.  Like the SITE_NAME, 
 # this prefix does not need to be unique to this server. This value will be 
 # prepended to any automatically generated path URI's
-SITE_PATHURI = "tag:das2.org,2017:/MY_SITE"
+SITE_PATH_URI = "tag:das2.org,2017:/MY_SITE"
 
 # Server ID, short lowercase string used to distinguish directories and files
 # created by this server.  This is useful when multiple das2 serving hosts
@@ -88,7 +88,7 @@ RESOURCE_PATH = "%(PREFIX)s/static"
 # clients provide a list of you other servers here.
 PEERS_FILE = "%(PREFIX)s/etc/das2peers.ini"
 
-# Program used to upconverting Das1 streams.  Only used by the U. Iowa group
+# Program used to upconvert das1 streams.  Only used by the U. Iowa group
 DAS1_TO_DAS2 = "das2_from_das1"
 
 # The absolute filesystem path to the data cache, only used if caching has 

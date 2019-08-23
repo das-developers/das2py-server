@@ -80,7 +80,7 @@ def getConf():
 # since config file can change module path
 
 def setModulePath(dConf):
-	if not dConf.has_key('MODULE_PATH'):
+	if not 'MODULE_PATH' in dConf:
 		perr(u"Set MODULE_PATH = /dir/containing/das2server_python_module")
 		return False	
 	
@@ -178,7 +178,7 @@ Create or update the das2 server password file whose located is defined in
 	# Load the util module
 	try:
 		mTmp = __import__('das2server', globals(), locals(), ['util'], 0)
-	except ImportError, e:
+	except ImportError as e:
 		perr(u"Error importing module 'das2server'\r\n: %s"%(str(e)))
 		return 19
 	try:
@@ -187,7 +187,7 @@ Create or update the das2 server password file whose located is defined in
 		perr(u'No module named das2server.util under %s'%dConf['MODULE_PATH'])
 		return 20
 	
-	if not dConf.has_key('USER_PASSWD'):
+	if 'USER_PASSWD' not in dConf:
 		perr(u'Indicate location of the das2 password file via '+\
 		      u'USER_PASSWD = in %s\n'%g_sConfPath)
 		return 21

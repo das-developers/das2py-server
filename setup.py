@@ -389,9 +389,9 @@ lDataFiles = [
 	# the resource files
 	('static', [
 		'static/das2logo.png',    'static/das2server.xsl', 
-		'static/hapi.jpg',        'static/magnetosphere.jpg', 
-		'static/das2logo_rv.png', 'static/das2server.css',
-		'static/hapi_sm.png',     'static/logo.png'
+		'static/magnetosphere.jpg', 'static/das2logo_rv.png',
+		'static/das2server.css', 'static/hapi_sm.png',
+		'static/logo.png'
 	]),
 	
 	# And a couple empty dirs...
