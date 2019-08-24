@@ -247,8 +247,8 @@ For further information on your das2-pyserver instance, including:
   * [federated catalog](https://das2.org/browse) integration
   * [EPN-TAP](http://www.europlanet-vespa.eu/standards.shtml) integration
   
-consult the users guide document  `das2_pyserver_ug.odt` included in the root
-of the repository.
+consult the users guide document  `das2_pyserver_ug.pdf` included in the docs
+directory of the repository.
 
 ## Examples License
 
