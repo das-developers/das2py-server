@@ -251,7 +251,7 @@ def getCacheReadCmd(U, fLog, sLocalId, dSrc, dForm):
 		
 	if lMissing != None and len(lMissing) > 0:
 		for t in lMissing:
-			print("Missing: ", t)
+			fLog.write("Missing: %s"%str(t))
 				
 		fLog.write("   Cache miss: Submitting build task for %d "%len(lMissing)+\
 		           "cacheLevel_%02d blocks."%lMissing[0][2])

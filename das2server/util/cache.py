@@ -139,8 +139,8 @@ def snapToTimeBlks(fLog, dsdf, sBeg, sEnd, nLevel, bCoverage=False):
 			raise E.TodoError("Handling resolution in units other than seconds"+\
 		                " or milliseconds is not yet implemented")
 	
-	sBeg = sBeg.encode('ascii')
-	sEnd = sEnd.encode('ascii')
+	sBeg = sBeg
+	sEnd = sEnd
 			
 	dtB = das2.DasTime(sBeg)
 	dtE = das2.DasTime(sEnd)

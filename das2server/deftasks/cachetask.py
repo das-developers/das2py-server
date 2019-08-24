@@ -199,13 +199,17 @@ class Task(T.TaskHandler):
 				rProg = float(nDoneBlks)/float(nTotalBlks)
 				self.setProgress(rProg, "Writing: %s"%sFile)
 				
+				# Yet another python3 problem... just treat everything like bytes
+				# (UNIX got this right).  Worring about decoding is VAX IO problems
+				# all over again because someone can't learn from history.
+				# Thank's python3 for breaking this code...
 				self.proc = subprocess.Popen(
 					uCmd, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
 					stderr=subprocess.PIPE, close_fds=True
 				)
 				
-				(sStdOut, sStdErr) = self.proc.communicate()
-				fLog.write(sStdErr)
+				(xStdOut, xStdErr) = self.proc.communicate()
+				fLog.write(xStdErr)
 				
 				# If we get a non-zero return, nuke the temp file, otherwise
 				# move the tmp file to the permanent location

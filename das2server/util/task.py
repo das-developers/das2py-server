@@ -56,6 +56,8 @@ class QueueBroker(object):
 			ret = self.broker.brpoplpush(sPopQueue, sPushQueue)
 		except redis.exceptions.ConnectionError as e:
 			raise E.ServerError(str(e))
+		
+			
 		return ret
 			
 	def lpop(self, sQueue):
@@ -116,7 +118,7 @@ def getBroker(fLog, dConf):
 	# some communication, before handing back the broker object	
 	try:
 		broker = QueueBroker(host=lConn[0], port=lConn[1], db=lConn[2],
-		                     socket_connect_timeout=300)
+		                     socket_connect_timeout=300, decode_responses=True)
 		sKey = broker.keys('das2_*')
 	except E.ServerError as e:
 		fLog.write("   ERROR: Job broker not available at %s:%d, db=%d.\n"%(

@@ -11,10 +11,32 @@ import pwd
 
 g_sConfPath = REPLACED_ON_BUILD
 
-perr = sys.stderr.write
 
 das2 = None  # Namespace anchor for das2 module, loaded afte sys.path is set
              # via the config file
+
+
+# handle output, python 2/3 compatible
+try:
+	unicode
+except NameError:
+	unicode = str
+
+def pout(item):
+	"""Write bytes or strings, in python 2 or 3
+	If input item is bytes, write them, if item is a unicode string encode as
+	utf-8 first"""
+		
+	if sys.version_info[0] == 2:
+		if isinstance(item, unicode):
+			sys.stdout.write(item.encode('utf-8'))
+		else:
+			sys.stdout.write(item)
+	else:
+		if isinstance(item, unicode):
+			sys.stdout.buffer.write(item.encode('utf-8'))
+		else:
+			sys.stdout.buffer.write(item)
 
 ##############################################################################
 # A generic version reporting block
@@ -46,7 +68,10 @@ def getConf():
 		return None
 
 	# Yes, the Das2 server config files can contain unicode characters
-	fIn = codecs.open(g_sConfPath, 'rb', encoding='utf-8')
+	if sys.version_info[0] == 2:
+		fIn = codecs.open(g_sConfPath, 'rb', encoding='utf-8')
+	else:
+		fIn = open(g_sConfPath, 'r')
 	
 	dConf = {}
 	nLine = 0
@@ -82,7 +107,7 @@ def getConf():
 # since config file can change module path
 
 def setModulePath(dConf):
-	if not dConf.has_key('MODULE_PATH'):
+	if 'MODULE_PATH' not in dConf:
 		perr(u"Set MODULE_PATH = /dir/containing/das2server_python_module")
 		return False	
 	
@@ -197,12 +222,12 @@ class CacheJob(JobTemplate):
 		
 		try:
 			dt = das2.dastime.DasTime(lArgs[1].strip())
-		except ValueError, e:
+		except ValueError as e:
 			raise ValueError("in 'begin' argument, %s\n"%str(e))
 		
 		try:
 			dt = das2.dastime.DasTime(lArgs[2].strip())
-		except ValueError, e:
+		except ValueError as e:
 			perr("in 'end' argument, %s\n"%str(e))
 			
 		return makeTask('CACHE', lArgs)
@@ -229,35 +254,35 @@ def prnJobHelp(sProg, sJob):
 	
 	tplt = g_dTemplates[sJob]
 	
-	print "Task:    %s"%tplt.name().upper()
-	print "Summary: %s"%tplt.summary()
-	print 
+	print("Task:    %s"%tplt.name().upper())
+	print("Summary: %s"%tplt.summary())
+	print("")
 	
 	lArgs = tplt.args()
 	(n1stCol, n2ndCol, sFmt) = _keyAndSumFmt(lArgs, " - ", 71)
 	
-	print "Parameters:"
+	print("Parameters:")
 	for i in range(0, len(lArgs)):
 		sInfo = sFmt%(lArgs[i], tplt.summary(lArgs[i]))
-		print "%4d) %s"%(i+1, sInfo)
+		print("%4d) %s"%(i+1, sInfo))
 	
-	print 
-	print "Description:"
-	print tplt.description()
+	print("") 
+	print("Description:")
+	print(tplt.description())
 	
 	lEx = tplt.examples()
 	if len(lEx) > 0:
 		if len(lEx) > 1:
-			print "Examples:"
+			print("Examples:")
 		else:
-			print "Example:"
+			print("Example:")
 			
 		for i in range(0, len(lEx)):
-			print "   %s:"%lEx[i][0]
-			print
-			print "      %s %s %s"%(sProg, tplt.name(), lEx[i][1])
+			print("   %s:"%lEx[i][0])
+			print("")
+			print("      %s %s %s"%(sProg, tplt.name(), lEx[i][1]))
 		
-	print
+	print("")
 
 ##############################################################################
 # Print the various queue types.  Started as a general function but since I
@@ -276,11 +301,11 @@ def _prnList(lColWidths, lHeaders, llOutputs, sList):
 	lSep = ["-"*n for n in lColWidths]
 	sFmt = " ".join(lFmt)
 	
-	print sFmt%tuple(lHeaders)
-	print " ".join(lSep)
+	print(sFmt%tuple(lHeaders))
+	print(" ".join(lSep))
 	
 	for lOutput in llOutputs:
-		print sFmt%tuple(lOutput)
+		print(sFmt%tuple(lOutput))
 
 
 def prnTodoQueue(broker):
@@ -539,7 +564,7 @@ def main(argv):
 	# We can handle help without reading the config.
 	if not opts.bListTodo and not opts.bListWorking and not opts.bListDone:
 		if len(lArgs) == 0:
-			print "Type '%s help' for usage."%sProg
+			print("Type '%s help' for usage."%sProg)
 			return 0
 		elif len(lArgs) == 1:
 			if lArgs[0].lower() == 'help':
@@ -574,14 +599,14 @@ def main(argv):
 	# Load the das2 module
 	try:
 		das2 = __import__('das2', globals(), locals(), [], 0)
-	except ImportError, e:
+	except ImportError as e:
 		perr("Error importing module 'das2'\r\n: %s\n"%(str(e)))
 		return 19
 	
 	# Load the das2server.util module
 	try:
 		mTmp = __import__('das2server', globals(), locals(), ['util'], 0)
-	except ImportError, e:
+	except ImportError as e:
 		perr(u"Error importing module 'das2server'\r\n: %s\n"%(str(e)))
 		return 19
 	try:
@@ -608,14 +633,14 @@ def main(argv):
 	tplt = g_dTemplates[lArgs[0]]
 	try:
 		sTask = tplt.getTask(lArgs[1:])
-	except ValueError, e:
+	except ValueError as e:
 		perr("ERROR: %s"%str(e))
 		return 13
 	
 	perr("Adding task '%s'\n"%sTask)
 	try:
 		broker.lpush('das2_todo', 	sTask)
-	except ServerError, e:
+	except ServerError as e:
 		perr("ERROR: Job broker error, %s.\n"%str(e))
 		return 21
 	

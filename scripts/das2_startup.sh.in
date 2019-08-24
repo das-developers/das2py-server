@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+
+# This script starts instances of das2_srv_arbiter and waits
+# for them to to exit.  The number of instances to run is 
+# determined by the first argument
+
+declare -a aSubProcs
+declare -i nProcs
+
+function on_sig_term {
+	echo "Caught SIGTERM..." 1>&2
+	for nPid in "${aSubProcs[@]}" ; do
+		echo "shutting down das2_srv_arbiter (pid ${nPid})" 1>&2
+		kill -TERM "${nPid}" 2>/dev/null
+	done
+}
+
+if [ "${1}" = "" ] ; then
+	nProcs=1
+else
+	nProcs=${1}
+fi
+
+trap on_sig_term SIGTERM
+
+for (( i=0; i<=((${nProcs} - 1)); i++ )) ; do 
+	echo -n "Starting %(PREFIX)s/bin/das2_srv_arbiter..." 1>&2
+	%(PREFIX)s/bin/das2_srv_arbiter &
+	aSubProcs[${i}]=$!
+	echo " instance ${i} started.  PID is ${aSubProcs[$i]} ." 1>&2
+done
+
+echo "waiting on ${aSubProcs[@]} ..." 1>&2
+wait ${aSubProcs[@]}
+
+echo "" 1>&2
+

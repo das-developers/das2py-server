@@ -301,6 +301,14 @@ class install_data_wconf(install_data):
 		fOut.write(sDat.encode(encoding='utf-8'))
 		fOut.close()
 		
+		# if dst ends in any recognizable shell script patterns, make it
+		# executable
+		sufficies = ('.sh','.ksh','.py')
+		for suffix in sufficies:
+			if dst.endswith(suffix): 
+				log.info("changing mode of %s to 755"%dst)
+				os.chmod(dst, 0o755)
+		
 		return (dst, 1)
 	
 	def copy_file_or_tplt(self, sFile, sDir):
@@ -363,6 +371,7 @@ lScripts = [ 'scripts/%s'%s for s in [
 ]]
 
 lDataFiles = [
+	('bin', ['scripts/das2_startup.sh.in']),
 	('etc', [
 		'etc/das2server.conf.example.in','etc/das2peers.ini.example.in',
 		'etc/group', 'etc/passwd'

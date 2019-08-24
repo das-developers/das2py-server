@@ -14,7 +14,50 @@ from os.path import dirname as dname
 
 g_sConfPath = REPLACED_ON_BUILD
 
-perr = sys.stdout.write   # Only writes text in python 3
+# handle output, python 2/3 compatible
+try:
+	unicode
+except NameError:
+	unicode = str
+
+def pout(item):
+	"""Write bytes or strings, in python 2 or 3
+	
+	If input item is bytes, write them, if item is a unicode string encode
+	as utf-8 first.  Don't screw with newlines, write them as the caller 
+	intended. (Stop trying to be helpful python 3, because you aren't)
+	"""
+	if sys.version_info[0] == 2:
+		if isinstance(item, unicode):
+			sys.stdout.write(item.encode('utf-8'))
+		else:
+			sys.stdout.write(item)
+	else:
+		if isinstance(item, unicode):
+			sys.stdout.buffer.write(item.encode('utf-8'))
+		else:
+			sys.stdout.buffer.write(item)
+	
+
+def perr(item):
+	"""Write bytes or strings, in python 2 or 3
+	
+	Like pout, but flushes after each write
+	"""
+	if sys.version_info[0] == 2:
+		if isinstance(item, unicode):
+			sys.stderr.write(item.encode('utf-8'))
+		else:
+			sys.stderr.write(item)
+		sys.stderr.flush()
+		
+	else:
+		if isinstance(item, unicode):
+			sys.stderr.buffer.write(item.encode('utf-8'))
+		else:
+			sys.stderr.buffer.write(item)
+		sys.stderr.buffer.flush()
+
 
 
 ##############################################################################
@@ -97,7 +140,11 @@ def getConf():
 		return None
 
 	# Yes, the Das2 server config files can contain unicode characters
-	fIn = codecs.open(g_sConfPath, 'rb', encoding='utf-8')
+	
+	if sys.version_info[0] == 2:
+		fIn = codecs.open(g_sConfPath, 'rb', encoding='utf-8')
+	else:
+		fIn = open(g_sConfPath, 'r')
 	
 	dConf = {}
 	nLine = 0
@@ -134,7 +181,7 @@ def getConf():
 # since config file can change module path
 
 def setModulePath(dConf):
-	if not dConf.has_key('MODULE_PATH'):
+	if 'MODULE_PATH' not in dConf:
 		perr(u"Set MODULE_PATH = /dir/containing/das2server_python_module")
 		return False	
 	
@@ -150,7 +197,8 @@ def setModulePath(dConf):
 	
 class StderrLog(object):
 	def write(self, sThing):
-		stderr.write("%s\n"%sThing)
+		perr(sThing)
+		perr('\n')
 	
 	def newPrefix(self):
 		pass
@@ -171,7 +219,7 @@ def daemonize(fLog, sPidFile):
 	sPidDir = dname(sPidFile)
 	if not os.path.isdir(sPidDir):
 		try:
-			os.makedirs(sPidDir, 0750)
+			os.makedirs(sPidDir, 0o750)
 		except OSError:
 			stderr.write("Can't make dir %s\n"%sPidDir)
 			return 13
@@ -189,7 +237,7 @@ def daemonize(fLog, sPidFile):
 		pid = os.fork()
 		if pid > 0:            
 			sys.exit(0)   # exit first parent
-	except OSError, e:
+	except OSError as e:
 		sys.stderr.write("fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
 		return 13
        
@@ -203,7 +251,7 @@ def daemonize(fLog, sPidFile):
 		pid = os.fork()
 		if pid > 0:
 			sys.exit(0)   # exit from second parent
-	except OSError, e:
+	except OSError as e:
 		sys.stderr.write("fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
 		return 13
        
@@ -244,13 +292,13 @@ def taskFactory(U, dConf, broker, sQueue, iTask, sTask, fLog):
 	
 	sCat = lTask[6].strip()
 	
-	if not g_dDefHandlers.has_key(sCat):
+	if sCat not in g_dDefHandlers:
 		raise ValueError("No task handler is defined for items of type %s"%sCat)
 	
 	
 	sModule = g_dDefHandlers[sCat]    # Start with the default
 	
-	if dConf.has_key(sCat):           # Take the task module from config if 
+	if sCat in dConf:           # Take the task module from config if
 		sModule = dConf[sCat]          #   it has one
 
 	if g_dLoadedModules[sCat] != None:
@@ -272,7 +320,7 @@ def taskFactory(U, dConf, broker, sQueue, iTask, sTask, fLog):
 			__import__(sModule, globals(), locals(), [], 0)
 			Module = sys.modules[sModule]
 			
-		except ImportError, e:
+		except ImportError as e:
 			raise U.errors.ServerError("Error loading module %s from %s: %s"%(
 			                 sModName, sModPath, e))
 		
@@ -281,7 +329,7 @@ def taskFactory(U, dConf, broker, sQueue, iTask, sTask, fLog):
 		# import A
 		try:
 			Module = __import__(sModule, globals(), locals(), [], 0)
-		except ImportError, e:
+		except ImportError as e:
 			raise U.errors.ServerError("Error loading module %s: %s"%(sModule, e))
 
 	task = Module.Task(dConf, broker, sQueue, iTask, sTask, fLog)
@@ -292,7 +340,7 @@ def taskFactory(U, dConf, broker, sQueue, iTask, sTask, fLog):
 ##############################################################################
 def main(argv):
 
-	global g_bShutdown, g_broker, g_lCurTask, perr, U
+	global g_bShutdown, g_broker, g_lCurTask, U
 
 	sUsage="das2_srv_arbiter [-D]"
 	sDesc="""
@@ -334,7 +382,7 @@ The current version can't process more than one job at a time.
 	# Load the util module
 	try:
 		mTmp = __import__('das2server', globals(), locals(), ['util'], 0)
-	except ImportError, e:
+	except ImportError as e:
 		perr(u"Error importing module 'das2server'\r\n: %s\n"%(str(e)))
 		return 19
 	try:
@@ -348,7 +396,7 @@ The current version can't process more than one job at a time.
 	U.misc.envPathMunge("PATH", dConf['BIN_PATH'])
 	U.misc.envPathMunge("LD_LIBRARY_PATH", dConf['LIB_PATH'])
 	
-	if dConf.has_key('LOG_PATH') and opts.sPidFile:
+	if 'LOG_PATH' in dConf and opts.sPidFile:
 	
 		# The switch to using fLog over stderr happens within daemonize
 		fLog = U.webio.DasLogFile(dConf['LOG_PATH'], 
@@ -363,11 +411,9 @@ The current version can't process more than one job at a time.
 	# Change the nice value
 	if os.name == 'posix':
 		os.nice(5)  # Drop our priority compared to real-time processing
-		
-	perr = None  # Prevent accidental use of perr
-		
+				
 	fLog.write("Setting process umask to 0002")
-	os.umask(0002)
+	os.umask(0o002)
 	
 	# Setup the signal handler so that sub-processes can be shutdown
 	# when we are:
@@ -392,7 +438,7 @@ The current version can't process more than one job at a time.
 			try:
 				broker = U.task.getBroker(fLog, dConf)
 				fLog.write("Connection to job broker established")
-			except U.errors.ServerError, e:
+			except U.errors.ServerError as e:
 				fLog.write("Job broker not available, %s"%str(e) +\
 				           "  Will try again in 5 minutes")
 				time.sleep(60*5)
@@ -404,11 +450,13 @@ The current version can't process more than one job at a time.
 		# Block waiting to move items to the queue job
 		try:
 			sTask = broker.brpoplpush("das2_todo", sWorkQueue)
-		except U.errors.DasError, e:
+			# Yay more python 3 problems!
+			
+		except U.errors.DasError as e:
 			fLog.write("Exception caught while reading/writing queues 'das2_todo', '%s': %s"%(
 			           sWorkQueue, str(e)))
 			break
-		except KeyboardInterrupt, e:
+		except KeyboardInterrupt as e:
 			fLog.write("Keyboard Interrupt caught, shutting down.")
 			break
 		
@@ -423,15 +471,15 @@ The current version can't process more than one job at a time.
 			task = taskFactory(U, dConf, broker, sWorkQueue, 0, sTask, fLog)
 			g_lCurTask.append(task)
 		
-		except ValueError, e:
+		except ValueError as e:
 			fLog.write("ERROR: Bad Task Entry, %s"%e)
 			broker.lpop(sWorkQueue)
 			continue
-		except U.errors.QueryError, e:
+		except U.errors.QueryError as e:
 			fLog.write("ERROR: Bad Task Request, %s"%e)
 			broker.lpop(sWorkQueue)
 			continue
-		except U.errors.DasError, e:
+		except U.errors.DasError as e:
 			fLog.write("ERROR: Inproper Server configuration, %s"%e)
 			broker.lpop(sWorkQueue)
 			continue
@@ -440,7 +488,7 @@ The current version can't process more than one job at a time.
 			task.begin()
 			task.run(fLog)
 				
-		except Exception, e: 
+		except Exception as e: 
 			task.end(13, str(e).replace('|',' '))
 			fLog.write("ERROR: %s"%e)
 		else:
