@@ -126,21 +126,6 @@ D2S_TO_UTF8 = das2_ascii
 #           asked to athenticate *any* data source.
 TEST_FROM = 127.0.0.1
 
-
-# PNG Image generator script, will be provided the following command line
-# arguments (with value examples):  
-#
-# server=http://emfisis.physics.uiowa.edu/das/das2Srever
-# dataset=rbsp/RBSP-B/HFR_spectra.dsdf
-# start_time=2013-03-01
-# end_time=2013-03-02
-# image=HFR_spectra_34578.png
-# params='KEEP-SPIKES Bu'
-#
-# Others can be added if it's useful.  
-
-#PNG_MAKER = autoplot_url2png.py
-
 # Das2 CGI scripts can record jobs to be preformed later, such as building
 # data caches.  Since many CGI instances may be running at a single time a
 # distributed work queue broker is used to handling the task queue.  By 
@@ -159,3 +144,18 @@ WORK_QUEUE_BROKER = redis
 
 WORK_QUEUE_CONN = localhost:6379:0
 
+# PNG Image generator script, will be provided the following command line
+# arguments (with value examples):  
+#
+# in.fmt=das2.2
+# time.max=2013-03-01
+# time.min=2013-03-02
+#
+# The program must take a das2.2 stream, or Q stream on it's standard input
+# channel and output a PNG image.  See the das2-pyserver user's guide for
+# details.
+#
+#PNG_MAKER = autoplot_url2png.py
+
+# Turn this on to enable support for heliophysics API services
+#ENABLE_HAPI_SUBSYS = false
