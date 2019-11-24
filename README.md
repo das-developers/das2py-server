@@ -83,7 +83,6 @@ save time.
 ```bash
 $ export PREFIX=/usr/local/das2srv   # Adjust to taste
 $ export PYVER=3.6                   # or 2.7, or 3.7 etc.
-$ export N_ARCH=/                    # omit per-OS sub-directories
 $ export SERVER_ID=solar_orbiter_2   # for example.  ID should not contain whitespace
 ```
 
@@ -92,6 +91,14 @@ python interpreter:
 
 ```bash
 $ python$PYVER
+```
+
+Build and install commands can run without `sudo` if the install directory
+is created manually.  The following will make the install directory and set
+it's ownership to the current account.  We will lock it down after install.
+```bash
+$ sudo mkdir $PREFIX
+$ sudo chown $LOGNAME $PREFIX
 ```
 
 The following sequence will build, test, and install libdas2.3 and das2py
@@ -122,6 +129,15 @@ Copy over the example configuration file:
 ```bash
 $ cd $PREFIX/etc
 $ cp das2server.conf.example das2server.conf
+```
+
+We are done with server software installation, lock down the install area (if desired). 
+The `cache` subdirectory shoud be owned by the account that runs asynchronous 
+data-reduction processing.  The `cache` subdirectory should not be owned by Apache
+or root, but any other account is fine.
+```bash
+$ sudo chown -R root:root $PREFIX
+$ sudo chown $LOGNAME cache               # i.e. any non-apache, non-root account
 ```
 
 ## Configure Apache
