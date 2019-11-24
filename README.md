@@ -133,11 +133,11 @@ $ cp das2server.conf.example das2server.conf
 
 We are done with server software installation, lock down the install area (if desired). 
 The `cache` subdirectory shoud be owned by the account that runs asynchronous 
-data-reduction processing.  The `cache` subdirectory should not be owned by Apache
-or root, but any other account is fine.
+data-reduction processing.  The cache subdirectory should not be owned by the
+webserver account, or root, but any other account is fine.
 ```bash
 $ sudo chown -R root:root $PREFIX
-$ sudo chown $LOGNAME cache               # i.e. any non-apache, non-root account
+$ sudo chown $LOGNAME $PREFIX/cache         # i.e. any non-apache, non-root account
 ```
 
 ## Configure Apache
