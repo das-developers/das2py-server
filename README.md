@@ -17,7 +17,7 @@ time resolution or better.  If the request is already cached, an HTTP response
 body is generated from cache blocks.  If not, the associated reader program and
 data reducer listed in the DSDF (Data Source Description File) are invoked on
 the server and the standard output stream from the  `"reader_prog | reducer_prog"`
-pipeline is delivered as the request body.
+pipeline is delivered as the response body.
 
 Das2-pyserver itself is released under the GPL, but we have intentionally
 separated the core server software from the data readers so that programs
