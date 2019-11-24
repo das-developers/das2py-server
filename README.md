@@ -13,7 +13,7 @@ such as [Autoplot](https://autoplot.org) or custom programs written in Python
 
 When a request for data is received, das2-pyserver inspects the HTTP GET URL
 and checks to see if its local cache contains the required data, at the desired
-time resolution or better.  If the request is already cached, an HTTP request
+time resolution or better.  If the request is already cached, an HTTP response
 body is generated from cache blocks.  If not, the associated reader program and
 data reducer listed in the DSDF (Data Source Description File) are invoked on
 the server and the standard output stream from the  `"reader_prog | reducer_prog"`
