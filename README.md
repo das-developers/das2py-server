@@ -198,6 +198,14 @@ $ sudo ln -s $PREFIX/bin/das2_srvcgi_main server
 $ sudo ln -s $PREFIX/bin/das2_srvcgi_logrdr log
 ```
 
+The main server script needs to be able to find the main log reader
+script and vice versa.  If you use something other than the default
+values above update the following config entries in your `das2server.conf`.
+```ini
+VIEW_LOG_URL = "log"
+MAIN_SRV_URL = "server"
+```
+
 Set the permissions of the log directory so that Apache can write logging
 information:
 
