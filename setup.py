@@ -379,7 +379,7 @@ lDataFiles = [
 	('datasets/Examples', [
 		'examples/Random.dsdf.in', 'examples/Spectra.dsdf.in',
 		'examples/Waveform.dsdf.in', 'examples/Params.dsdf.in',
-		'examples/_dirinfo_.dsdf'
+		'examples/Auth.dsdf.in', 'examples/_dirinfo_.dsdf'
 	]),
 	('examples', [
 		'examples/randata.py','examples/spectra.sh.in', 'examples/waveform.py',

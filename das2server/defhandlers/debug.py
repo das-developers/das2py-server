@@ -22,7 +22,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		
 			bAuth = True
 		
-			sAuthPlain = base64.b64decode(sAuth[5:])
+			sAuthPlain = base64.b64decode(sAuth[5:]).decode('utf-8')
 			lAuth = sAuthPlain.split(':')
 			sUser = lAuth[0]
 			sPasswd = lAuth[1]

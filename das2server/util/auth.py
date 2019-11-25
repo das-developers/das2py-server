@@ -70,7 +70,7 @@ def _getUserPasswd(fLog):
 		sAuth = os.environ['HTTP_AUTHORIZATION']
 		
 		if sAuth.startswith('Basic') and len(sAuth) > 12:
-			sAuthPlain = base64.b64decode(sAuth[6:])
+			sAuthPlain = base64.b64decode(sAuth[6:]).decode('utf-8')
 			lAuth = sAuthPlain.split(':')
 			return( lAuth[0], ':'.join(lAuth[1:]) )
 			
