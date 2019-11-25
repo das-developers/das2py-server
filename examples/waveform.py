@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # This is free and unencumbered software released into the public domain.
 # 
 # Anyone is free to copy, modify, publish, use, compile, sell, or
@@ -274,7 +276,7 @@ class VgrWfrmRecord(object):
 		
 		# In python 3 iterating over bytearrays produces integers, in python 3
 		# it's 1-element character arrays.
-		if sys.version_info[0] >= 2:
+		if sys.version_info[0] > 2:
 			for n in self.bytes[228:1020]:   # Starting at 228 instead of 220 because
 				n1 = (n & 0xF0) >> 4          # 1st 16 samples are junk at Jupiter
 				n2 = n & 0x0F

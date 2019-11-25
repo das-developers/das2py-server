@@ -9,8 +9,10 @@ import os
 import codecs
 import traceback
 
-#from io import BytesIO     # handles bytes strings
-from io import StringIO     # handles unicode strings
+if sys.version_info[0] < 3:
+	from StringIO import StringIO  # handles binary strings
+else:
+	from io import StringIO        # handles unicode strings
 
 from os.path import join as pjoin
 
