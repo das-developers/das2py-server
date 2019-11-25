@@ -10,8 +10,8 @@ import platform
 import os.path
 from os.path import join as pjoin
 
-import error
-import cache
+from . import error
+from . import cache
 
 ##############################################################################
 # Fallback HAPI info command line
@@ -149,7 +149,8 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	if len(lExamples) == 0:
 		error.sendIncompatable(fLog, "no example time range provided")
 	dEx = lExamples[-1]
-	(sExBeg, sExEnd) = (dEx['params']['time.min'], dEx['params']['time.max'])
+	
+	(sExBeg, sExEnd) = (dEx['http_params']['start_time'], dEx['http_params']['end_time'])
 	fLog.write("   Using range %s to %s for stream information"%(sExBeg, sExEnd))
 	
 	if (u'qstream' in dsdf) and dsdf.isTrue(u'qstream'):
@@ -211,49 +212,59 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	(nRet, sOut, sErr) = U.command.getCmdOutput(fLog, uCmd) # Blocking call
 	
-	if nRet != 0:
-		pout('Status: 500 Internal Server Error\r\n')
+	# The hapi converter always triggers an error return because it kills the
+	# pipe as soon as it has what in needs.  Don't trigger off of an error
+	# return.
+	#if nRet != 0:
+	#	pout('Status: 500 Internal Server Error\r\n')
+	#
+	#	dStatus = {'code':1500, 'message': 'Internal Server Error'}
+	#	dOut = {"HAPI": "1.1", 'status':dStatus}
+	#	dStatus['x_reason'] = sErr.replace('\\', '\\\\').replace('"','\"') 
+	#	
+	#	sOut = json.dumps(dOut, ensure_ascii=False, sort_keys=True, indent=3)
+	#	sys.stdout.write(sOut)
+	#	sys.stdout.write('\r\n')
+	#	return 0
+		
 	
+	# If couldn't parse the converter's output ...
+	try:
+		dOut = json.loads(sOut, encoding="utf-8")
+	except ValueError:
+		pout('Status: 500 Internal Server Error\r\n')
 		dStatus = {'code':1500, 'message': 'Internal Server Error'}
 		dOut = {"HAPI": "1.1", 'status':dStatus}
-		dStatus['x_reason'] = sErr.replace('\\', '\\\\').replace('"','\"') 
-		
+		dStatus['x_reason'] = "Couldn't decode JSON data from sub-command"
 		sOut = json.dumps(dOut, ensure_ascii=False, sort_keys=True, indent=3)
-	else:
-		# Read the original json here and merge in a URL
-		try:
-			dOut = json.loads(sOut, encoding="utf-8")
-		except ValueError:
-			pout('Status: 500 Internal Server Error\r\n')
-			dStatus = {'code':1500, 'message': 'Internal Server Error'}
-			dOut = {"HAPI": "1.1", 'status':dStatus}
-			dStatus['x_reason'] = "Couldn't decode JSON data from sub-command"
-			sOut = json.dumps(dOut, ensure_ascii=False, sort_keys=True, indent=3)
-			return 13
+		sys.stdout.write(sOut)
+		sys.stdout.write('\r\n')
+		return 13
 		
-		sTmp = ''
-		if sHapiParam and (len(sHapiParam) > 0):
-			sTmp = "&parameters=%s"%sHapiParam
 		
-		# Provide a Das2 link in case the client is able to use these
-		dOut['x_links'] = [ {
-			"tag":"das2Stream",
-			"description":"Access to the upstream Das2 data source for this HAPI endpoint",
-			"mime-type": "application/vnd.das2.das2stream",
-			"url":"%s?server=dataset?dataset=%s&start_time=%s&end_time=%s"%(
-                sScript, sId, sExBeg, sExEnd)
-		}]
+	# Okay, looks like it worked
+	sTmp = ''
+	if sHapiParam and (len(sHapiParam) > 0):
+		sTmp = "&parameters=%s"%sHapiParam
 		
-		# Change the description to match the sub source if needed
-		if sDescription:
-			fLog.write("   Setting description to: \"%s\""%sDescription)
-			dOut['description'] = sDescription
+	# Provide a Das2 link in case the client is able to use these
+	dOut['x_links'] = [ {
+		"tag":"das2Stream",
+		"description":"Access to the upstream Das2 data source for this HAPI endpoint",
+		"mime-type": "application/vnd.das2.das2stream",
+		"url":"%s?server=dataset?dataset=%s&start_time=%s&end_time=%s"%(
+               sScript, sId, sExBeg, sExEnd)
+	}]
 		
-		sOut = json.dumps(dOut, ensure_ascii=False, sort_keys=True, indent=3)
-	
+	# Change the description to match the sub source if needed
+	if sDescription:
+		fLog.write("   Setting description to: \"%s\""%sDescription)
+		dOut['description'] = sDescription
+		
 	pout("Expires: now")
 	pout("Status: 200 OK\r\n")
 		
+	sOut = json.dumps(dOut, ensure_ascii=False, sort_keys=True, indent=3)
 	sys.stdout.write(sOut)
 	sys.stdout.write('\r\n')
 	

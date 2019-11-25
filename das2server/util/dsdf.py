@@ -520,11 +520,11 @@ class Dsdf(object):
 
 		for sKey in lKeys:
 			dParams = {}
-			dExample = {'SETTINGS':dParams}
+			dExample = {'http_params':dParams}
 			lVal = escSplitStr(self.d[sKey], '|', '\\')
 			sRng = lVal[0]
 			if len(lVal) > 1:
-				dExample['TITLE'] = lVal[1].strip()
+				dExample['title'] = lVal[1].strip()
 			sRng = sRng.replace('UTC','')
 			lRng = [x.strip() for x in sRng.split('to')]
 			if len(lRng) != 2:
@@ -543,7 +543,7 @@ class Dsdf(object):
 			if bDas23:
 				sInfoKey = sKey.replace('exampleRange','exampleInfo')
 				if sInfoKey in self.d:
-					dExample['TITLE'] = self.d[sInfoKey]
+					dExample['title'] = self.d[sInfoKey]
 			
 			sIntKey = sKey.replace('exampleRange','exampleInterval')
 

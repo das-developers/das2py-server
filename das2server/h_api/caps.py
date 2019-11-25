@@ -2,22 +2,27 @@
 
 import sys
 import json
-import error
+
+from . import error
 
 ##############################################################################
 def pout(sOut):
-	sys.stdout.write(sOut)
-	sys.stdout.write('\r\n')
+	if sys.version_info[0] < 3:
+		sys.stdout.write(sOut)
+		sys.stdout.write('\r\n')
+	else:
+		sys.stdout.buffer.write(sOut)
+		sys.stdout.buffer.write(b'\r\n')
 	
 ##############################################################################
 def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	fLog.write("\nDas 2.2 HAPI Capabilities handler")
-	pout("Content-Type: application/json; charset=utf-8")
+	pout(b'Content-Type: application/json; charset=utf-8')
 	
 	if not error.paramCheck(fLog, 'capabilities', [], form):
 		return 18
 	
-	pout("Status: 200 OK\r\n")
+	pout(b'Status: 200 OK\r\n')
 	
 	d = {
 		"HAPI":"1.1", 

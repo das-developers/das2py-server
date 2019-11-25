@@ -5,14 +5,18 @@ import codecs
 import json
 import os.path
 
-import error
-
 from os.path import join as pjoin
+
+from . import error
 
 ##############################################################################
 def pout(sOut):
-	sys.stdout.write(sOut)
-	sys.stdout.write('\r\n')
+	if sys.version_info[0] < 3:
+		sys.stdout.write(sOut)
+		sys.stdout.write('\r\n')
+	else:
+		sys.stdout.buffer.write(sOut)
+		sys.stdout.buffer.write(b'\r\n')
 
 
 def _keyVal(sLine, sCmt):
@@ -206,7 +210,7 @@ def _sortNoDesc(tListItem):
 def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	fLog.write("\nDas 2.2 HAPI Catalog handler\n")
 	
-	pout("Content-Type: application/json; charset=utf-8")
+	pout(b'Content-Type: application/json; charset=utf-8')
 	
 	if 'DSDF_ROOT' not in dConf:
 		U.webio.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
@@ -215,7 +219,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	if not error.paramCheck(fLog, 'catalog', [], form):
 		return 18
 			
-	pout("Status: 200 OK\r\n")  
+	pout(b'Status: 200 OK\r\n')
 	
 	sScript = U.webio.getScriptUrl()
 

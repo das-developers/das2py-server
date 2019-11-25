@@ -10,7 +10,7 @@ import platform
 from os.path import basename as bname
 from os.path import join as pjoin
 
-import error
+from . import error
 
 ##############################################################################
 # Fallback HAPI info command line
@@ -20,8 +20,12 @@ import error
 
 ##############################################################################
 def pout(sOut):
-	sys.stdout.write(sOut)
-	sys.stdout.write('\r\n')
+	if sys.version_info[0] < 3:
+		sys.stdout.write(sOut)
+		sys.stdout.write('\r\n')
+	else:
+		sys.stdout.buffer.write(sOut)
+		sys.stdout.buffer.write(b'\r\n')
 
 ##############################################################################
 def _sendBadFormat(fLog, sReqFmt):
@@ -32,7 +36,7 @@ def _sendBadFormat(fLog, sReqFmt):
 	           'code':1409 }
 	dOut = {"HAPI": "1.1", 'status':dStatus}
 	sOut = json.dumps(dOut, ensure_ascii=False, sort_keys=True, indent=3)
-	pout(sOut)
+	pout(sOut.encode('utf8'))
 
 ##############################################################################
 def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
@@ -222,15 +226,15 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	# Handle the no data case
 	if nRet == 0:
 		if not bHdrSent:
-			pout('Content-Type: text/csv; charset=utf-8')
-			pout('Status: 200 OK\r\n')
+			pout(b'Content-Type: text/csv; charset=utf-8')
+			pout(b'Status: 200 OK\r\n')
 			fLog.write("   Not data in range, empty message body sent")
 	else:
 		if not bHdrSent:
 			# If headers haven't went out the door, I can send a proper error
 			# response
-			pout('Content-Type: application/json; charset=utf-8')
-			pout('Status: 500 Internal Server Error\r\n')
+			pout(b'Content-Type: application/json; charset=utf-8')
+			pout(b'Status: 500 Internal Server Error\r\n')
 	
 			dStatus = {'code':1500, 'message': 'Internal Server Error'}
 			dOut = {"HAPI": "1.1", 'status':dStatus}
