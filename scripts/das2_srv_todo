@@ -37,6 +37,22 @@ def pout(item):
 			sys.stdout.buffer.write(item.encode('utf-8'))
 		else:
 			sys.stdout.buffer.write(item)
+			
+def perr(item):
+	"""Write bytes or strings, in python 2 or 3
+	If input item is bytes, write them, if item is a unicode string encode as
+	utf-8 first"""
+		
+	if sys.version_info[0] == 2:
+		if isinstance(item, unicode):
+			sys.stderr.write(item.encode('utf-8'))
+		else:
+			sys.stderr.write(item)
+	else:
+		if isinstance(item, unicode):
+			sys.stderr.buffer.write(item.encode('utf-8'))
+		else:
+			sys.stderr.buffer.write(item)
 
 ##############################################################################
 # A generic version reporting block

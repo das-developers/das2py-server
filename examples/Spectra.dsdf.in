@@ -91,4 +91,10 @@ param_01 = 'DFT_SLIDE | The denominator of the overlap fraction, defaults to 2 (
 ; bins.  Since no special reducer is listed for this source, the default
 ; reducer will be used to generate the cache files.
 
-cacheLevel_00 = '10 s | daily'
+cacheLevel_00 = '250 ms | hourly'
+cacheLevel_10 = '1 s | daily'
+
+
+; Enable HAPI format conversion if desired
+hapi = 1
+
