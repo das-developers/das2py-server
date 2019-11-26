@@ -124,6 +124,8 @@ before this step.
 $ cd ../das2-pyserver
 $ python${PYVER} setup.py install --prefix=${PREFIX} --install-lib=${PREFIX}/lib/python${PYVER}
 ```
+You can add the argument `--no-examples` to avoid installing the example
+datasets if these are not desired.
 
 Copy over the example configuration file:
 
