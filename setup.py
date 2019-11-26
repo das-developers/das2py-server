@@ -258,11 +258,19 @@ class build_scripts_wconf(build_scripts):
 
 
 ##############################################################################
+
+# Global hack to deal with lack of access to command constructor
+g_lKeepDest = []
+
 class install_data_wconf(install_data):
 	"""Copies data files any files that have the extension *.in are 
 	treated as a python format string and a dictionary consisting of the
 	current environment plus the 
 	"""
+	
+	def __init__(self, dist):
+		install_data.__init__(self,dist)
+		self.lKeepDest = g_lKeepDest
 	
 	def file_from_tplt(self, src, dst, verbose=1, dry_run=0):
 		"""Replicate some of the dist_utils copy file code here"""
@@ -280,6 +288,12 @@ class install_data_wconf(install_data):
 			dst = os.path.join(dst, os.path.basename(src_strip))
 		else:
 			dir = os.path.dirname(dst)
+			
+		# If the destination exists and is in our "don't overwrite" list
+		# ignore the install
+		if os.path.isfile(dst) and (os.path.basename(dst) in self.lKeepDest):
+			return (dst, 0)
+		
 
 		if verbose >= 1:
 			if os.path.basename(dst) == os.path.basename(src):
@@ -311,11 +325,26 @@ class install_data_wconf(install_data):
 		
 		return (dst, 1)
 	
+	
 	def copy_file_or_tplt(self, sFile, sDir):
 		if not sFile.endswith('.in'):
-			return self.copy_file(sFile, sDir)
+			
+			if os.path.isdir(sDir):
+				sFinal = os.path.join(sDir, os.path.basename(sFile))
+			else:
+				sFinal = sDir
+			
+			# If the destination exists and is in our "don't overwrite" list
+			# ignore the install.  This is different from the perserve_mode=1
+			# behavior for copy_file in that it doesn't care about file times.
+			if os.path.isfile(sFinal) and (os.path.basename(sFinal) in self.lKeepDest):
+				return (sFinal, 0)
+			else:
+				return self.copy_file(sFile, sDir)
+				
 		else:
 			return self.file_from_tplt(sFile, sDir)			
+	
 	
 	def run(self):
 	
@@ -330,8 +359,7 @@ class install_data_wconf(install_data):
 							  (f, self.install_dir))
 				
 				(out, _) = self.copy_file_or_tplt(f, self.install_dir)
-				
-				self.outfiles.append(out)
+				if out: self.outfiles.append(out)
 				
 			else:
 				# it's a tuple with path to install to and a list of files
@@ -355,7 +383,7 @@ class install_data_wconf(install_data):
 					
 						(out, _) = self.copy_file_or_tplt(data, dir)
 				
-						self.outfiles.append(out)
+						if out: self.outfiles.append(out)
 	
 
 ##############################################################################
@@ -376,24 +404,6 @@ lDataFiles = [
 		'etc/das2server.conf.example.in','etc/das2peers.ini.example.in',
 		'etc/group', 'etc/passwd'
 	]),
-	('datasets/Examples', [
-		'examples/Random.dsdf.in', 'examples/Spectra.dsdf.in',
-		'examples/Waveform.dsdf.in', 'examples/Params.dsdf.in',
-		'examples/Auth.dsdf.in', 'examples/_dirinfo_.dsdf'
-	]),
-	('examples', [
-		'examples/randata.py','examples/spectra.sh.in', 'examples/waveform.py',
-		'examples/cdf.py'
-	]),
-	('examples/vgr_data', [
-		'examples/vgr_data/VG1_1979-03-01_12-26-11-956.DAT',
-		'examples/vgr_data/VG1_1979-03-01_12-26-59-956.DAT',
-		'examples/vgr_data/VG1_1979-03-01_12-27-47-956.DAT',
-		'examples/vgr_data/VG1_1979-03-01_12-28-35-956.DAT'
-	]),
-	('examples/themis_data', [
-		'examples/themis_data/tha_l3_sm_20080629_171151_20080629_171152_burst_v01.cdf'
-	]),
 	
 	# the resource files
 	('static', [
@@ -405,7 +415,44 @@ lDataFiles = [
 	
 	# And a couple empty dirs...
 	('log', []), ('cache', [])
+
 ]
+
+# Hack in a "--no-examples" argument
+if '--no-examples' in sys.argv:
+	sys.argv.remove('--no-examples')
+else:
+	lDataFiles.append( 
+		('datasets/Examples', [
+			'examples/Random.dsdf.in', 'examples/Spectra.dsdf.in',
+			'examples/Waveform.dsdf.in', 'examples/Params.dsdf.in',
+			'examples/Auth.dsdf.in', 'examples/_dirinfo_.dsdf'
+		])
+	)
+	lDataFiles.append( 
+		('examples', [
+			'examples/randata.py','examples/spectra.sh.in', 'examples/waveform.py',
+			'examples/cdf.py'
+		])
+	)
+	lDataFiles.append( 
+		('examples/vgr_data', [
+			'examples/vgr_data/VG1_1979-03-01_12-26-11-956.DAT',
+			'examples/vgr_data/VG1_1979-03-01_12-26-59-956.DAT',
+			'examples/vgr_data/VG1_1979-03-01_12-27-47-956.DAT',
+			'examples/vgr_data/VG1_1979-03-01_12-28-35-956.DAT'
+		])
+	)
+	lDataFiles.append( 
+		('examples/themis_data', [
+			'examples/themis_data/tha_l3_sm_20080629_171151_20080629_171152_burst_v01.cdf'
+		])
+	)
+
+
+# Hack around command constructors not accessable.  These files won't be
+# overwritten if destination exists.
+g_lKeepDest = ['passwd', 'group']
 
 setup(
    name="das2server",
