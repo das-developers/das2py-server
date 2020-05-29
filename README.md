@@ -64,12 +64,11 @@ $ sudo apt-get install python3-redis                                # or python2
 
 ## Get the Source
 
-For now, some of the sources are in a University of Iowa SVN server and
-some are on github.com.  All sources will be moved to github.com as time
-permits.
+All sources are now on github.com
 
 ```bash
-$ svn co https://saturn.physics.uiowa.edu/svn/das2/core/stable/libdas2_3
+$ git clone https://github.com/das-developers/das2C.git
+$ git clone https://github.com/das-developers/das2py.git
 $ git clone https://github.com/das-developers/das2-pyserver.git
 ```
 
@@ -83,6 +82,7 @@ save time.
 
 ```bash
 $ export PREFIX=/usr/local/das2srv   # Adjust to taste
+$ export N_ARCH=/                    # since das2 servers are typically machine bound
 $ export PYVER=3.6                   # or 2.7, or 3.7 etc.
 $ export SERVER_ID=solar_orbiter_2   # for example.  ID should not contain whitespace
 ```
@@ -106,13 +106,17 @@ The following sequence will build, test, and install libdas2.3 and das2py
 if you have all prerequisite libraries installed:
 
 ```bash
-$ cd libdas2_3
+$ cd das2C
 $ make
-$ make test
-$ make pylib
-$ make pylib_test
+$ make test     # Contacts remote services, okay if those tests fail
 $ make install
-$ make pylib_install
+$ cd ../
+
+$ cd das2py
+$ make 
+$ make test     # Also contacts remote servers, okay if those tests fail
+$ make install
+$ cd ../
 ```
 
 Now build and install the python module and example configuration files.
