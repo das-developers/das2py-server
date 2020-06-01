@@ -81,7 +81,7 @@ the setup, so leaving your terminal window open though the testing stage will
 save time.
 
 ```bash
-$ export PREFIX=/usr/local/das2srv   # Adjust to taste
+$ export PREFIX=/var/www/das2srv     # Adjust to taste
 $ export N_ARCH=/                    # since das2 servers are typically machine bound
 $ export PYVER=3.6                   # or 2.7, or 3.7 etc.
 $ export SERVER_ID=solar_orbiter_2   # for example.  ID should not contain whitespace
