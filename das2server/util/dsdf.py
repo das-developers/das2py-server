@@ -1501,7 +1501,7 @@ def checkParam(fLog, sKey, sValue):
 
 	for sTest in [';', '|','../','..\\', ':\\', '>', '&']:
 		if sValue.find(sTest) != -1:
-			io.queryError(
+			webio.queryError(
 				fLog,
 				"Illegal character(s): '%s', in value: '%s' for query parmeter: %s"%(
 			   sTest, sValue, sKey)
@@ -1516,12 +1516,12 @@ def handleRedirect(fLog, sOldName, dsdf):
 	bRedir = False
 
 	# 1: Potentially get a new server path...
-	sServer = io.getScriptUrl()
+	sServer = webio.getScriptUrl()
 	if sServer.endswith('/'):
 		sServer = sServer[:-1]
 
 	if u'server' in dsdf:
-		sNewServer = dsdf[u'server'].encode('ascii', 'replace')
+		sNewServer = dsdf[u'server']
 		if sNewServer.endswith('/'):
 			sNewServer = sNewServer[:-1]
 
@@ -1566,7 +1566,7 @@ def handleRedirect(fLog, sOldName, dsdf):
 		pout("Location: %s\r\n"%sRefer)
 	else:
 
-		io.serverError(fLog, "Dataset %s does not require redirection"%sOldName)
+		webio.serverError(fLog, "Dataset %s does not require redirection"%sOldName)
 		return 17
 
 	return 0

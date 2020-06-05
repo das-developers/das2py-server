@@ -25,7 +25,7 @@ MONTHS="(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
 TIME="\d\d:\d\d:\d\d"
 PREFIX=re.compile("\[(%s %s [ \d]\d) (%s) (\d{4}) (\d+)\s+\d+\](.+)"%(DAYS,MONTHS,TIME))
 
-PREFIX=re.compile("\[(%s %s \d\d?) (%s) (\d{4}) (\d+) .+\](.+)"%(DAYS,MONTHS,TIME)); 
+#PREFIX=re.compile("\[(%s %s \d\d?) (%s) (\d{4}) (\d+) .+\](.+)"%(DAYS,MONTHS,TIME)); 
 
 # handle output, python 2/3 compatible
 try:
@@ -112,13 +112,12 @@ def setModulePath(dConf):
 ##############################################################################
 def main():
 	form = cgi.FieldStorage()
-
-	if 'type' in form:
-		type=form["type"].value
-	else:
-		type="das2"
 	
-	#pout = stdout.write
+	if 'type' in form:
+		sType=form["type"].value
+	else:
+		sType="das2"
+	
 	#pout("Content-Type: text/plain; charset=utf-8\r\n\r\n")
 	
 	# Find out the log directory location
@@ -163,7 +162,7 @@ def main():
 
 	if 'action' in form:
 		if form['action'].value == 'deleteAll':
-			deleteAll(dConf['LOG_PATH'], type,ip)
+			deleteAll(dConf['LOG_PATH'], sType,ip)
 			
 			if "ip" in form:
 				sViewLogUrl += '?ip=' + ip
@@ -173,21 +172,19 @@ def main():
 			
 
 	dRequests = {}
-	try:
-		processFile(pjoin(dConf['LOG_PATH'], "%s.%s_0.log"%(type, ip)), dRequests)
-	except:
-		pass
-	try:
-		processFile(pjoin(dConf['LOG_PATH'], "%s.%s_1.log" % (type, ip)), dRequests)
-	except:
-		pass
-	try:
-		processFile(pjoin(dConf['LOG_PATH'], "%s.%s_2.log" % (type, ip)), dRequests)
-	except:
-		pass
+	lFiles = []
+	for i in range(0,3):
+		try:
+			lFiles.append( pjoin(dConf['LOG_PATH'], "%s.%s_%d.log"%(sType, ip, i)) )
+			processFile(lFiles[i], dRequests)
+		except:
+			pass
 		
-	dReplace = {'log-script':sViewLogUrl, 'main-script':sMainSrvUrl,
-	            'server-sig':os.getenv('SERVER_SIGNATURE')}
+	dReplace = {
+		'log-script':sViewLogUrl, 'main-script':sMainSrvUrl, 
+		'server-sig':os.getenv('SERVER_SIGNATURE'),
+		'files':lFiles
+	}
 	
 	# Get replacement parameters for HTML text output
 	if 'SITE_NAME' in dConf:
@@ -257,10 +254,17 @@ def main():
 		pout('''
 	<div class="day">
 		<div class="dayheader">
-		  Request logs are empty for IP %(ip)s
+		  Request logs are empty for type %(type)s and IP %(ip)s, checked:
+		  <pre>
+'''%{'ip':ip, 'type':sType})
+		for i in range(0,3):
+			pout("%s\n"%os.path.basename(lFiles[i]))
+
+		pout('''
+</pre>
 	   </div>
 	</div>
-'''%{'ip':ip})
+''')
 	
 		
 	pout("""
@@ -340,11 +344,11 @@ def getConf(sConfFile):
 ##############################################################################
 # Read one file
 ##############################################################################
-def deleteAll(sLogDir, type,ip):
+def deleteAll(sLogDir, sType,ip):
 	files=[
-		pjoin(sLogDir, '%s.%s_0.log'%(type,ip)),
-		pjoin(sLogDir, '%s.%s_1.log'%(type,ip)),
-		pjoin(sLogDir, '%s.%s_2.log'%(type,ip)),
+		pjoin(sLogDir, '%s.%s_0.log'%(sType,ip)),
+		pjoin(sLogDir, '%s.%s_1.log'%(sType,ip)),
+		pjoin(sLogDir, '%s.%s_2.log'%(sType,ip)),
 	]
 	
 	fOut = open("%s/das2.%s_loghndlr.log"%(sLogDir, ip), "w")
@@ -358,12 +362,17 @@ def deleteAll(sLogDir, type,ip):
 ##############################################################################
 # Read one file
 ##############################################################################
-def processFile(file, dRequests):
-	fd = open(file, "r")
+def processFile(sFile, dRequests):
+	fd = open(sFile, "r")
+	#pout('<p>Opened %s\n</p><pre>'%sFile)
 	for line in fd:
+		#pout(line)
 		m = PREFIX.match(line)
 		if m == None:
+			#pout('>>>>no match\n')
 			continue
+		#pout('>>>match\n')
+
 		key1 = "%s %s"%(m.group(1),m.group(3))
 		key2 = "%s %s"%(m.group(2),m.group(4))
 		if key1 in dRequests:
