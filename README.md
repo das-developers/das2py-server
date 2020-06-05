@@ -154,9 +154,7 @@ The following procedure is provided as an example and has been tested on
 CentOS 7.
 
 First determine which directory on your server maps to an Apache HTTPS CGI
-directory.  To do this inspect `/etc/httpd/conf/httpd.conf` (or similar).
-The default is `/var/www/cgi-bin`.  To provide better URLs for your site add
-the line:
+directory.  To provide better URLs for your site add the line:
 
 ```apache
 ScriptAlias /das/ "/var/www/cgi-das/"
@@ -169,6 +167,15 @@ ScriptAlias /cgi-bin/ "/var/www/cgi-bin/"
 ```
 
 inside the `<IfModule alias_module>` section of httpd.conf.  
+
+Of course the cgi-das directory will have to be created. and on CentOS anyway, the
+proper SELinux context applied:
+```bash
+sudo mkdir /var/www/cgi-das
+# You should apply a proper SELinux context to this directory, though the author
+# does not know how to do so.  Any contributions on this manner are welcome as
+# SELinux does not report to the console and audit logs are ususally empty.
+```
 
 Then provide configuration information for your `/var/www/cgi-das` directory
 inside the `/etc/httpd/conf.d/ssl.conf` file.  We're editing the *ssl.conf*
