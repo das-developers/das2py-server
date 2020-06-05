@@ -402,7 +402,7 @@ lDataFiles = [
 	('bin', ['scripts/das2_startup.sh.in']),
 	('etc', [
 		'etc/das2server.conf.example.in','etc/das2peers.ini.example.in',
-		'etc/group', 'etc/passwd'
+		'etc/group', 'etc/passwd', 'etc/ReadMe-Passwords.txt.in'
 	]),
 	
 	# the resource files
