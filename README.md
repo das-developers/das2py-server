@@ -7,12 +7,13 @@ stream of data values covering the requested time range, at the requested time
 resolution, is provided in the response body.  This software, *das2-pyserver*
 provides a caching middleware layer between server-side das2 readers, which
 stream data at full resolution to standard out, and remote client programs
-such as [Autoplot](https://autoplot.org) or custom programs written in 
-Java ([das2java](https://github.com/das-developers/das2java)), 
+such as [Autoplot](https://autoplot.org), [SPEDAS](https://github.com/spedas)
+and [SDDAS](http://www.sddas.org/), or custom programs written in Java
+([das2java](https://github.com/das-developers/das2java)), 
 Python ([das2py](https://github.com/das-developers/das2py)), IDL
-([das2pro](https://github.com/das-developers/das2pro) ),  C 
-([das2C](https://github.com/das-developers/das2C) ), or soon
-D ([das2D](https://github.com/das-developers/das2D) ).
+([das2pro](https://github.com/das-developers/das2pro), 
+[das2dlm](https://github.com/das-developers/das2dlm) ), or C
+([das2C](https://github.com/das-developers/das2C) ).
 
 When a request for data is received, das2-pyserver inspects the HTTP GET URL
 and checks to see if its local cache contains the required data, at the desired
