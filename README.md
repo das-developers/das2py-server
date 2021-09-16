@@ -34,11 +34,10 @@ environments and depends on the following tools:
 2. Apache2, any remotely recent version
 3. [Redis](https://redis.io), known to work with version 3.2 or higher
 4. [redis-py](https://redislabs.com/lp/python-redis/), known to work with version 2.10 or higher
-5. [libdas2](https://saturn.physics.uiowa.edu/svn/das2/core/stable/libdas2_3), latest version
-   recommended
+5. [das2C](https://github.com/das-developers/das2C), latest version recommended
 
-Since libdas2 provides small binaries needed by das2-pyserver, and since there
-are no pre-built libdas2.3 packages, installation instructions for both libdas2
+Since das2C provides small binaries needed by das2-pyserver, and since there
+are no pre-built das2C packages, installation instructions for both das2C
 and das2-pyserver are included below.  In these instructions the '$' character
 is used at the beginning of a line to indicate commands that you'll need to run
 in a bourne compatible shell (bash, ksh, etc.).
@@ -75,7 +74,7 @@ $ git clone https://github.com/das-developers/das2-pyserver.git
 ## Build and Install
 
 Decide where your das2-pyserver code and configuration information will reside. 
-In the example below I've  selected `/usr/local/das2srv` but you can choose
+In the example below I've  selected `/var/www/das2srv` but you can choose
 any location you like.  These environment variables will be used through out
 the setup, so leaving your terminal window open though the testing stage will
 save time.
