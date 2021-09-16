@@ -47,21 +47,18 @@ in a bourne compatible shell (bash, ksh, etc.).
 
 Example prerequisite package installation commands are provided below for CentOS 7 \.\.\.
 ```bash
-$ sudo yum install gcc subversion git                               
+$ sudo yum install gcc git                               
 $ sudo yum install expat-devel fftw-devel openssl-devel             
-$ sudo yum install python3 python3-numpy python3-devel              # or python2 equivalents
-$ sudo yum install redis                    
-$ sudo pip3 install redis                                           # if using python3
-# --or--
-$ sudo yum install python2-redis                                    # if using python2
+$ sudo yum install python3 python3-numpy python3-devel 
+$ sudo pip3 install redis
 ```
 \.\.\. and Debian 9:
 ```bash
-$ sudo apt-get install gcc subversion git                           
+$ sudo apt-get install gcc git                           
 $ sudo apt-get install libexpat-dev libfftw3-dev libssl-dev          
-$ sudo apt-get install python3-dev python3-distutils python3-numpy  # or python2 equivalents
+$ sudo apt-get install python3-dev python3-distutils python3-numpy
 $ sudo apt-get install redis-server                                 
-$ sudo apt-get install python3-redis                                # or python2 equivalent
+$ sudo apt-get install python3-redis
 ```
 
 ## Get the Source
