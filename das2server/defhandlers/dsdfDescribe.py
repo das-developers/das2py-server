@@ -80,6 +80,10 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	sOut = _dsdfToStreamHdr(dsdf)
 	
+	U.webio.pout('Access-Control-Allow-Origin: *\r\n')
+	U.webio.pout('Access-Control-Allow-Methods: GET\r\n')
+	U.webio.pout('Access-Control-Allow-Headers: Content-Type\r\n')
+
 	# Set a mime-type that allows this to be visible in a browser
 	if U.webio.isBrowser():
 		U.webio.pout('Content-Type: text/plain; charset=utf-8\r\n\r\n')

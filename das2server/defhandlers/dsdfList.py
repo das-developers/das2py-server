@@ -124,6 +124,9 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		bJsonOut = False
 	
 	U.webio.pout("Status: 200 OK\r\n")
+	U.webio.pout('Access-Control-Allow-Origin: *\r\n')
+	U.webio.pout('Access-Control-Allow-Methods: GET\r\n')
+	U.webio.pout('Access-Control-Allow-Headers: Content-Type\r\n')	
 	U.webio.pout("Content-Type: text/plain; charset=utf-8\r\n\r\n")
 	
 	# Walk the tree, following symlinks

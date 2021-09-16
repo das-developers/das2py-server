@@ -63,6 +63,9 @@ def sendCmdOutput(fLog, uCmd, sMimeType, sContentDis, sOutFile):
 				if len(xRead) != 0:
 					
 					if not bHttpHdrsSent:
+						webio.pout('Access-Control-Allow-Origin: *\r\n')
+						webio.pout('Access-Control-Allow-Methods: GET\r\n')
+						webio.pout('Access-Control-Allow-Headers: Content-Type\r\n')	
 						webio.pout("Content-Type: %s\r\n"%sMimeType)
 						webio.pout("Status: 200 OK\r\n")
 						webio.pout("Expires: now\r\n")

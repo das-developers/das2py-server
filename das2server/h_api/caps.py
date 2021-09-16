@@ -17,6 +17,10 @@ def pout(sOut):
 ##############################################################################
 def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	fLog.write("\nDas 2.2 HAPI Capabilities handler")
+	
+	pout(b'Access-Control-Allow-Origin: *')
+	pout(b'Access-Control-Allow-Methods: GET')
+	pout(b'Access-Control-Allow-Headers: Content-Type')
 	pout(b'Content-Type: application/json; charset=utf-8')
 	
 	if not error.paramCheck(fLog, 'capabilities', [], form):

@@ -27,6 +27,9 @@ def pout(sOut):
 def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	fLog.write("\nDas 2.2 HAPI Info handler")
 	
+	pout('Access-Control-Allow-Origin: *')
+	pout('Access-Control-Allow-Methods: GET')
+	pout('Access-Control-Allow-Headers: Content-Type')
 	pout("Content-Type: application/json; charset=utf-8")
 	
 	# HAPI is very strict.  Check the parameters list to make sure that only

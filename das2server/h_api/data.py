@@ -197,7 +197,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	if bHeader:
 		sOpt = " -i -d %s"%dsdf.sPath
 	
-	# HAPI datasources can't be fattened (Grrr)
+	# HAPI datasources can't be flattened (Grrr)
 	#if dsdf[u'flattenHapi']:
 	#	sOpt += "-f"
 
@@ -226,6 +226,9 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	# Handle the no data case
 	if nRet == 0:
 		if not bHdrSent:
+			pout(b'Access-Control-Allow-Origin: *')
+			pout(b'Access-Control-Allow-Methods: GET')
+			pout(b'Access-Control-Allow-Headers: Content-Type')	
 			pout(b'Content-Type: text/csv; charset=utf-8')
 			pout(b'Status: 200 OK\r\n')
 			fLog.write("   Not data in range, empty message body sent")
@@ -233,6 +236,9 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		if not bHdrSent:
 			# If headers haven't went out the door, I can send a proper error
 			# response
+			pout(b'Access-Control-Allow-Origin: *')
+			pout(b'Access-Control-Allow-Methods: GET')
+			pout(b'Access-Control-Allow-Headers: Content-Type')	
 			pout(b'Content-Type: application/json; charset=utf-8')
 			pout(b'Status: 500 Internal Server Error\r\n')
 	

@@ -210,6 +210,10 @@ def _sortNoDesc(tListItem):
 def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	fLog.write("\nDas 2.2 HAPI Catalog handler\n")
 	
+
+	pout(b'Access-Control-Allow-Origin: *')
+	pout(b'Access-Control-Allow-Methods: GET')
+	pout(b'Access-Control-Allow-Headers: Content-Type')
 	pout(b'Content-Type: application/json; charset=utf-8')
 	
 	if 'DSDF_ROOT' not in dConf:
