@@ -33,7 +33,7 @@ can plug into the system.
 Compilation and installation of das2-pyserver has only been tested in Linux
 environments and depends on the following tools:
 
-1. Python >= 2.6, or Python >= 3.4
+1. Python >= 3.4
 2. Apache2, any remotely recent version
 3. [Redis](https://redis.io), known to work with version 3.2 or higher
 4. [redis-py](https://redislabs.com/lp/python-redis/), known to work with version 2.10 or higher
@@ -82,7 +82,7 @@ save time.
 ```bash
 $ export PREFIX=/var/www/das2srv     # Adjust to taste
 $ export N_ARCH=/                    # since das2 servers are typically machine bound
-$ export PYVER=3.6                   # or 2.7, or 3.7 etc.
+$ export PYVER=3.6                   # minimum 3.4
 $ export SERVER_ID=solar_orbiter_2   # for example.  ID should not contain whitespace
 ```
 
