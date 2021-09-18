@@ -3,40 +3,7 @@
 
 SITE_NAME = "My Data Source Site"
 
-# Das2 uses the 'tag' URI scheme (RFC-4151) to generate human readable, but
-# globally unique data source paths.  These strings are not like DOIs.  They
-# don't tag files, datests, or even servers, they identify das2 catalog
-# navagation paths.
-# 
-# Your site is an independent head node in the catalog.  It thus needs an
-# independent path tag. To keep the tag's short, try using the shortest
-# domain name you can directly influence, and the oldest year for which
-# you are confident there are no conflicting tags.  Here's an example:
-#
-#   SITE_PATH = tag:physics.uiowa.edu,2006
-#
-# In the example above, suppose that you could request DNS sub-entries for
-# "physics.uiowa.edu" but for organizational reasons, not directly in
-# "uiowa.edu".  In this case the even shorter tag:
-#
-#   tag:uiowa.edu,2006 
-#
-# would not meet the claim of ownership for the purposes of RFC-4151. 
-# (To link into the global catalog see SITE_ID at the end of this file)
-
-SITE_PATH = "tag:CHANGE.ME,2021"
-
-# Server ID, short lowercase string used to distinguish this server from
-# others at the same site.  Will be combined with the site path, to make
-# a server path.  For example if:
-# 
-#  SITE_PATH  = "tag:physics.uiowa.edu,2016"
-#  SERVER_ID = "jupiter"
-#
-# Then all data source paths on this server with start with the prefix:
-#
-#    tag:physics.uiowa.edu,2016:jupiter:/
-
+# Identify this server seperatly in combined logs
 SERVER_ID = "%(SERVER_ID)s"
 
 # Contact email.  You can use replacement characters to obscure the address
@@ -186,50 +153,11 @@ WORK_QUEUE_CONN = localhost:6379:0
 # Turn this on to enable support for heliophysics API services
 #ENABLE_HAPI_SUBSYS = true
 
-# There is a global das2 catalog that can be linked, either to your site
-# as a whole if you have a site catalog, or directly to your das2 servers
-# if you don't.  To request a link, either:
-#
-#    1) open an issue at  https://github.com/das-developers/das-cat
-#    2) or send email to  das-developers@uiowa.edu.  
-#
-# The global catalog path root is:
-#
-#    tag:das2.org,2012
-#
-# This catalog object may be found at two urls for live fail-over:
-#
-#    http://das2.org/catalog/das.json
-#    https://raw.githubusercontent.com/das-developers/das-cat/master/cat/das.json
-#
-# When linked into the federated das2 catalog, your data sources will 
-# take on a second path tag.  For example a data source found through
-# the site local path:
-#
-#   tag:physics.uiowa.edu,2006:/jupiter/juno/wav/survey
-#
-# will also be reachable using one of the paths:
-#
-#   tag:das2.org,2012:site:/SITE_ID/juno/wav/survey  (production)
-#
-#   tag:das2.org,2012:test:/SITE_ID/juno/wav/survey  (test sources)
-#
-# Use this option to set the ID you prefer.  
-#
-# Like SERVER_ID above, this should be a simple single token.  It only needs to
-# be unique within the "tag:das2.org,2012" namespace.  Since space physics is
-# not a huge community (compared to the Internet in general) there's no need to
-# use an elaborate site ID.  Here's a few examples of picking good ones based
-# on organizational URLs:
-# 
-#   Organization URL              SITE_ID
-#   --------------------------    -------
-#   jsoc.swri.org                  swri
-#   physics.uiowa.edu              uiowa
-#   ufa.cas.cz                     ufa_cas
-#   voparis-maser-das.obspm.fr     obspm
-# 
-# For documentation (if nothing else) set this to the site ID you received
-# when linking to the federated catalog
+# ########################################################################## #
+# Federated Catalog Integration  See docs/FedCat.md for more information.
 
+# Site wide tag (RFC-4151).  
+# SITE_CATALOG_TAG = "tag:CHANGE.ME,2021"
+
+# Site ID for references from "tag:das2.org,2012:site:/"
 # SITE_ID = mysite
