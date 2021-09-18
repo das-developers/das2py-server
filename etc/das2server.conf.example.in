@@ -16,7 +16,7 @@ SITE_NAME = "My Data Source Site"
 #   SITE_PATH = tag:physics.uiowa.edu,2006
 #
 # In the example above, suppose that you could request DNS sub-entries for
-# "physiscs.uiowa.edu" but for organizational reasons, not directly in
+# "physics.uiowa.edu" but for organizational reasons, not directly in
 # "uiowa.edu".  In this case the even shorter tag:
 #
 #   tag:uiowa.edu,2006 
