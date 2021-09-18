@@ -45,7 +45,7 @@ tag:physics.uiowa.edu,2006       # SITE_CATALOG_TAG
 ```
 Full global data source tag:
 ```
-tag:physics.uiowa.edu,2006:any:/voyager/1/mag/electroncyclotron
+tag:physics.uiowa.edu,2006:/voyager/1/mag/electroncyclotron
 ```
 
 After setting the SITE_CATALOG_TAG for your servers, run the `das2_site_cat`
@@ -54,27 +54,12 @@ on one of your servers.  For example:
 
 ```bash
 $ mkdir mysite && cd mysite
-$ das2_site_cat https://server1.place.edu/das/server  https://server2.place.edu/das/server
+$ das2_site_cat https://server1.place.edu/das/server/catalog.json \
+  https://server2.place.edu/das/server/catalog.json
 ```
 
 will generate a series of `*.json` files merging data source references from
 all your servers.
-
-## Configuration Option: SERVER_ID
-
-Though it's better to avoid server specific paths when refering to datasets
-sometimes you want to make sure (especially for testing) that you are getting
-data from a specific server.  The SERVER_ID configuration option is used by
-`das2_site_cat` to generate server specific catalogs as well.  
-
-To refer to data in a server specific manner use the server ID instead of 
-`any`.  For example if the SERVER_ID is `juptier` then the alternate global
-data source tag:
-```
-tag:physics.uiowa.edu,2006:jupiter:/voyager/1/mag/electroncyclotron
-```
-could be used to force a data read only from jupiter.  Obviously this means
-`any` is a keyword, and no server may have that ID.
 
 ## Configuration Option: SITE_ID
 
