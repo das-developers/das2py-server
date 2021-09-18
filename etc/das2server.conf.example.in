@@ -1,34 +1,56 @@
-# Site name.  Many das2 servers can be located at the same site
+# Site name.  Many das2 servers can be located at the same site, please
+# use the same SITE_NAME for all the das2 servers in a given organization.
+
 SITE_NAME = "My Data Source Site"
 
-# The default path prefix for sources on this server.  Like the SITE_NAME, 
-# this prefix does not need to be unique to this server. This value will be 
-# prepended to any automatically generated path URI's
-SITE_PATH_URI = "tag:das2.org,2017:/MY_SITE"
+# Das2 uses the 'tag' URI scheme (RFC-4151) to generate human readable, but
+# globally unique data source paths.  These strings are not like DOIs.  They
+# don't tag files, datests, or even servers, they identify das2 catalog
+# navagation paths.
+# 
+# Your site is an independent head node in the catalog.  It thus needs an
+# independent path tag. To keep the tag's short, try using the shortest
+# domain name you can directly influence, and the oldest year for which
+# you are confident there are no conflicting tags.  Here's an example:
+#
+#   SITE_PATH = tag:physics.uiowa.edu,2006
+#
+# In the example above, suppose that you could request DNS sub-entries for
+# "physiscs.uiowa.edu" but for organizational reasons, not directly in
+# "uiowa.edu".  In this case the even shorter tag:
+#
+#   tag:uiowa.edu,2006 
+#
+# would not meet the claim of ownership for the purposes of RFC-4151. 
+# (To link into the global catalog see SITE_ID at the end of this file)
 
-# Server ID, short lowercase string used to distinguish directories and files
-# created by this server.  This is useful when multiple das2 serving hosts
-# share the same diskspace (presumably by NFS) but need to keep thier config
-# file separate.
+SITE_PATH = "tag:CHANGE.ME,2021"
+
+# Server ID, short lowercase string used to distinguish this server from
+# others at the same site.  Will be combined with the site path, to make
+# a server path.  For example if:
+# 
+#  SITE_PATH  = "tag:physics.uiowa.edu,2016"
+#  SERVER_ID = "jupiter"
+#
+# Then all data source paths on this server with start with the prefix:
+#
+#    tag:physics.uiowa.edu,2016:jupiter:/
+
 SERVER_ID = "%(SERVER_ID)s"
 
-# Support the das2.3 prototype interface, this is a temporary config
-# item that will be removed in the future
-DAS23_PROTOTYPE = False
-
-# You can use replacement characters to obscure the address a bit, for 
-# example:
+# Contact email.  You can use replacement characters to obscure the address
+# a bit, for example:
 #
 #   &#45;  '-'
 #   @#46;  '.'
 #   &#64;  '@'
 #   &#117; 'u'
-#
+
 CONTACT_EMAIL = "update&#45;das2server&#46;conf&#64;nowhere&#45;ed&#117;"
 
 # A contact page for the person responsible for the server
 CONTACT_URL  = "https://update-das2server.conf.nowhere.edu/~someone/"
-
 
 # The top location of any dsdf files
 DSDF_ROOT = "%(PREFIX)s/datasets"
@@ -83,9 +105,8 @@ IGNORE_REDIRECT = false
 # Should contain das2server.xsl, and a logo.*.
 RESOURCE_PATH = "%(PREFIX)s/static"
 
-# Old 2.2 support.  Prior to das 2.3 there was no concept of a central catalog
-# thus servers could only find each other via peers lists.  To support older
-# clients provide a list of you other servers here.
+# Provide links to other das2 servers you run, or use (or just know
+# about :)
 PEERS_FILE = "%(PREFIX)s/etc/das2peers.ini"
 
 # Program used to upconvert das1 streams.  Only used by the U. Iowa group
@@ -104,15 +125,20 @@ D2S_REDUCER = "das2_bin_avgsec"
 # datasets using the 'cacheReader=' directive.
 D2S_CACHE_RDR = "das2_cache_rdr"
 
+# Sent the default delimited text values converter.  DSDFs can override
+# this setting for individual data sources using the 'csvConverter='
+# directive.
+D2S_CSV_CONVERTER = "das2_csv"
+
+# Set default das2 binary to das2 text stream converter, datasources can
+# override this usin the 'textConverter=' directive.
+D2S_TO_UTF8 = "das2_ascii"
+
 # If you are serving QStreams as well as Das2 streams, put the name of your
 # default QStream reducer here.
 #QDS_REDUCER = qds_bin_avgsec
 #QDS_CACHE_RDR = qds_cache_rdr
 
-
-# Set default TEXT converters, at preset datasources can override this setting,
-# that option is rarely used.
-D2S_TO_UTF8 = das2_ascii
 #QDS_TO_UTF8 = qds_ascii
 
 # Auto-authentication, this is used to setup test servers that can download
@@ -158,4 +184,52 @@ WORK_QUEUE_CONN = localhost:6379:0
 #PNG_MAKER = autoplot_url2png.py
 
 # Turn this on to enable support for heliophysics API services
-#ENABLE_HAPI_SUBSYS = false
+#ENABLE_HAPI_SUBSYS = true
+
+# There is a global das2 catalog that can be linked, either to your site
+# as a whole if you have a site catalog, or directly to your das2 servers
+# if you don't.  To request a link, either:
+#
+#    1) open an issue at  https://github.com/das-developers/das-cat
+#    2) or send email to  das-developers@uiowa.edu.  
+#
+# The global catalog path root is:
+#
+#    tag:das2.org,2012
+#
+# This catalog object may be found at two urls for live fail-over:
+#
+#    http://das2.org/catalog/das.json
+#    https://raw.githubusercontent.com/das-developers/das-cat/master/cat/das.json
+#
+# When linked into the federated das2 catalog, your data sources will 
+# take on a second path tag.  For example a data source found through
+# the site local path:
+#
+#   tag:physics.uiowa.edu,2006:/jupiter/juno/wav/survey
+#
+# will also be reachable using one of the paths:
+#
+#   tag:das2.org,2012:site:/SITE_ID/juno/wav/survey  (production)
+#
+#   tag:das2.org,2012:test:/SITE_ID/juno/wav/survey  (test sources)
+#
+# Use this option to set the ID you prefer.  
+#
+# Like SERVER_ID above, this should be a simple single token.  It only needs to
+# be unique within the "tag:das2.org,2012" namespace.  Since space physics is
+# not a huge community (compared to the Internet in general) there's no need to
+# use an elaborate site ID.  Here's a few examples of picking good ones based
+# on organizational URLs:
+# 
+#   Organization URL              SITE_ID
+#   --------------------------    -------
+#   jsoc.swri.org                  swri
+#   physics.uiowa.edu              uiowa
+#   ufa.cas.cz                     ufa_cas
+#   voparis-maser-das.obspm.fr     obspm
+# 
+# For documentation (if nothing else) set this to the site ID you received
+# when linking to the federated catalog
+
+# SITE_ID = mysite
