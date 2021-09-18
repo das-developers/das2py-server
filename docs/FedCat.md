@@ -102,27 +102,27 @@ through the site local path:
   tag:physics.uiowa.edu,2006:/juno/wav/survey
 ```
 will also be reachable using one of the paths:
-
+```
   tag:das2.org,2012:site:/SITE_ID/juno/wav/survey  (production)
-
   tag:das2.org,2012:test:/SITE_ID/juno/wav/survey  (test sources)
-
+```
 Where `SITE_ID` is a string you request.
 
 Like SERVER_ID above, this should be a simple single token.  It only needs to
-be unique within the "tag:das2.org,2012" namespace.  Since space physics is
+be unique within the `tag:das2.org,2012` namespace.  Since space physics is
 not a huge community (compared to the Internet in general) there's no need to
 use an elaborate site ID.  Here's a few examples of picking good ones based
 on organizational URLs:
 
-  Organization URL              SITE_ID
-  --------------------------    -------
-  jsoc.swri.org                  swri
-  physics.uiowa.edu              uiowa
-  ufa.cas.cz                     ufa_cas
-  voparis-maser-das.obspm.fr     obspm
+| Organization URL           | SITE_ID  |
+|----------------------------|----------|
+| jsoc.swri.org              |  swri    |
+| physics.uiowa.edu          |  uiowa   |
+| ufa.cas.cz                 |  ufa_cas |
+| voparis-maser-das.obspm.fr |  obspm   |
 
-For documentation (if nothing else) set this to the site ID you received
-when linking to the federated catalog
-
+For documentation (if nothing else) set this configuration option to to the
+site ID you requested when linking to the federated catalog:
+```
 SITE_ID = mysite
+```
