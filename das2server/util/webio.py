@@ -117,7 +117,7 @@ g_dMime = {True:g_dBrowserMime, False:g_dDasClientMime}
 # I wish there was a more reliable way to do this, for example if all
 # das2 apps set a user agent string that could be known to the server.
 
-g_lNotDas2App = ['firefox','explorer', 'safari', 'chrome', 'konqueror']
+g_lNotDas2App = ['firefox','explorer', 'safari', 'chrome', 'edge', 'konqueror']
 
 def isBrowser():
 	if "HTTP_USER_AGENT" not in os.environ:
@@ -249,7 +249,7 @@ def forbidError(fLog, uOut, bHdrSent=False):
 
 def notFoundError(fLog, uOut, bHdrSent=False):
 	pout("Status: 404 Not Found\r\n")
-	dasExcept('NoSuchDatasource', uOut, fLog, bHdrSent)
+	dasExcept('NoSuchDataSource', uOut, fLog, bHdrSent)
 	
 	
 # Taking any DasError exception and outputting the proper HTTP codes

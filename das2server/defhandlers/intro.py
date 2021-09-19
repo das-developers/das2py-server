@@ -282,7 +282,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	pout('  </ul>')
 	pout('''%s
   <br><br>
-  <a href="%s/peers">Peer Servers</a>
+  <a href="%s/peers.xml">Peer Servers</a>
 </div>'''%(sViewLogNav, sScriptURL))
 	
 	pout('<div class="article">')
@@ -311,7 +311,7 @@ can parse das2 streams include:</p>
 <ul>
 <li> <a href="http://das2.org/autoplot">Autoplot</a> via the
 <a href="https://github.com/das-developers/das2java">das2java</a> library.  
-This is most common client.</li>
+This is the most common client.</li>
 <li> <a href="https://spedas.org/blog/">SPEDAS (Space Physics Environment Data Analysis Software)</a>
 via the <a href="https://github.com/das-developers/das2dlm">das2dlm</a> module.</li>
 <li><a href="http://www.sddas.org/">SDDAS (Southwest Data Display and Analysis System)</a>
@@ -334,13 +334,9 @@ functionality is complete.</i></h4>
 <h2>Interface</h2>
 
 <p>This server provides the following "filesytem" style interface which is accessed
-via HTTP GET messages.</p>
-
-<p>Note that clients do <i>not</i> need to understand this layout.  Merely
-providing one of the catalog files: <a href="%(script)s/sources.json">sources.json<a>
-or <a href="%(script)s/sources.csv">sources.csv<a> is sufficent as these files
-contain <i>fully qualified URLs</i> pointing to data retrieval locations within
-the server. </p>
+via HTTP GET messages. Note that clients do <i>not</i> need to understand this layout. 
+Merely providing one of the catalog files: <a href="%(script)s/sources.json">sources.json<a>
+or <a href="%(script)s/sources.csv">sources.csv<a> is sufficent.</p>
 
 <pre>
 <a href="%(script)s">server/</a>  This introductory page, at %(script)s
@@ -379,24 +375,24 @@ the server. </p>
   |- <a href="%(script)s/verify">verify</a> - Included das2 stream verification tool (if enabled)
   |
   |- <a href="%(script)s/id.json">id.json</a> - Server identification information
-  |- <a href="%(script)s/id.txt">id.txt</a> - das2 2.1/2.2 style info text
+  |- <a href="%(script)s/id.txt">id.txt</a> - das2 v2.1 style info text
   |- <a href="%(script)s/logo.png">logo.png</a> - A server identifier logo
+  |- <a href="%(script)s/peers.xml">peers.xml</a> - Other recognized das2 servers
 </pre>
 
 <p>
 Almost all content provided by this server is generated dynamically.  The filesystem
 interface is just a facade.  You can ease the load on your server and provide faster
-metadata response times by replicating this server's non-data content onto a static
-site.  The following commands illustrate this process.
+metadata response times by replicating non-data content onto a static site.
+The following commands illustrate this process.
 </p>
 <pre>
    $ wget -nH --cut-dirs=2 -r --no-parent %(script)s/sources/  # note trailing slash
    $ wget -nH %(script)s/sources.json
    $ wget -nH %(script)s/sources.csv
 </pre>
-<p>All content in those locations contain fully qualified URLs to other 
-resources and may thus be copied off the server without issue.  Furthermore,
-metadata items do not require a password.</p>
+<p>Of course you'll have to repeat the process whenever data source definitions
+are altered.</p>
 
 """%dReplace)
 	

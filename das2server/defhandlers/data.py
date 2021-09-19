@@ -285,9 +285,9 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	sLocalId = form.getfirst('dataset', '')
 	if sLocalId == '':
-		sLocalId = os.getenv("PATH_INFO")  # Knock off leading '/data/'
-		if sLocalId.startswith('/data/'):
-			sLocalId = sLocalId[len('/data/'):]
+		sLocalId = os.getenv("PATH_INFO")  # Knock off leading '/source/'
+		if sLocalId.startswith('/source/'):
+			sLocalId = sLocalId[len('/source/'):]
 	
 	if sLocalId.find('_dirinfo_') != -1:
 		U.webio.queryError(fLog, u"Invalid das2.3 query")
@@ -310,7 +310,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	# Get the interface definition
 	sRootUrl = "%s/data"%U.webio.getScriptUrl() 
-	dDef = dsdf.getInterfaceDef(dConf, fLog, dConf['SITE_PATH_URI'], sRootUrl, True)
+	dDef = dsdf.getInterfaceDef(dConf, fLog, sRootUrl, True)
 	
 	# See if this is just a redirection, it will look like a catalog node
 	if 'URL' in dDef:

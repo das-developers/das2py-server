@@ -1,7 +1,7 @@
 """Default handler for sending data source information as a das2 packet"""
 
 from io import StringIO     # handles unicode strings
-
+from os.path import dirname
 import sys
 import os
 
@@ -10,7 +10,7 @@ import os
 tDrop = (
 	'reader', 'reducer', 'compressor', 'readAccess', 'groupAccess',
 	'hapi', 'subSource', 'hapi', 'readerCmd', 'reducerCmd', 'exampleQuery',
-	'readerTrans', 'tag'
+	'readerTrans'
 	
 	# Autoplot developers built a hard limit buffer into their das2 info
 	# parser.  Try to route around the problem by dropping extra stuff
@@ -23,8 +23,6 @@ def _dsdfToStreamHdr(dsdf):
 	
 	fOut.write(u"<stream version=\"2.2\">\r\n")
 	fOut.write(u"  <properties\r\n")
-	
-	fOut.write("    pathUri=\"%s\"\r\n\r\n"%dsdf['pathUri']);
 
 	lKeys = list(dsdf.keys())
 	lKeys.sort()
@@ -74,15 +72,17 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	"""See das2server.defhandlers.intro.py for a decription of this function
 	interface
 	"""
+
 	sDsdf = form.getfirst('dataset', '')
 	if sDsdf == '':
 		if os.getenv("PATH_INFO"):
-			sDsdf = os.getenv("PATH_INFO")  
-			sDsdf.replace('/catalog/', '') # Knock off leading '/data/'
+			sDsdf = os.getenv("PATH_INFO")
+			sDsdf = sDsdf.replace('/source/', '')  # Knock off leading '/source/'
+			sDsdf = sDsdf.replace('/dsdf.d2t', '') # knock off trailing filename
 		else:
 			U.webio.queryError(
 				fLog, u"No dataset specified, use the 'dataset=' query parameter "+\
-				"or the /catalog/ path extension"
+				"or the /source/ path"
 			)
 			return 17
 	
@@ -91,11 +91,22 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	if 'DSDF_ROOT' not in dConf:
 		U.webio.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
 		return 17
-		
-	dsdf = U.dsdf.Dsdf(sDsdf, dConf, form, fLog)
 	
+	try:
+		dsdf = U.dsdf.Dsdf(sDsdf, dConf, form, fLog)
+	except U.errors.QueryError as e:
+		U.webio.notFoundError(fLog, str(e))
+		return 17
+
 	if u'rename' in dsdf:
 		return U.dsdf.handleRedirect(fLog, sDsdf, dsdf)
+
+	# Add in our own stuff
+	sScriptURL = U.webio.getScriptUrl()
+	dsdf.d['action'] = 'das2.2 | %s?server=dataset&dataset=%s'%(sScriptURL, sDsdf)
+	#dsdf.d['action_01'] = 'das2.3 | %s/%s/data'%(sScriptURL, sDsdf.lower())
+	#dsdf.d['interface_00'] = 'das2.3  | %s/%s/das2.json'%(sScriptURL, sDsdf.lower())
+	#dsdf.d['interface_01'] = 'vods1.1 | %s/%s/voresource.xml'%(sScriptURL, sDsdf.lower())
 	
 	sOut = _dsdfToStreamHdr(dsdf)
 	

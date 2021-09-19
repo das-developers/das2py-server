@@ -29,8 +29,8 @@ def pout(item):
 
 _g_BrowserAgent = ['firefox','explorer','chrome','safari','edge']
 
-_g_siteTree = 'tag:das2.org,2012:site:/'
-_g_testTree = 'tag:das2.org,2012:test:/'
+#_g_siteTree = 'tag:das2.org,2012:site:/'
+#_g_testTree = 'tag:das2.org,2012:test:/'
 
 ##############################################################################
 # Default request handler map.  
@@ -39,36 +39,35 @@ _g_testTree = 'tag:das2.org,2012:test:/'
 #
 # server/  An introductory html page
 #   |
-#   |- hapi/  - Heliophysics API subsystem
+#   |- hapi/  - Heliophysics API subsystem (if enabled)
 #   |
 #   |- static/ - An html directory listing
 #   |    |
 #   |    |- static files such as logos, etc
 #   |
-#   |- source/ - An html directory listing with category info at the top
-#   |    |       (wget-able for faster static site)
+#   |- source/ - An html directory listing
 #   |    |
-#   |    |- juno.html - A fancy sub page for humans, overrideable
+#   |    |- info.html - A fancy sub page for humans, overrideable
 #   |    |
-#   |    |- juno/ - An html directory listing with category blurb
+#   |    |- juno/ - An html directory listing
 #   |         |
-#   |         |- wav.html - A fance sub page for humans.
+#   |         |- info.html - A fance sub page for humans,overridable
 #   |         |
 #   |         |- wav/ - An html directory listing with category blurb
 #   |             |
-#   |             |- survey.html - a web form for humans to get data
-#   |             |- survey.json - A fed cat Collection object
+#   |             |- info.html - A fance sub page for humans,overridable
+#   |             |
 #   |             |- survey/ - An html directory with listing an blurb
 #   |                  |
+#   |                  |- form.html - a web form for humans to get data
 #   |                  |- dsdf.d2t - the old dsdf as das2 stream trick
 #   |                  |- das2.json - a fed cat HttpStreamSource object
+#   |                  |- voservice.xml 
+#   |                  |
 #   |                  |- data - form action handler (hidden from indexes)
 #   |
 #   |- sources.json  A das2 catalog listing of all items down to the
-#   |     source level, which are just referenced by URLs.  
-#   |     
-#   |     You could feed this to node.c as a detached root and the tags
-#   |     should match as if using the federated catalog (yay!)
+#   |     HttpStreamSource level, can feed URL to node.c as detached root
 #   |
 #   |- sources.csv   A listing of all directories and dsdf files on this
 #   |                server
@@ -78,14 +77,13 @@ _g_testTree = 'tag:das2.org,2012:test:/'
 #   |- id.json - Server identification information
 #   |- id.txt  - Old das2.1 info text
 #   |- logo.png - Old das2.1 logo
+#   |- peers.xml - A listing of peer servers
 #
 #
 # To merge sources list here into a central catalog:
 #
 #  1) Pull sources.json
-#  2) Iterate through the levels merging information.
-
-
+#  2) Iterate through the levels merging information, creating collections
 
 g_dDefHandlers = {
 
@@ -107,11 +105,12 @@ g_dDefHandlers = {
 	# ?server=id    /id.txt  /id.json
 	'HANDLE_ID':     'das2server.defhandlers.id',
 	
-	# ?server=discovery /sources.csv
+	# ?server=discovery ?server=list
 	'HANDLE_LIST':   'das2server.defhandlers.src_list_text',
 	'HANDLE_LIST':   'das2server.defhandlers.dsdfList',
 
 	# /source.json   <-- catalog down to source level
+    # /sources.csv   
 	'HANDLE_CATALOG':  'das2server.defhandlers.catalog',
 
 	# Effectively index files for wget... /source /static
@@ -128,7 +127,7 @@ g_dDefHandlers = {
 
 	# ?server=dataset&dataset=/Juno/WAV/Survey
 	# /source/juno/wav/survey/data?
-	'HANDLE_DATA':     'das2server.defhandlers.timedata',
+	'HANDLE_TIME_DATA':     'das2server.defhandlers.timedata',
 	
 	# List of services offered by this server
 	#'HANDLE_SERVICES': 'das2server.defhandlers.services',
@@ -149,7 +148,7 @@ g_dDefHandlers = {
 
 def preLoadError(sOut):
 	"""Cut down error handling for use before the util modules are loaded,
-	script must exit afte calling this or multiple HTTP headers will be 
+	script must exit after calling this or multiple HTTP headers will be 
 	emitted.
 	"""
 	
@@ -226,10 +225,6 @@ def getConf():
 	
 	# As finial steps, inclued a reference to the config file itself
 	dConf['__file__'] = g_sConfPath
-
-	#... and the root tags
-	dConf['__siteprefix__'] = _g_siteTree;
-	dConf['__testprefix__'] = _g_testTree;
 	
 	return dConf
 
@@ -260,17 +255,20 @@ def getHandler(U, fLog, dConf, sReqType):
 	function in the module because future handler interfaces my involve more
 	than one function in the API"""
 	
+	if sReqType == None:
+		U.webio.queryError(fLog, u"No handler for request type %s"%sReqType)
+		return None
+
 	if sReqType != 'HANDLE_RESOURCE':
 		fLog.write("   Request Type: %s"%sReqType)
 			
 	# Take the handler from the conf, if not present, use the default
-	sModule = g_dDefHandlers[sReqType]
-	
 	if sReqType in dConf:
 		sModule = dConf[sReqType]
-		
-	if sModule == None or sModule == '':
-		U.webio.queryError(fLog, u"No handler for requset type %s"%sReqType)
+	elif sReqType in g_dDefHandlers:
+		sModule = g_dDefHandlers[sReqType]
+	else:
+		U.webio.notFoundError(fLog, "No handler for request type %s"%sReqType)
 		return None
 	
 	if sModule.find('.') != -1:
@@ -308,8 +306,7 @@ def getHandler(U, fLog, dConf, sReqType):
 	if sReqType != 'HANDLE_RESOURCE':
 		fLog.write("   Handler: %s"%module.__file__)
 	return module
-		
-
+	
 #############################################################################
 # Main
 
@@ -401,17 +398,14 @@ def main(form):
 		sServer = sServer.lower()
 		
 		if sServer == 'list':
-			sReqType = 'HANDLE_DSDF_LIST_ALL'
+			sReqType = 'HANDLE_LIST'
 
 		elif sServer == 'discovery':
-			sReqType = 'HANDLE_DSDF_EXAMPLE_LIST'
+			sReqType = 'HANDLE_LIST'
 			
 		elif sServer == 'dsdf':
-			sReqType = 'HANDLE_DSDF_DESCRIBE'
-			
-		elif sServer == 'source':
-			sReqType = 'HANDLE_DSDF_SOURCE'
-				
+			sReqType = 'HANDLE_DSDF'
+						
 		elif sServer == 'logo':
 			sReqType = 'HANDLE_LOGO'
 	
@@ -419,10 +413,10 @@ def main(form):
 			sReqType = 'HANDLE_ID'
 
 		elif sServer in ['dataset', 'compactdataset']:
-			sReqType = 'HANDLE_DSDF_DATASET'
+			sReqType = 'HANDLE_TIME_DATA'  # A restricted set
 	
-		elif sServer == 'image':
-			sReqType = 'HANDLE_DSDF_IMAGE'
+		#elif sServer == 'image':
+		#	sReqType = 'HANDLE_DSDF_IMAGE'
 		
 		elif sServer == 'peers':
 			sReqType = 'HANDLE_PEERS'
@@ -430,13 +424,9 @@ def main(form):
 		elif sServer == 'debug':
 			sReqType = 'HANDLE_DEBUG'
 		
-		elif sServer in ['id','authenticator']:
-			# 'authenticator' and 'id' are not yet handled
-			U.webio.todoError(fLog, u"The queries: server=authenticator and "+\
-			               u"server=id have not been implemented")
 		else:
-			U.webio.queryError(fLog, u"Bad server keyword.  Server must be "
-	   	      "[dataset|dsdf|logo|list|discovery]\n")
+			U.webio.queryError(fLog, "Bad server keyword.  Server must be "
+	   	      "[dataset|dsdf|logo|list|discovery|logo|id|peers]\n")
 					
 	# If the path starts with '/hapi' send requests to subsystem handlers
 	elif sPathInfo.startswith('/hapi'):
@@ -447,9 +437,9 @@ def main(form):
 		
 		else: 
 			dTmp = {'/hapi/capabilities': 'HANDLE_H_API_CAPS',
-					  '/hapi/catalog':      'HANDLE_H_API_CATALOG',
-					  '/hapi/info':         'HANDLE_H_API_INFO',
-					  '/hapi/data':         'HANDLE_H_API_DATA' }
+					'/hapi/catalog':      'HANDLE_H_API_CATALOG',
+					'/hapi/info':         'HANDLE_H_API_INFO',
+					'/hapi/data':         'HANDLE_H_API_DATA' }
 			for sKey in dTmp:
 				if sPathInfo.startswith(sKey):
 					sReqType = dTmp[sKey]
@@ -465,45 +455,42 @@ def main(form):
 		if sPathInfo in [None, '', '/']:
 			sReqType = 'HANDLE_NONE'
 
-		elif sPathInfo.startswith('/data'):
-			sReqType = 'HANDLE_DATA'
-			
-		#elif sPathInfo.startswith('/services'):
-		#	sReqType = 'HANDLE_SERVICES'
+		elif sPathInfo == "/sources.json" or sPathInfo == "/sources.csv":
+			sReqType = 'HANDLE_CATALOG'
 		
+		elif sPathInfo == "/id.txt" or sPathInfo == "/id.json":
+			sReqType = 'HANDLE_ID'
+		
+		elif sPathInfo == "/logo.png":
+			sReqType = 'HANDLE_LOGO'
+
+		elif sPathInfo.startswith('/peers.xml'):
+			sReqType = 'HANDLE_PEERS'		
+					
 		elif sPathInfo.startswith('/debug'):
 			sReqType = 'HANDLE_DEBUG'
 		
-		elif sPathInfo.startswith('/peers'):
-			sReqType = 'HANDLE_PEERS'		
-		
-		# Catalog is now a path to all kinds of info, the catalog handler
-		# ends up routing to other handlers based of the file type selected			
-		elif sPathInfo.startswith('/catalog'):
-			sReqType = catalogReq(sPathInfo)
-			
-		elif sPathInfo.startswith('/logo'):
-			sReqType = 'HANDLE_LOGO'
-				
 		elif sPathInfo.startswith('/static'):
 			sReqType = 'HANDLE_RESOURCE'		
 		
 		elif sPathInfo.startswith('/source'):
-			if sPathInfo.endswith('/') or sPathInfo.endswith('index.json'):
-				sReqType = 'HANDLE_DIRECTORY'
-			else:
+			if sPathInfo.endswith('/') or sPathInfo.endswith('index.html'):
+				sReqType = 'HANDLE_DIR'
+			elif sPathInfo.endswith('info.html'):
+				sReqType = 'HANDLE_INFO'
+			elif sPathInfo.endswith('form.html'):
+				sReqType = 'HANDLE_FORM'
+			elif sPathInfo.endswith('dsdf.d2t'):
+				sReqType = 'HANDLE_DSDF'
+			elif sPathInfo.endswith('das2.json'):
 				sReqType = 'HANDLE_SOURCE'
-					
-		elif sPathInfo.startswith('/coverage'):
-			sReqType = 'HANDLE_COVERAGE'
-	
-	#fLog.write('Hello, server = %s, sReqType = %s'%(sServer, sReqType))
-		
-	if sReqType == None:
-		return 24
-	
-	if not sPathInfo.startswith('/static'):
-		fLog.write("\nRouting")
+			elif sPathInfo.endswith('voservice.xml'):
+				sReqType = 'HANDLE_VOSERVICE'
+			elif sPathInfo.endswith('data'):
+				sReqType = 'HANDLE_DATA'
+
+		#elif sPathInfo.startswith('/coverage'):
+		#	sReqType = 'HANDLE_COVERAGE'
 	
 	H = getHandler(U, fLog, dConf, sReqType)
 	if H == None:

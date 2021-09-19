@@ -136,6 +136,40 @@ def escSplitStr(sArg, sSep, cEsc):
 
 	return [s.strip() for s in lOut]
 
+##############################################################################
+
+def _findDsdfNoCase(sRoot, sDsdf, fLog):
+	"""Look up dsdf files using a case sensitive root and a case insensitive
+	remaning path.  If sDsdf doesn't end in .dsdf, that string is appended 
+	"""
+
+	if not sDsdf.endswith('.dsdf'):
+		sDsdf = "%s.dsdf"%sDsdf
+
+	if not os.path.isdir(sRoot): return (None,None)
+
+	lIn = sDsdf.split('/')
+	sPath = sRoot
+	
+	lName = []
+	while len(lIn) > 0:
+		sPart = None
+		for sEntry in os.listdir(sPath):
+			#fLog.write("Checking %s vs %s"%(sEntry, lIn[0]))
+			if sEntry.lower() == lIn[0].lower():
+				sPart = sEntry
+				lIn.pop(0)
+				lName.append(sEntry)
+				break;
+		if sPart == None: return (None,None)
+		sPath = "%s/%s"%(sPath, sPart)
+	
+	if not os.path.isfile(sPath): return (None,None)
+	
+	sName = '/'.join(lName)
+	sName = sName.rstrip('.dsdf');
+	return (sName, sPath)
+
 
 ##############################################################################
 
@@ -177,21 +211,17 @@ class Dsdf(object):
 		self.lTrue = ['1',u'1','true',u'true']
 		self.lFalse = ['0',u'0','false',u'false']
 
-		self.sName = sDsdf
 		#self.lExTimes = None
 		#self.lExIntervals = None
 		self.lExamples = None
 		self.lValidTimes = None
 		self.dSubSource = None
-		self.sPath = pjoin(dConf['DSDF_ROOT'], sDsdf)
 
 		ptrn = re.compile('\$\(.*\)')
 
-		# When looking up dsdf's, allow .dsdf to be missing
-		if not os.path.isfile(self.sPath):
-			self.sPath = self.sPath + '.dsdf'
-
-		if not os.path.isfile(self.sPath):
+		# New for v2.3, allow dataset IDs to be case insensitive
+		(self.sName, self.sPath) = _findDsdfNoCase(dConf['DSDF_ROOT'], sDsdf, fLog);
+		if self.sPath == None:
 			raise errors.QueryError(u"Data source %s doesn't exist on this server"%sDsdf)
 
 		fLog.write("   Reading: %s"%self.sPath)
@@ -277,11 +307,8 @@ class Dsdf(object):
 				"variables remain after 50 passes"
 			)
 
-		# Add in the datasource tag
-		sPre = dConf['__siteprefix__']
-		if self.isTrue('test'): sPre = dConf['__testprefix__']
-
-		self.d['pathUri'] = "%s%s/%s/das2"%(sPre, dConf['SITE_ID'], self.sName)
+		# Add in the local ID
+		self.d['name'] = self.sName
 
 
 	##############################################################################
@@ -1257,13 +1284,12 @@ class Dsdf(object):
 		"""
 
 		# Global parameters
-		sURI = "%s/%s"%(sRootPathUri, self.sName.lower())
 		sTokName = bname(self.sName).replace('.dsdf','').replace(" ","_")
 		dSrc = {}
 		dDef = {'TYPE':'Das2Source', 
 		        'NAME': sTokName,
 		        'TITLE':self.d['description'],
-		        'PATH_URI': sURI, 'SOURCE':dSrc}
+		        'SOURCE':dSrc}
 
 		# Cascade references
 		dDef['LINKS'] = self._getLinks(dConf, fLog)
