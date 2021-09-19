@@ -39,7 +39,7 @@ def _dirOut(sDirName, tData):
 		pass
 	
 	sDataSrcDir = u"%s/"%sDirName.replace(sPrefix, '')
-	lOut.append( (sDataSrcDir, sDescription, None)  )
+	lOut.append( (sDataSrcDir, sDescription, None, None)  )
 		
 	return (True, sDirName)
 	
@@ -63,6 +63,7 @@ def _fileOut(sFileName, tData):
 		return True
 	
 	sServer = None
+	sSrvType = None
 	
 	for sLine in fIn:
 		iComment = sLine.find(u';')
@@ -92,10 +93,18 @@ def _fileOut(sFileName, tData):
 			lLine = sLine.split(u'=')
 			if len(lLine) > 1:
 				sServer = lLine[1].strip(u"\"' \r\n\t")
+				# If other server is denoted as das2.3, mark as such
+				lSrv = [s.strip() for s in sServer.split('|')]
+				if len(lSrv) > 1:
+					sSrvType = lSrv[0] 
+					sServer = lSrv[1]
+				else:
+					sSrvType = "das2.2"
+					sServer = lSrv[0]
 	
 	fIn.close()
 	sRelPath = sFileName.replace(sPrefix, '').replace('.dsdf','')
-	lOut.append( (sRelPath, sDescription, sServer) )
+	lOut.append( (sRelPath, sDescription, sServer, sSrvType) )
 		
 	return True
 
@@ -118,16 +127,11 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	tData = ("%s/"%dConf['DSDF_ROOT'], lOut, fLog)
 	
 	sPath = os.getenv("PATH_INFO")  # Knock off leading '/source'
-	if sPath != None:
-		bJsonOut = sPath.lower().endswith(".json")
-	else:
-		bJsonOut = False
 	
 	U.webio.pout("Status: 200 OK\r\n")
 	U.webio.pout('Access-Control-Allow-Origin: *\r\n')
 	U.webio.pout('Access-Control-Allow-Methods: GET\r\n')
 	U.webio.pout('Access-Control-Allow-Headers: Content-Type\r\n')	
-	U.webio.pout("Content-Type: text/plain; charset=utf-8\r\n\r\n")
 	
 	# Walk the tree, following symlinks
 	U.misc.symWalk(fLog, dConf['DSDF_ROOT'], _fileOut, _dirOut, tData)
@@ -156,13 +160,64 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 					break
 				j += 1
 	
-	for i in range(0, len(lOut)):
-		if not lIgnore[i]:
-			if lOut[i][1] != None:
-				s = u"%s|%s\r\n"%(lOut[i][0], lOut[i][1])
+	# Output one of three versions:
+   # (no path) - old das2.1 list
+	# /sources.csv - New das2.3 list
+	# /sources.json - New das2.3 catalog
+	if sPath == "/sources.csv":
+		sScriptURL = U.webio.getScriptUrl()
+		U.webio.pout("Content-Type: text/csv; charset=utf-8\r\n")
+		U.webio.pout("Status: 200 OK\r\n")
+		U.webio.pout("Expires: now\r\n")
+		U.webio.pout('Content-Disposition: attachment; filename="sources.csv"\r\n\r\n')
+
+		U.webio.pout('"Name","Type","Description","Definition"\r\n');
+		for i in range(0, len(lOut)):
+			if lIgnore[i]: continue
+
+			sName = '"%s"'%(lOut[i][0].replace('"','""'));
+
+			if lOut[i][0].endswith('/'): 
+				sType = '"cat"'
+				sDef = "" # Directories don't get a URL
 			else:
-				s = u"%s\r\n"%lOut[i][0]
-						
-			U.webio.pout(s)
+				sType = '"src"'
+				
+				if lOut[i][2] == None:
+					# This is one of mine
+					sDef = '"%s/source/%s/dsdf.d2t"'%(sScriptURL, lOut[i][0].lower())
+				else:
+					# Somebody else's
+					if lOut[i][3] == "das2.3":
+						sDef = '"%s/source/%s/dsdf.d2t"'%(lOut[i][2], lOut[i][0].lower())
+					else:
+						sDef = '"%s/?server=dsdf&dataset=%s"'%(lOut[i][2], lOut[i][0])
+			
+			if lOut[i][1] == None: sDesc = ""
+			else: sDesc = '"%s"'%(lOut[i][1].replace('"','""'))
+
+			U.webio.pout("%s,%s,%s,%s\r\n"%(sName, sType, sDesc, sDef))
+
+	elif sPath == "/sources.json":
+		U.webio.pout("Content-Type: application/json; charset=utf-8\r\n")
+		U.webio.pout("Status: 200 OK\r\n")
+		U.webio.pout("Expires: now\r\n")
+		U.webio.pout('Content-Disposition: attachment; filename="sources.json"\r\n\r\n')
+
+		U.webio.pout('{"TODO":"soon"}')
+
+	else:
+		U.webio.pout("Content-Type: text/plain; charset=utf-8\r\n")
+		U.webio.pout("Status: 200 OK\r\n")
+		U.webio.pout("Expires: now\r\n")
+		U.webio.pout('Content-Disposition: inline; filename="sources.txt"\r\n\r\n')
+		for i in range(0, len(lOut)):
+			if not lIgnore[i]:
+				if lOut[i][1] != None:
+					s = u"%s|%s\r\n"%(lOut[i][0], lOut[i][1])
+				else:
+					s = u"%s\r\n"%lOut[i][0]
+							
+				U.webio.pout(s)
 	
 	return 0

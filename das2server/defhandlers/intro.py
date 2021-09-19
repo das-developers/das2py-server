@@ -220,7 +220,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		if len(dConf['VIEW_LOG_URL']) > 0:
 			sViewLog = '<a href="%s">Recent '%dConf['VIEW_LOG_URL']+\
 			           'activity logs</a> for your IP address are available.'
-			sViewLogNav = '<hr><a href="%s">Activity Log</a>'%dConf['VIEW_LOG_URL'] 
+			sViewLogNav = '<a href="%s">Activity Log</a>'%dConf['VIEW_LOG_URL'] 
 	
 	sScriptURL = U.webio.getScriptUrl()
 	
@@ -270,7 +270,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	# Add side navigation bar to top level categories ...
 	pout('<div class="main">')
 		
-	pout('<div class="nav">Data Sources<hr>')
+	pout('<div class="nav"><i>Data Sources</i><hr>')
 	pout('  <ul>')
 	
 	lTop = _getWebTargets(U, dConf, fLog, '/')
@@ -279,7 +279,9 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		for (sName, sUrl) in lTop:
 			pout('    <li><a href="%s">%s</a><br><br></li>'%(sUrl, sName))
 
-	pout('  </ul>')
+	pout('  </ul><hr>')
+	pout('<a href="%s/sources.csv">Catalog (csv)</a><br><br>'%sScriptURL)
+	pout('<a href="%s/sources.json">Catalog (das2)</a><br><br>'%sScriptURL)
 	pout('''%s
   <br><br>
   <a href="%s/peers.xml">Peer Servers</a>
