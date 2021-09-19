@@ -60,11 +60,11 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	# All das2.2 queries require a start and end time
 	sBeg = getVal(form, 'start_time','')
 	if len(sBeg) == 0:
-		sBeg = getVal(form, 'time.min')
+		sBeg = getVal(form, 'time.min', '')
 		
 	sEnd = getVal(form, 'end_time','')
 	if len(sEnd) == 0:
-		sEnd = getVal(form, 'time.max')
+		sEnd = getVal(form, 'time.max','')
 	
 	sRes = getVal(form, 'resolution', '')
 	if sRes == '':
@@ -84,7 +84,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	# Key just used for error messages
 	lTmpKey = ['start_time or time.min','end_time or time.max',
 				  'resolution','interval','params']
-	lTmpVal = [sBeg, sEnd, sRes, sInterval, sParams];
+	lTmpVal = [sBeg, sEnd, sRes, sInterval, sParams]
 	for i in range(0, len(lTmpVal)):
 		if not U.dsdf.checkParam(fLog, lTmpKey[i], lTmpVal[i]):
 			return 17

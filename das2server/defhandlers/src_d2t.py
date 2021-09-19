@@ -10,7 +10,7 @@ import os
 tDrop = (
 	'reader', 'reducer', 'compressor', 'readAccess', 'groupAccess',
 	'hapi', 'subSource', 'hapi', 'readerCmd', 'reducerCmd', 'exampleQuery',
-	'readerTrans'
+	'readerTrans', 'tag'
 	
 	# Autoplot developers built a hard limit buffer into their das2 info
 	# parser.  Try to route around the problem by dropping extra stuff
@@ -21,22 +21,27 @@ def _dsdfToStreamHdr(dsdf):
 	"""Write a utf-8 string that contains the stream"""
 	fOut = StringIO()
 	
-	fOut.write(u"<stream>\r\n")
-	fOut.write(u"  <properties")
+	fOut.write(u"<stream version=\"2.2\">\r\n")
+	fOut.write(u"  <properties\r\n")
 	
-	for uKey in dsdf.keys():
+	fOut.write("    pathUri=\"%s\"\r\n\r\n"%dsdf['pathUri']);
+
+	lKeys = list(dsdf.keys())
+	lKeys.sort()
+	sLastPre = ''
+	for sKey in lKeys:
 	
 		bCont = False
 		for sTmp in tDrop:
-			if uKey.startswith(sTmp):
+			if sKey.startswith(sTmp):
 				bCont = True
 				break
 		
 		if bCont:
 			continue
-		
+
 		# Replace special characters
-		lValue = list( dsdf[uKey])
+		lValue = list( dsdf[sKey])
 		dReplace = {u'&':u'&amp;', u'"':u'&quot;', u"'":u'&apos;', u"<":u"&lt;",
 		            u'>':u'&gt;', u'(':'', u')':''}
 		lRepKeys = dReplace.keys()
@@ -50,7 +55,13 @@ def _dsdfToStreamHdr(dsdf):
 				
 		uValue = u"".join(lNewValue)
 		
-		fOut.write( u' %s="%s"'%(uKey, uValue.strip("'")))
+		# See if we want to space this out
+		lKey = sKey.split('_')
+		if (len(sLastPre) > 0) and (not sKey.startswith(sLastPre)):
+			fOut.write( u'\r\n    %s="%s"\r\n'%(sKey, uValue.strip("'")))
+		else:
+			fOut.write( u'    %s="%s"\r\n'%(sKey, uValue.strip("'")))
+		sLastPre = lKey[0]
 	
 	fOut.write(u" />\r\n")
 	fOut.write(u"</stream>")
@@ -65,7 +76,15 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	"""
 	sDsdf = form.getfirst('dataset', '')
 	if sDsdf == '':
-		sDsdf = os.getenv("PATH_INFO")[1:]  # Knock off leading '/'
+		if os.getenv("PATH_INFO"):
+			sDsdf = os.getenv("PATH_INFO")  
+			sDsdf.replace('/catalog/', '') # Knock off leading '/data/'
+		else:
+			U.webio.queryError(
+				fLog, u"No dataset specified, use the 'dataset=' query parameter "+\
+				"or the /catalog/ path extension"
+			)
+			return 17
 	
 	fLog.write("\nDas 2.2 Description Handler")
 	

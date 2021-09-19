@@ -10,33 +10,16 @@ from os.path import join as pjoin
 
 from . import errors as E
 
-# Ugg, the python 2/3 mess, would be fine if I was paid overtime...
-try:
-	unicode         # in python2 only unicode class has .encode
-except NameError:
-	unicode = str   # In python3 all strings have .encode
-
 def pout(item):
-	"""Write bytes or strings, in python 2 or 3
-	If input item is bytes, write them, if item is a unicode string encode as
-	utf-8 first"""
-		
-	if sys.version_info[0] == 2:
-		if isinstance(item, unicode):
-			sys.stdout.write(item.encode('utf-8'))
-		else:
-			sys.stdout.write(item)
+	"""If input item is bytes, write them, if item is a string
+	encode as utf-8 first"""	
+	if isinstance(item, str):
+		sys.stdout.buffer.write(item.encode('utf-8'))
 	else:
-		if isinstance(item, unicode):
-			sys.stdout.buffer.write(item.encode('utf-8'))
-		else:
-			sys.stdout.buffer.write(item)
+		sys.stdout.buffer.write(item)
 			
 def flushOut():
-	if sys.version_info[0] == 2:
-		sys.stdout.flush()
-	else:
-		sys.stdout.buffer.flush()
+	sys.stdout.buffer.flush()
 
 ##############################################################################
 def getScriptUrl():
@@ -319,19 +302,14 @@ class DasLogFile(object):
 		
 	def write(self, sMsg):
 	
-		if isinstance(sMsg, unicode):
+		if isinstance(sMsg, str):
 			lMsg = sMsg.split(u'\n')
 			
 			for sLine in lMsg:
 				if len(sLine.strip()) > 0:
 
 					sOut = '[%s %4d] %s\n'%(self.sPrefix, self.nLine, sLine)
-				
-					if sys.version_info[0] >= 3:
-						self._file.buffer.write(sOut.encode('utf-8'))
-					else:
-						self._file.write(sOut.encode('utf-8'))
-					
+					self._file.buffer.write(sOut.encode('utf-8'))
 					self.nLine += 1
 
 		else:
@@ -340,17 +318,10 @@ class DasLogFile(object):
 			for xLine in lMsg:
 				if len(xLine.strip()) > 0:
 					
-					if sys.version_info[0] >= 3:
-						sPre = '[%s %4d] '%(self.sPrefix, self.nLine)
-						self._file.buffer.write(sPre.encode('utf-8'))					
-						self._file.buffer.write(xLine)
-						self._file.buffer.write(b'\n')
-					else:
-						# Good ole Python 2 binary strings
-						# Thank jeebus *something* is still simple
-						xOut = '[%s %4d] %s\n'%(self.sPrefix, self.nLine, xLine)
-						self._file.write(xOut)
-					
+					sPre = '[%s %4d] '%(self.sPrefix, self.nLine)
+					self._file.buffer.write(sPre.encode('utf-8'))					
+					self._file.buffer.write(xLine)
+					self._file.buffer.write(b'\n')
 					self.nLine += 1
 
 		self._file.flush()

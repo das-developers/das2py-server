@@ -310,7 +310,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	# Get the interface definition
 	sRootUrl = "%s/data"%U.webio.getScriptUrl() 
-	dDef = dsdf.getInterfaceDef(dConf, fLog, dConf['SITE_PATHURI'], sRootUrl, True)
+	dDef = dsdf.getInterfaceDef(dConf, fLog, dConf['SITE_PATH_URI'], sRootUrl, True)
 	
 	# See if this is just a redirection, it will look like a catalog node
 	if 'URL' in dDef:

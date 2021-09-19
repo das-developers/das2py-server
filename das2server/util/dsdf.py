@@ -16,14 +16,10 @@ import urllib
 from os.path import join as pjoin
 from os.path import basename as bname
 
-# Module moved in python3
-try:
-	from urllib import quote_plus
-	from urllib import unquote_plus
-except ImportError:
-	from urllib.parse import quote_plus
-	from urllib.parse import unquote_plus
-
+from urllib.parse import quote_plus
+from urllib.parse import unquote_plus
+from urllib.parse import urlencode
+	
 import das2
 
 from . import webio
@@ -200,7 +196,7 @@ class Dsdf(object):
 
 		fLog.write("   Reading: %s"%self.sPath)
 
-		fIn = codecs.open(self.sPath, 'rb', 'utf-8')
+		fIn = open(self.sPath, encoding='UTF-8')
 
 		try:
 			self.d = readDsdf(fIn, fLog)
@@ -210,7 +206,7 @@ class Dsdf(object):
 		fIn.close()
 
 		if len(self.d) == 0:
-			raise ServerError(u"Data source file is empty")
+			raise ServerError("Data source file is empty")
 
 		lDsdfKeys = list(self.d.keys())
 
@@ -280,6 +276,13 @@ class Dsdf(object):
 				"Error in DSDF file %s, un-resolved subtitution "+sDsdf+\
 				"variables remain after 50 passes"
 			)
+
+		# Add in the datasource tag
+		sPre = dConf['__siteprefix__']
+		if self.isTrue('test'): sPre = dConf['__testprefix__']
+
+		self.d['pathUri'] = "%s%s/%s/das2"%(sPre, dConf['SITE_ID'], self.sName)
+
 
 	##############################################################################
 
@@ -601,7 +604,7 @@ class Dsdf(object):
 				else:
 					sFmt = "%s%s&%s"
 				dExample['URL'] = sFmt%(
-					   sBaseUrl, self.sName, urllib.urlencode(dParams)
+					   sBaseUrl, self.sName, urlencode(dParams)
 				)
 			self.lExamples.append(dExample)
 

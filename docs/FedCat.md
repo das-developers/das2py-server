@@ -54,8 +54,8 @@ on one of your servers.  For example:
 
 ```bash
 $ mkdir mysite && cd mysite
-$ das2_site_cat https://server1.place.edu/das/server/catalog.json \
-  https://server2.place.edu/das/server/catalog.json
+$ das2_site_cat https://server1.place.edu/das/server/sources.json \
+  https://server2.place.edu/das/server/sources.json
 ```
 
 will generate a series of `*.json` files merging data source references from
