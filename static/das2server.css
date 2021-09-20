@@ -129,6 +129,15 @@ div.footer a:hover, div.footer a:active
    background-color: #663;
 }
 
+pre {
+	background-color: #cae3f8;
+	color: #000;
+	border-radius: 0.5em;
+	padding: 1em;
+	/*border: solid 2px #666;*/
+	border: solid 1px #033385;
+}
+
 /* Styles used by the log reader */
 .day {
 	#border: solid 1px black;
