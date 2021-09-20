@@ -1,8 +1,5 @@
 """Grab bag of utilities for the Das2.2 server"""
 
-# make py2 code safer by preventing relative imports
-from __future__ import absolute_import
-
 import os
 from . import webio
 

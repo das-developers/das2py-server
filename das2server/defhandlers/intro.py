@@ -1,156 +1,11 @@
 """Default Handler for no argument hit on the top level of the server"""
 
 import sys
-import os
-from os.path import join as pjoin
 
 ##############################################################################
 def pout(sOut):
 	sys.stdout.write(sOut)
 	sys.stdout.write('\r\n')
-	
-##############################################################################
-# Provide a list of name and directory tuples from a given data level
-
-def _isVisible(sDsdf):
-	if not os.path.isfile(sDsdf): return False
-	
-	try:
-		fIn = open(sDsdf, 'r')
-
-		for sLine in fIn:
-			if sLine.find('#') != -1:
-				sLine = sLine[: sLine.find('#') ]
-			sLine = sLine.strip()
-			if sLine.startswith('hidden'):
-				lLine = [s.strip().strip("'") for s in sLine.split('=')]
-				if len(lLine) > 1:
-					if lLine[1].lower() in ('yes','true','1'):
-						fIn.close()
-						return False;
-
-		fIn.close()
-	except:
-		return False
-	return True
-
-# ########################################################################## #
-
-def _getWebTargets(U, dConf, fLog, sRelPath):
-	"""Get a list of display names, filesystem names and links and names for
-   everything at a particular level
-	
-	sRelPath - Level under SCRIPT/source, use a '/' to get
-	           information for the top of the dsdf root
-	"""
-
-	sScriptURL = U.webio.getScriptUrl()
-	
-	# Keep a list of directories
-
-	if 'DSDF_ROOT' not in dConf:
-		fLog.write("   ERROR: Configuration item DSDF_ROOT missing")
-		return None
-
-	sRoot = dConf['DSDF_ROOT']
-	
-	if not os.path.isdir(sRoot):
-		fLog.write("   ERROR: DSDF_ROOT dir '%s' does not exist"%sRoot)
-		return None
-	
-	if sRelPath == '/':
-		sPath = sRoot
-	else:
-		sPath = pjoin(sRoot, sRelPath)
-		
-	if not os.path.isdir(sPath):
-		fLog.write("   ERROR: Data directory '%s' does not exist"%sPath)
-		return None
-	
-	lOut = []
-	
-	lItems = os.listdir(sPath)
-	lItems.sort()
-	
-	#fLog.write("   INFO: Listing items in %s for relpath %s"%(sPath, sRelPath))
-	for sItem in lItems:
-		sItemPath = pjoin(sPath, sItem)
-		if os.path.isdir( sItemPath ):
-
-			sDirDsdf = pjoin(sItemPath, '_dirinfo_.dsdf')
-			if not _isVisible(sDirDsdf): continue
-
-			sUrl = '%s/source%s%s/info.html'%(sScriptURL, sRelPath.lower(), sItem.lower())
-			sName = sItem.replace('_',' ')
-			if sRelPath == '/':
-				lOut.append( (sName, sItem, sUrl) )
-			else:
-				lOut.append( (sName, pjoin(sRelPath, sItem), sUrl) )
-
-		elif os.path.isfile( sItemPath ):
-			if not sItem.endswith(".dsdf"): continue
-			if sItem == "_dirinfo_.dsdf": continue
-			if not _isVisible(sItemPath): continue
-
-			sSrcDir = sItemPath.strip('.dsdf').lower();
-			sUrl = '%s/source%s%s/form.html'%(sScriptURL, sRelPath.lower(), sSrcDir)
-			sName = sItem.replace('_',' ').replace('.dsdf','')
-			if sRelPath == '/':
-				lOut.append( (sName, sItem, sUrl) )
-			else:
-				lOut.append( (sName, pjoin(sRelPath, sItem), sUrl) )
-	
-	#fLog.write(">>>lOut>>> %s"%lOut)
-
-	return lOut
-
-##############################################################################
-def allowViewLog(dConf, fLog, sIP):
-	"""Check the config and see if sIP is allowed to view log files"""
-	
-	fLog.write("   WARNING: das2server.util.intro.allowViewLog not implemented, always says yes")
-	
-	return True
-	
-
-##############################################################################
-# Helper for browseHeader, provides an optional header that shows the data
-# hierarchy down to the current level
-
-def _dataNavHeader(U, sReqType, dConf, fLog, form, sPathInfo):
-	
-	sScriptURL = U.webio.getScriptUrl()
-	
-	sDataSet = sPathInfo.replace('/source/', '')
-	
-	# Split the path up into parts that retain the trailing '/'
-	lParts = [ '%s/'%s for s in sDataSet.split('/')]
-	
-	if lParts[-1] == '/':
-		lParts[-2] = "%s/"%(lParts[-2])
-		lParts = lParts[:-1]
-		
-	if len(lParts) < 1:
-		return
-	
-	pout('  <center><ul id="datanav">')
-	
-	
-	for i in range(0, len(lParts)):
-		sPart = lParts[i]
-		sName = 	lParts[i].rstrip('/').replace('_',' ').upper()
-		
-		sUrl = '%s/source/%s'%(sScriptURL, ''.join(lParts[:i+1]))
-		
-		if i > 0:
-			sSep = ' &gt '
-		else:
-			sSep = ''
-			
-		pout('    <li>%s<a href="%s">%s</a></li>'%(sSep, sUrl, sName))
-	
-	pout(' </ul></center>')
-		
 	
 ##############################################################################
 def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
@@ -174,7 +29,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 
    File Inputs:
 
-      stdin - Has already been consumed by the FieldStorage instance, theres
+      stdin - Has already been consumed by the FieldStorage instance, there's
 		   nothing to read there
 			
    Environment Inputs:
@@ -194,7 +49,6 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	Return Value:
 	
 	   Return 0 if everything went okay, non-zero to indicate an error return
-		
 	
 	Exceptions:
 		There is a traceback handler at the top level, so thrown exceptions will
@@ -207,109 +61,41 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	pout('<!DOCTYPE html>')
 	
 	dReplace = {"script":U.webio.getScriptUrl()}
-	
-	sExQuery = ""
-	
-	dReplace['SERVER_VER'] = "Das2.3 (prototype)"
-		
-	if 'SAMPLE_DSDF' in dConf:
-		dReplace['dataset'] = dConf['SAMPLE_DSDF']
-			
-	if 'SAMPLE_START' in dConf and 'SAMPLE_END' in dConf:
-		dReplace['min'] = dConf['SAMPLE_START']
-		dReplace['max'] = dConf['SAMPLE_END']
-	
-	bHSubSys	= False
-	sKey = "ENABLE_HAPI_SUBSYS"
-	if sKey in dConf:
-		bHSubSys = dConf[sKey].lower() in ('true','yes','1')
-		
 				
-	sViewLog = ""
-	sViewLogNav = ""
-	if 'VIEW_LOG_URL' in dConf:
-		if len(dConf['VIEW_LOG_URL']) > 0:
-			sViewLog = '<a href="%s">Recent '%dConf['VIEW_LOG_URL']+\
-			           'activity logs</a> for your IP address are available.'
-			sViewLogNav = '<a href="%s">Activity Log</a>'%dConf['VIEW_LOG_URL'] 
-	
 	sScriptURL = U.webio.getScriptUrl()
-	
-	if 'SITE_NAME' in dConf:
-		sSiteId = dConf['SITE_NAME']
-	else:
-		sSiteId = "Set SITE_NAME in %s"%dConf['__file__']
-	dReplace['SITE_NAME'] = sSiteId	
-
-	if 'SERVER_ID' in dConf:
-		sServerId = dConf['SERVER_ID'].upper()
-	else:
-		sServerId = "{Set SERVER_ID in %s}"%dConf['__file__']
-	dReplace['SERVER_ID'] = sServerId
 
 	if 'STYLE_SHEET' in dConf:
 		sCssLink = "%s/static/%s"%(sScriptURL, dConf['STYLE_SHEET'])
 	else:
 		sCssLink = "%s/static/das2server.css"%sScriptURL
-	
-	pout('''
-<html>
+
+	if 'SITE_NAME' in dConf:
+		sSiteId = dConf['SITE_NAME']
+	else:
+		sSiteId = "Set SITE_NAME in %s"%dConf['__file__']
+
+	pout('''<html>
 <head>
    <title>%s</title>
    <link rel="stylesheet" type="text/css" media="screen" href="%s" />
 </head>
 '''%(sSiteId, sCssLink))
 	
-	pout('''
-<body>
-<div class="header">
-	<div class="hdr_left">
-		<img src="%(script)s/static/logo.png" alt="%(SERVER_ID)s" width="70" height="70" >
-	</div> 
-	<div class="hdr_center">
-	%(SERVER_ID)s, a %(SERVER_VER)s Server
-	<h1>%(SITE_NAME)s</h1>
-	</div>
-	<div class="hdr_right">
-		<a href="http://das2.org">
-		<img src="%(script)s/static/das2logo_rv.png" alt="das2" width="80" height="80">
-		</a>
-	</div>
-</div>
-'''%dReplace)
+	pout('<body>')
+
+	U.page.header(dConf, fLog)
 	
 	# Add side navigation bar to top level categories, need to put this in a
 	# libray call
 	pout('<div class="main">')
-		
-	pout('<div class="nav"><i>Data Sources</i><hr>')
-	pout('  <ul>')
 	
-	lTop = _getWebTargets(U, dConf, fLog, '/')
-	if lTop != None:
-		for (sName, sPathName, sUrl) in lTop:
-			pout('    <li><a href="%s">%s</a><br>'%(sUrl, sName))
-
-			lSub = _getWebTargets(U, dConf, fLog, sPathName)
-			if lSub != None:
-				for (sSubName, sSubPathName, sSubUrl) in lSub:
-					pout('    &nbsp; &nbsp; <a href="%s">%s</a><br>'%(sSubUrl, sSubName))
-			
-			pout('   <br></li>')
-
-	pout('  </ul><hr>')
-	pout('<a href="%s/sources.csv">Catalog (csv)</a><br><br>'%sScriptURL)
-	pout('<a href="%s/sources.json">Catalog (das2)</a><br><br>'%sScriptURL)
-	pout('''%s
-  <br><br>
-  <a href="%s/peers.xml">Peer Servers</a>
-</div>'''%(sViewLogNav, sScriptURL))
+	U.page.sidenav(dConf, fLog)
 	
 	pout('<div class="article">')
 			
 	if sPathInfo.startswith('/source/'):
 		if sPathInfo != '/source/':
-			_dataNavHeader(U, sReqType, dConf, fLog, form, sPathInfo)
+			navheader(U, sReqType, dConf, fLog, form, sPathInfo)
 	
 	pout("""<p>
 This is a <b>das2/v2.3 (prototype) server</b>.  It provides data streams,
@@ -335,7 +121,7 @@ This is the most common client.</li>
 <li> <a href="https://spedas.org/blog/">SPEDAS (Space Physics Environment Data Analysis Software)</a>
 via the <a href="https://github.com/das-developers/das2dlm">das2dlm</a> module.</li>
 <li><a href="http://www.sddas.org/">SDDAS (Southwest Data Display and Analysis System)</a>
-    via the <a href="github.com/das-developers/das2C">das2C</a> library</li>
+    via the <a href="https://github.com/das-developers/das2C">das2C</a> library</li>
 </ul>
 
 <p>In addition, custom scripts written in 
@@ -354,8 +140,9 @@ functionality is complete.</i></h4>
 <h2>Interface</h2>
 
 <p>This server provides the following "filesytem" style interface which is accessed
-via HTTP GET messages. Note that clients do <i>not</i> need to understand this layout. 
-Merely providing one of the catalog files: <a href="%(script)s/sources.json">sources.json<a>
+via HTTP GET messages.</p>
+<p>Note that clients do <i>not</i> need to understand this layout. 
+Merely reading one of the catalog files: <a href="%(script)s/sources.json">sources.json<a>
 or <a href="%(script)s/sources.csv">sources.csv<a> is sufficent.</p>
 
 <pre>
@@ -418,6 +205,13 @@ are altered.</p>
 	
 	# Das 2.1/2.2 support ################################################### #
 
+	if 'SAMPLE_DSDF' in dConf:
+		dReplace['dataset'] = dConf['SAMPLE_DSDF']
+			
+	if 'SAMPLE_START' in dConf and 'SAMPLE_END' in dConf:
+		dReplace['min'] = dConf['SAMPLE_START']
+		dReplace['max'] = dConf['SAMPLE_END']
+
 	pout("""
 <h2>Traditional Queries</h2>
 
@@ -453,7 +247,7 @@ Example:
 	
 	pout("</ul>")
 
-# Plot maker ############################################################### #
+	# Plot maker ############################################################ #
 
 	if 'PNG_MAKER' in dConf:
 		pout("""
@@ -478,6 +272,11 @@ For example:
 	
 	# Helophysics API support ############################################### #
 
+	bHSubSys	= False
+	sKey = "ENABLE_HAPI_SUBSYS"
+	if sKey in dConf:
+		bHSubSys = dConf[sKey].lower() in ('true','yes','1')
+
 	if bHSubSys:
 		pout("""
 <h2>Helophysics API Support</h2>
@@ -487,21 +286,12 @@ https://github.com/hapi-server/data-specification</p>
 """%(dReplace["script"], dReplace["script"]))
 		
 	
+	# END Article Div, and Main DIV ######################################### #
 	pout('  </div>\n</div>\n') 
-	# END MAIN DIV ############################################################
 	
-	pout('''
+	U.page.footer(dConf, fLog)
 
-<div class="footer">
-  <div>More information about das2 can be found at:
-  <a href="http://das2.org/">http://das2.org/</a>.</div>
-  <div>%s</div>
-</div>'''%os.getenv('SERVER_SIGNATURE'))
-
-	pout('''
-</body>
+	pout('''</body>
 </html>''')
 	
 	return 0
-
-	
