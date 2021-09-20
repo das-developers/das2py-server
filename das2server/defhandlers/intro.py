@@ -34,8 +34,11 @@ def _isVisible(sDsdf):
 		return False
 	return True
 
+# ########################################################################## #
+
 def _getWebTargets(U, dConf, fLog, sRelPath):
-	"""Get a list of links and names for everything at a particular level
+	"""Get a list of display names, filesystem names and links and names for
+   everything at a particular level
 	
 	sRelPath - Level under SCRIPT/source, use a '/' to get
 	           information for the top of the dsdf root
@@ -52,7 +55,7 @@ def _getWebTargets(U, dConf, fLog, sRelPath):
 	sRoot = dConf['DSDF_ROOT']
 	
 	if not os.path.isdir(sRoot):
-		fLog.write("   ERROR: DSID_ROOT dir '%s' does not exist"%sRoot)
+		fLog.write("   ERROR: DSDF_ROOT dir '%s' does not exist"%sRoot)
 		return None
 	
 	if sRelPath == '/':
@@ -69,7 +72,7 @@ def _getWebTargets(U, dConf, fLog, sRelPath):
 	lItems = os.listdir(sPath)
 	lItems.sort()
 	
-	fLog.write("   INFO: Listing items in %s"%sPath)
+	#fLog.write("   INFO: Listing items in %s for relpath %s"%(sPath, sRelPath))
 	for sItem in lItems:
 		sItemPath = pjoin(sPath, sItem)
 		if os.path.isdir( sItemPath ):
@@ -79,25 +82,33 @@ def _getWebTargets(U, dConf, fLog, sRelPath):
 
 			sUrl = '%s/source%s%s/info.html'%(sScriptURL, sRelPath.lower(), sItem.lower())
 			sName = sItem.replace('_',' ')
-			lOut.append( (sName, sUrl) )
+			if sRelPath == '/':
+				lOut.append( (sName, sItem, sUrl) )
+			else:
+				lOut.append( (sName, pjoin(sRelPath, sItem), sUrl) )
 
 		elif os.path.isfile( sItemPath ):
 			if not sItem.endswith(".dsdf"): continue
 			if sItem == "_dirinfo_.dsdf": continue
 			if not _isVisible(sItemPath): continue
 
-			sSourceDir = sItemPath.strip('.dsdf').lower();
+			sSrcDir = sItemPath.strip('.dsdf').lower();
 			sUrl = '%s/source%s%s/form.html'%(sScriptURL, sRelPath.lower(), sSrcDir)
-			sName = sItem.replace('_',' ')
-			lOut.append( (sName, sUrl) )
+			sName = sItem.replace('_',' ').replace('.dsdf','')
+			if sRelPath == '/':
+				lOut.append( (sName, sItem, sUrl) )
+			else:
+				lOut.append( (sName, pjoin(sRelPath, sItem), sUrl) )
 	
+	#fLog.write(">>>lOut>>> %s"%lOut)
+
 	return lOut
 
 ##############################################################################
 def allowViewLog(dConf, fLog, sIP):
 	"""Check the config and see if sIP is allowed to view log files"""
 	
-	fLog.write("   WARNING: das2server.util.site.allowViewLog not implemented, always says yes")
+	fLog.write("   WARNING: das2server.util.intro.allowViewLog not implemented, always says yes")
 	
 	return True
 	
@@ -267,17 +278,24 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 </div>
 '''%dReplace)
 	
-	# Add side navigation bar to top level categories ...
+	# Add side navigation bar to top level categories, need to put this in a
+	# libray call
 	pout('<div class="main">')
 		
 	pout('<div class="nav"><i>Data Sources</i><hr>')
 	pout('  <ul>')
 	
 	lTop = _getWebTargets(U, dConf, fLog, '/')
-	
 	if lTop != None:
-		for (sName, sUrl) in lTop:
-			pout('    <li><a href="%s">%s</a><br><br></li>'%(sUrl, sName))
+		for (sName, sPathName, sUrl) in lTop:
+			pout('    <li><a href="%s">%s</a><br>'%(sUrl, sName))
+
+			lSub = _getWebTargets(U, dConf, fLog, sPathName)
+			if lSub != None:
+				for (sSubName, sSubPathName, sSubUrl) in lSub:
+					pout('    &nbsp; &nbsp; <a href="%s">%s</a><br>'%(sSubUrl, sSubName))
+			
+			pout('   <br></li>')
 
 	pout('  </ul><hr>')
 	pout('<a href="%s/sources.csv">Catalog (csv)</a><br><br>'%sScriptURL)
