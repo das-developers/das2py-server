@@ -25,8 +25,12 @@ class recursionError(Exception):
 ############################################################################
 def symWalk(fLog, sRoot, fileCallBack = None, dirCallBack = None, tData = None, 
             nMaxDepth=20, _n=0):
-	"""Walk a directory tree, following symlinks.  For each file encountered
-	call the fileCallback which looks like:
+	"""Walk a directory tree, following symlinks.  
+
+	WARNING: Other code depends on the callback order (dirs then files)
+	         so DON'T CHANGE IT!
+
+	For each file encountered call the fileCallback which looks like:
 	
 	   bContinue fileCallback(sAbsPathToFile, userData)
 		
