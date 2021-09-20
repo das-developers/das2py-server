@@ -93,10 +93,6 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	pout('<div class="article">')
 			
-	if sPathInfo.startswith('/source/'):
-		if sPathInfo != '/source/':
-			navheader(U, sReqType, dConf, fLog, form, sPathInfo)
-	
 	pout("""<p>
 This is a <b>das2/v2.3 (prototype) server</b>.  It provides data streams,
 typically in das2/v2.2 format, via an HTTP GET query protocol.  It operates

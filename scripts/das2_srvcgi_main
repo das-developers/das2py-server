@@ -108,8 +108,11 @@ g_dDefHandlers = {
 	# ?server=discovery ?server=list /sources.csv /sources.json
 	'HANDLE_LIST':   'das2server.defhandlers.catalog',
 	
-	# Effectively index files for wget... /source /static
+	# Effectively index.html files for wget... /source /static
 	'HANDLE_DIR':      'das2server.defhandlers.directory',
+
+	# Directory info pages leading to a data source page
+	'HANDLE_INFO':     'das2server.defhandlers.info',
 
 	# ?server=dsdf&dsdf=/Juno/WAV/Survey  /source/juno/wav/survey/dsdf.d2t
 	'HANDLE_DSDF':     'das2server.defhandlers.src_d2t',

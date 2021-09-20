@@ -82,7 +82,7 @@ def getWebTargets(dConf, fLog, sRelPath):
 			sDirDsdf = pjoin(sItemPath, '_dirinfo_.dsdf')
 			if not isVisible(sDirDsdf): continue
 
-			sUrl = '%s/source%s%s/info.html'%(sScriptURL, sRelPath.lower(), sItem.lower())
+			sUrl = '%s/source/%s/%s/info.html'%(sScriptURL, sRelPath.lower(), sItem.lower())
 			sName = sItem.replace('_',' ')
 			if sRelPath == '/':
 				lOut.append( (sName, sItem, sUrl) )
@@ -95,7 +95,9 @@ def getWebTargets(dConf, fLog, sRelPath):
 			if not isVisible(sItemPath): continue
 
 			sSrcDir = sItemPath.strip('.dsdf').lower();
-			sUrl = '%s/source%s%s/form.html'%(sScriptURL, sRelPath.lower(), sSrcDir)
+			sUrl = '%s/source/%s/%s/form.html'%(
+				sScriptURL, sRelPath.lower(), sItem.lower().strip('.dsdf')
+			)
 			sName = sItem.replace('_',' ').replace('.dsdf','')
 			if sRelPath == '/':
 				lOut.append( (sName, sItem, sUrl) )
