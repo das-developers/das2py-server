@@ -410,7 +410,7 @@ lDataFiles = [
 		'static/das2logo.png',    'static/das2server.xsl', 
 		'static/magnetosphere.jpg', 'static/das2logo_rv.png',
 		'static/das2server.css', 'static/hapi_sm.png',
-		'static/logo.png'
+		'static/logo.png', 'static/flowdiagram.svg'
 	]),
 	
 	# And a couple empty dirs...

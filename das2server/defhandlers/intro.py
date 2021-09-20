@@ -94,13 +94,20 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	pout('<div class="article">')
 			
 	pout("""<p>
-This is a <b>das2/v2.3 (prototype) server</b>.  It provides data streams,
-typically in das2/v2.2 format, via an HTTP GET query protocol.  It operates
-by running full-resolution data stream creators on the server and if 
-requested, processing those streams as they flow through the server to
-your client program.</p>
+This is a <b>das2/v2.3 (prototype) server</b>.  It provides data streams
+via an HTTP GET query protocol.</p>
 
-<img src=%(script)s/static/flowdiagram.png</img>
+<img src="%(script)s/static/flowdiagram.svg"
+  alt="das2-pyserver data flow diagram" id="flowdiagram"
+/>
+<center><i><span style="font-size: 80%%">Internal Stream Processing</span></i></center>
+
+<p>The server runs full-resolution data stream generators, processes the
+flow, and optionally caches the results.  Almost all processing steps are
+optional.
+</p>
+
+<h2>Clients</h2>
 
 <p>Forms are provided to download data from this server as das2 streams,
 helophysics API streams, text delimited value streams (csv), PNG images,
@@ -128,18 +135,22 @@ my utilize these data.</p>
 <h4><i>
 This is an <b>alpha version</b> of the server and not all
 functionality is complete.</i></h4>
-""")
+"""%dReplace)
 			
 	# Site Navagation ######################################################## #
 
 	pout("""
 <h2>Interface</h2>
 
+<p>The most common data output format is mime-type: <tt>application/vnd.das2.das2stream</tt>
+as this is the output of most data-reader programs.  However, streams be
+reformatted as if requested.</p>
+
 <p>This server provides the following "filesytem" style interface which is accessed
 via HTTP GET messages.</p>
 <p>Note that clients do <i>not</i> need to understand this layout. 
-Merely reading one of the catalog files: <a href="%(script)s/sources.json">sources.json<a>
-or <a href="%(script)s/sources.csv">sources.csv<a> is sufficent.</p>
+Merely reading one of the catalog files: <a href="%(script)s/sources.json">sources.json</a>
+or <a href="%(script)s/sources.csv">sources.csv</a> is sufficent.</p>
 
 <pre>
 <a href="%(script)s">server/</a>  This introductory page, at %(script)s
