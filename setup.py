@@ -456,7 +456,7 @@ g_lKeepDest = ['passwd', 'group']
 
 setup(
    name="das2server",
-	version="2.2",
+	version="2.3-proto",
 	description="Das2 pyserver - a das2 stream caching and reduction CGI service",
 	author="Chris Piker",
 	packages=lPkg,

@@ -105,13 +105,9 @@ g_dDefHandlers = {
 	# ?server=id    /id.txt  /id.json
 	'HANDLE_ID':     'das2server.defhandlers.id',
 	
-	# ?server=discovery ?server=list /sources.csv
-	'HANDLE_LIST':   'das2server.defhandlers.srclist',
+	# ?server=discovery ?server=list /sources.csv /sources.json
+	'HANDLE_LIST':   'das2server.defhandlers.catalog',
 	
-	# /source.json   <-- catalog down to source level
-    # /sources.csv   
-	'HANDLE_CATALOG':  'das2server.defhandlers.catalog',
-
 	# Effectively index files for wget... /source /static
 	'HANDLE_DIR':      'das2server.defhandlers.directory',
 
@@ -454,10 +450,7 @@ def main(form):
 		if sPathInfo in [None, '', '/']:
 			sReqType = 'HANDLE_NONE'
 
-		elif sPathInfo == "/sources.json":
-			sReqType = 'HANDLE_CATALOG'
-
-		elif sPathInfo == "/sources.csv":
+		elif sPathInfo == "/sources.json" or sPathInfo == "/sources.csv":
 			sReqType = 'HANDLE_LIST'
 		
 		elif sPathInfo == "/id.txt" or sPathInfo == "/id.json":
