@@ -212,6 +212,11 @@ def dasExcept(sType, uOut, fLog=None, bHdrSent=False):
 	if bClientIsBrowser and (not bHdrSent):
 		pout(uOut)
 	else:
+		
+		if not bHdrSent:
+			sOut = "<stream version=\"2.2\" />\n"
+			pout("[00]%06d%s"%(len(sOut), sOut))
+
 		uOut = uOut.replace(u'\n', u'&#13;&#10;').replace(u'"', u"'")
 		
 		# Handle replacement of < and >
@@ -219,7 +224,7 @@ def dasExcept(sType, uOut, fLog=None, bHdrSent=False):
 		
 		uOut = u'<exception type="%s" message="%s" />\n'%(sType, uOut)
 		sOut = uOut.encode('utf-8')
-		pout("[00]%06d"%len(sOut))
+		pout("[xx]%06d"%len(sOut))
 		pout(sOut)
 	
 	sys.stdout.flush()
