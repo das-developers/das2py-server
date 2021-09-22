@@ -113,8 +113,8 @@ functionality is complete.</i></span></h4>
 <h2>Clients</h2>
 
 <p>Forms are provided to download data from this server as das2 streams,
-helophysics API streams, text delimited value streams (csv), PNG images,
-and eventually as VOTables (in work) via the navigation bar to the right.
+text delimited value streams (CSV), PNG images, hapi streams, and eventually
+as VOTables (in work) via the navigation bar to the right.
 </p>
 
 <p>Full use of this server requires a client program capable of reading
@@ -172,7 +172,7 @@ or <a href="%(script)s/sources.csv">sources.csv</a> is sufficent.</p>
   |             |
   |             |- <i>data-source</i>/ - A data source directory
   |                  |
-  |                  |- das2.json - A das2 HttpStreamSource definiton
+  |                  |- api.json - A das2 HttpStreamSource definiton
   |                  |- dsdf.d2t - A das2 v2.1/2.2 source definition
   |                  |- form.html - A web form for querying this source   
   |                  |- voservice.xml - A VO <a href="https://www.ivoa.net/documents/DataLink/20150617/index.html">DataLink</a> definition

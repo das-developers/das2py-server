@@ -4,6 +4,7 @@ from __future__ import absolute_import
 from . import webio
 from . import misc
 from . import dsdf
+from . import source
 from . import auth
 from . import task
 from . import cache

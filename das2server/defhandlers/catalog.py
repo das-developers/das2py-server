@@ -197,9 +197,9 @@ def _addEntries(sScriptUrl, lOut, lIgnore, dCat, fLog):
 			sId = sName.lower()
 
 			if lOut[i][2] == None:
-				sUrl = "%s/source/%s/das2.json"%(sScriptUrl,lOut[i][0].lower())
+				sUrl = "%s/source/%s/api.json"%(sScriptUrl,lOut[i][0].lower())
 			else:
-				sUrl = "%s/source/%s/das2.json"%(lOut[i][2],lOut[i][0].lower())
+				sUrl = "%s/source/%s/api.json"%(lOut[i][2],lOut[i][0].lower())
 
 			dParent['catalog'][sId] = {
 				'type':'HttpStreamSrc',
