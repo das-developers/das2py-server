@@ -49,9 +49,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	# ####################################################################### #
 	# The main show #
 
-	if sPathInfo.startswith('/source/'):
-		if sPathInfo != '/source/':
-			U.page.navheader(dConf, fLog, sPathInfo)
+	U.page.navheader(dConf, fLog, sPathInfo.replace('form.html','download'))
 
 	pout('<h1>TODO: Data Download Page</h1>')
 

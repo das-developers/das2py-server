@@ -81,8 +81,13 @@ def getWebTargets(dConf, fLog, sRelPath):
 
 			sDirDsdf = pjoin(sItemPath, '_dirinfo_.dsdf')
 			if not isVisible(sDirDsdf): continue
-
-			sUrl = '%s/source/%s/%s/info.html'%(sScriptURL, sRelPath.lower(), sItem.lower())
+			
+			if(sRelPath == '/'):
+				sUrl = '%s/source/%s/info.html'%(sScriptURL, sItem.lower())
+			else:
+				sUrl = '%s/source/%s/%s/info.html'%(sScriptURL, sRelPath.lower(), sItem.lower())
+			
+				
 			sName = sItem.replace('_',' ')
 			if sRelPath == '/':
 				lOut.append( (sName, sItem, sUrl) )
@@ -96,7 +101,7 @@ def getWebTargets(dConf, fLog, sRelPath):
 
 			sSrcDir = sItemPath.strip('.dsdf').lower();
 			sUrl = '%s/source/%s/%s/form.html'%(
-				sScriptURL, sRelPath.lower(), sItem.lower().strip('.dsdf')
+				sScriptURL, sRelPath.lower(), sItem.lower().replace('.dsdf','')
 			)
 			sName = sItem.replace('_',' ').replace('.dsdf','')
 			if sRelPath == '/':
@@ -104,7 +109,9 @@ def getWebTargets(dConf, fLog, sRelPath):
 			else:
 				lOut.append( (sName, pjoin(sRelPath, sItem), sUrl) )
 	
-	#fLog.write(">>>lOut>>> %s"%lOut)
+	#for t in lOut:
+	#	fLog.write(">>>lOut>>> %s"%str(t))
+	#fLog.write("<<<")
 
 	return lOut
 
@@ -133,7 +140,9 @@ def header(dConf, fLog):
 	pout('''	
 <div class="header">
 	<div class="hdr_left">
+		<a href="%(script)s/">
 		<img src="%(script)s/static/logo.png" alt="%(SERVER_ID)s" width="70" height="70" >
+		</a>
 	</div> 
 	<div class="hdr_center">
 	%(SERVER_ID)s, a %(SERVER_VER)s Server
@@ -197,8 +206,8 @@ def sidenav(dConf, fLog):
 
 # ########################################################################## #
 
-def navheader(dConf, fLog, sPathInfo):
-	"""Write an unordered list of the current source path as CSS style 'datanav'"""
+def navheader(dConf, fLog, dsdf):
+	"""Write an unordered list of the current source path as CSS style 'navlist'"""
 	
 	sScriptUrl = webio.getScriptUrl()
 	
@@ -214,11 +223,11 @@ def navheader(dConf, fLog, sPathInfo):
 	if len(lParts) < 1:
 		return
 	
-	pout('  <center><ul id="datanav">')
+	pout('  <ul id="navlist">')
 	
 	for i in range(0, len(lParts)):
 		sPart = lParts[i]
-		sName = 	lParts[i].rstrip('/').replace('_',' ').upper()
+		sName = 	lParts[i].rstrip('/').replace('_',' ')
 		
 		sUrl = '%s/source/%s'%(sScriptUrl, ''.join(lParts[:i+1]))
 		

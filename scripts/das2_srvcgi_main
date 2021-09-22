@@ -131,7 +131,10 @@ g_dDefHandlers = {
 	#'HANDLE_SERVICES': 'das2server.defhandlers.services',
 	
 	# TODO: New version of dsdfDataset, arbitrary command line
-	'HANDLE_DATA':         'das2server.defhandlers.data',
+	#       For now just route to old handler, not every das.json
+	#       will work yet. -cwp 2021-09-21
+	#'HANDLE_DATA':         'das2server.defhandlers.data',
+	'HANDLE_DATA':         'das2server.defhandlers.timedata',
 	
 	# Helophysics API substem
 	'HANDLE_H_API_NONE':         'das2server.h_api.root',

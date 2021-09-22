@@ -66,6 +66,7 @@ div.main {
 	display: flex;
 }
 
+/* Sidebar navigation of top two levels */
 div.nav {
 	padding: 1em;
 	background-color: #033385;
@@ -96,6 +97,31 @@ div.nav a:hover, div.nav a:active
 {
 	color: #fff;
 	background-color: #663;
+}
+
+/* Top navigation to specific item */
+#navlist
+{
+	margin: 0;
+	font-size: 125%;
+	/* background-color: #000055; */
+	padding: 2px 0;
+	color: #000;
+}
+
+#navlist li
+{
+	display: inline;
+	list-style-type: none;
+}
+
+#navlist a:link, #catnav a:visited
+{
+	color: #000;
+	background-color: transparent;
+	/* text-decoration: none; */
+	padding-left: 15px;
+	padding-right: 15px;
 }
 
 /* Used when no sidebar is printed */

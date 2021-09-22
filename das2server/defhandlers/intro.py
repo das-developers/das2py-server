@@ -102,10 +102,13 @@ via an HTTP GET query protocol.</p>
 />
 <center><i><span style="font-size: 80%%">Internal Stream Processing</span></i></center>
 
-<p>The server runs full-resolution data stream generators, processes the
+<p>This server runs full-resolution data stream generators, processes the
 flow, and optionally caches the results.  Almost all processing steps are
 optional.
 </p>
+
+<h4><span style="color: #993300"><i>This is an <b>alpha version</b> of the server and not all
+functionality is complete.</i></span></h4>
 
 <h2>Clients</h2>
 
@@ -132,9 +135,6 @@ via the <a href="https://github.com/das-developers/das2dlm">das2dlm</a> module.<
 or <a href="https://github.com/das-developers/das2pro">IDL</a>
 my utilize these data.</p>
 
-<h4><i>
-This is an <b>alpha version</b> of the server and not all
-functionality is complete.</i></h4>
 """%dReplace)
 			
 	# Site Navagation ######################################################## #
@@ -143,8 +143,7 @@ functionality is complete.</i></h4>
 <h2>Interface</h2>
 
 <p>The most common data output format is mime-type: <tt>application/vnd.das2.das2stream</tt>
-as this is the output of most data-reader programs.  However, streams be
-reformatted as if requested.</p>
+However, streams may be reformatted if requested.</p>
 
 <p>This server provides the following "filesytem" style interface which is accessed
 via HTTP GET messages.</p>
@@ -176,7 +175,7 @@ or <a href="%(script)s/sources.csv">sources.csv</a> is sufficent.</p>
   |                  |- das2.json - A das2 HttpStreamSource definiton
   |                  |- dsdf.d2t - A das2 v2.1/2.2 source definition
   |                  |- form.html - A web form for querying this source   
-  |                  |- voservice.xml - A <a href="https://ivoa.net/documents/VODataService/index.html">VODataService</a> definition
+  |                  |- voservice.xml - A VO <a href="https://www.ivoa.net/documents/DataLink/20150617/index.html">DataLink</a> definition
   |                  |
   |                  |- data - form action handler (hidden)
   |
