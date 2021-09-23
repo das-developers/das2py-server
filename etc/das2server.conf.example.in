@@ -1,10 +1,14 @@
 # Site name.  Many das2 servers can be located at the same site, please
 # use the same SITE_NAME for all the das2 servers in a given organization.
 
-SITE_NAME = "My Data Source Site"
+SITE_TITLE = "My Data Source Site"
 
-# Identify this server seperatly in combined logs
+# A nicer name for the server
+SERVER_NAME = "%(SERVER_ID)s"
+
+# Identify this server seperatly in combined logs, will be reduced to lower case
 SERVER_ID = "%(SERVER_ID)s"
+
 
 # Contact email.  You can use replacement characters to obscure the address
 # a bit, for example:

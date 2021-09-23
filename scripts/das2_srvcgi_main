@@ -229,6 +229,16 @@ def getConf():
 	
 	# As finial steps, inclued a reference to the config file itself
 	dConf['__file__'] = g_sConfPath
+
+	# Some replacement text
+	if 'SERVER_ID' not in dConf:
+		dConf['SERVER_ID'] = "unknown"
+
+	if 'SERVER_NAME' not in dConf:
+		dConf['SERVER_NAME'] = "Unknown"
+
+	if 'SITE_CATALOG_TAG' not in dConf:
+		dConf['SITE_CATALOG_TAG'] = "tag:unknown.site.org,2021"
 	
 	return dConf
 

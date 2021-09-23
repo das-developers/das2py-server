@@ -211,32 +211,35 @@ def navheader(dConf, fLog, dsdf):
 	
 	sScriptUrl = webio.getScriptUrl()
 	
+	sPathInfo = os.getenv("PATH_INFO")
+
 	sDataSet = sPathInfo.replace('/source/', '')
-	
+
 	# Split the path up into parts that retain the trailing '/'
 	lParts = [ '%s/'%s for s in sDataSet.split('/')]
 	
 	if lParts[-1] == '/':
 		lParts[-2] = "%s/"%(lParts[-2])
 		lParts = lParts[:-1]
-		
+	else:
+		lParts = lParts[:-1]
+	
 	if len(lParts) < 1:
 		return
 	
+	# TODO: Consult the filesystem for each part and get the capitalization
+	#       from there.
+	
 	pout('  <ul id="navlist">')
+	pout('    <li> <a href="%s">%s</a>'%(sScriptUrl, dConf['SERVER_ID']))
 	
 	for i in range(0, len(lParts)):
 		sPart = lParts[i]
 		sName = 	lParts[i].rstrip('/').replace('_',' ')
 		
 		sUrl = '%s/source/%s'%(sScriptUrl, ''.join(lParts[:i+1]))
-		
-		if i > 0:
-			sSep = ' &gt '
-		else:
-			sSep = ''
 			
-		pout('    <li>%s<a href="%s">%s</a></li>'%(sSep, sUrl, sName))
+		pout('    <li> &gt <a href="%s">%s</a></li>'%(sUrl, sName))
 	
 	pout(' </ul></center>')
 
