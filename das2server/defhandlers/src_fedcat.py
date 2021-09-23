@@ -153,8 +153,6 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		sDsdf = sDsdf.replace("/api.json", '.dsdf')
 	else:
 		U.webio.serverError(fLog, u"PATH_INFO did not end with /api.json")
-
-	sDataUrl = "%s/%s/data"%(U.webio.getScriptUrl(), sDsdf.replace('.dsdf','').lower())
 	
 	fLog.write("\nDas2 HttpStreamSrc definition Handler")
 	
@@ -172,7 +170,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	# the server itself.
 	
 	try:
-		dDef = U.source.fromDsdf(dConf, sDsdf, sDataUrl, fLog)
+		dDef = U.source.fromDsdf(dConf, sDsdf,fLog)
 	except U.errors.RemoteServer:
 		U.webio.queryError(fLog, "File %s is for a different server"%bname(sDsdf))
 		return 17

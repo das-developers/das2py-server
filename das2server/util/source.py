@@ -14,6 +14,35 @@ from . import webio
 import das2
 
 #########################################################################
+
+def stdTimeKeys(sConvention):
+	"""Get the standard time parameter keys based on the call convention
+	In das2/v2.3 the key names are picked for coordinate names to help
+	the developer keep different physical dimensions separate.
+
+	Returns (sTimeBegKey, sTimeEndKey, sTimeMaxBinSzKey, sIntervalKey)
+	"""
+	if sConvention in ("das2.3","das2/v2.3"):
+		return (
+			"read.time.min",
+			"read.time.max",
+			"bin.time.max",
+			"read.time.interval"
+			# Other possible future keys
+			# bin.freq.max
+         # bin.merge.avg
+         # bin.merge.peaks
+         # bin.merge.min
+         # bin.merge.max
+         # dft.length
+         # dft.slide
+         # format.mime
+		)
+	else:
+		return ('start_time','end_time','resolution','interval')
+
+
+#########################################################################
 #def _getInternalInterface(self, fLog, dConf, dSrc):
 #	"""Get all the items needed for the internal server interface that are
 #	not to be sent out to the clients.
@@ -311,6 +340,11 @@ def _loadDsdf(dConf, sDsdf, fLog):
 		dDsdf['__path__'] = sPath  # Save case-sensitive name and disk path
 		dDsdf['__name__'] = bname(sName)
 
+		# The case sensitive path portion that leads to this dsdf, without ".dsdf"
+		dDsdf['__caseid__'] = sPath.replace(dConf['DSDF_ROOT'],'')
+		dDsdf['__caseid__'] = dDsdf['__caseid__'].rstrip('.dsdf')
+		dDsdf['__caseid__'] = dDsdf['__caseid__'].strip('/')
+
 		return dDsdf
 
 ##############################################################################
@@ -423,7 +457,47 @@ def _mergeContacts(dOut, dProps):
 				dContact = {'type':'technical', 'name':sWho} 
 		
 			if dContact not in lOut: lOut.append( dContact )
+
+def _mergeProto(dOut, dProps):
+	# If this is a remote server assume it's das2.2 until proved otherwise
+	# This can be confusing, because this server can be listed in the dsdf
+	# as well as remote servers.
+	#
+	# Also, the server value may have one or two parts
 	
+	dProto = _getDict(dOut, 'protocol')
+	lUrls  = _getList(dProto, 'base_urls')
+	lUrls.clear()
+
+	sMe = webio.getScriptUrl().strip('/')
+	sSrvType = 'das2.3'
+	
+	if 'server' in dProps and '00' in dProps['server']:
+		sSrv = dProps['server']['00']
+		lSrv = [ s.strip() for s in sSrv.split('|')]
+		if len(lSrv) > 1:
+			sSrvType = lSrv[0]
+			sServer = lSrv[1].strip('/')
+		else:
+			# If no server type given, assume 2.2
+			sSrvType = "das2.2"
+			sServer = lSrv[0].strip('/')
+
+		if sServer == sMe:  # If the listed server is me, override the type
+			sSrvType = "das2.3"
+	else:
+		sServer = sMe
+	
+	if sSrvType == "das2.3":
+		dProto['convention']	= 'das2/v2.3'
+		sBaseUrl = "%s/%s/data"%(sServer, dProps["__caseid__"].lower())
+	else:
+		dProto['convention']	= 'das2/v2.2'
+		sBaseUrl = "%s?server=dataset&dataset=%s"%(sServer, dProps["__caseid__"])
+
+	lUrls = [sBaseUrl]
+	return sBaseUrl
+
 
 def _mergeColCoordInfo(dOut, dProps):
 	dCoords = _getDict(dOut, 'coordinates')
@@ -466,6 +540,8 @@ def _mergeSrcCoordInfo(dOut, dProps):
 	# By default das2/2.2 servers only know that there is a time coordinate
 	# so set that one up.  
 	dTime = _getDict(dCoords, 'time')
+
+	(sBegKey, sEndKey, sResKey, sIntKey) = stdTimeKeys(dOut['protocol']['convention'])
 	
 	if 'name' not in dTime: dTime['name']  = 'Time'
 
@@ -510,8 +586,8 @@ def _mergeSrcCoordInfo(dOut, dProps):
 			dTime['resolution'][sV] = (dtEnd - dtBeg) / 2000.0
 				
 	# Set up the alteration rules
-	dTime['minimum']['set'] = {'param':'start_time', 'required':True}
-	dTime['maximum']['set'] = {'param':'end_time', 'required':True}
+	dTime['minimum']['set'] = {'param':sBegKey, 'required':True}
+	dTime['maximum']['set'] = {'param':sEndKey, 'required':True}
 	
 	if 'validRange' in dProps:
 		lTimeRng = [ s.strip() for s in dProps['validRange']['00'].split('to') ]
@@ -520,9 +596,9 @@ def _mergeSrcCoordInfo(dOut, dProps):
 			dTime['maximum']['set']['range'] = lTimeRng
 	
 	if 'interval' in dTime:
-		dTime['interval']['set'] = {'param':'interval', 'required':True}
+		dTime['interval']['set'] = {'param':sIntKey, 'required':True}
 	else:
-		dTime['resolution']['set'] = {'param':'resolution', 'required':False}
+		dTime['resolution']['set'] = {'param':sResKey, 'required':False}
 		
 	
 	# See if any other coordinates are mentioned, if so give them a 
@@ -740,6 +816,8 @@ def _mergeExamples(dOut, dProps, sBaseUrl):
 	lRange = []
 	lParams = []
 	lInterval = []
+
+	(sBegKey, sEndKey, sResKey, sIntKey) = stdTimeKeys(dOut['protocol']['convention'])
 	
 	if 'exampleRange' in dProps:
 		lRange = list(dProps['exampleRange'].keys())
@@ -771,18 +849,18 @@ def _mergeExamples(dOut, dProps, sBaseUrl):
 			
 		sBeg = lTmp[0]
 		sEnd = lTmp[1].replace('UTC','').strip()
-		dQuery['start_time'] = sBeg
-		dQuery['end_time']   = sEnd
+		dQuery[sBegKey] = sBeg
+		dQuery[sEndKey]   = sEnd
 			
 		# See if we need resolution or interval
 		if sNum in lInterval:
-			dQuery['interval'] = dProps['exampleInterval'][sNum]
+			dQuery[sIntKey] = dProps['exampleInterval'][sNum]
 		else:
 			# Default to 1/2000th of the range, here's where we need the
 			# das2 module.
 			dtBeg = das2.DasTime(sBeg)
 			dtEnd = das2.DasTime(sEnd)
-			dQuery['resolution'] = (dtEnd - dtBeg) / 2000.0
+			dQuery[sResKey] = (dtEnd - dtBeg) / 2000.0
 			
 		if sNum in lParams:
 			dQuery['params'] = dProps['exampleParams'][sNum]
@@ -836,7 +914,7 @@ def _mergeFormat(dOut, dProps):
 
 # ########################################################################## #
 
-def fromDsdf(dConf, sDsdf, sBaseUrl, fLog, bInternal=False):
+def fromDsdf(dConf, sDsdf, fLog, bInternal=False):
 	"""Create an HttpStreamSrc object from a DSDF file and the given server
 	configuration information.
 
@@ -863,12 +941,6 @@ def fromDsdf(dConf, sDsdf, sBaseUrl, fLog, bInternal=False):
 		raise errors.QueryError(u"Data source %s doesn't exist on this server"%sDsdf)
 
 	dProps = _loadDsdf(dConf, sDsdf, fLog)
-
-	# Check to see if this is some other server's problem
-	if 'server' in dProps and '00' in dProps['server']:
-		sRmt = dProps['server']['00']
-		if sRmt.strip('/') != webio.getScriptUrl().strip('/'):
-			raise errors.RemoteServer("Source is for server %s not this one"%sRmt)
 	
 	# TODO: Could merge in json data from disk here, but skip it for now...
 	dOut = {}
@@ -888,9 +960,9 @@ def fromDsdf(dConf, sDsdf, sBaseUrl, fLog, bInternal=False):
 		dOut["title"] = dProps['description']['00']
 	dOut['type'] = 'HttpStreamSrc'
 	dOut['version'] = "0.6"
-	dProto = _getDict(dOut, 'protocol')
-	dProto['convention'] = 'das2/2.3'
 
+	# potentially override the base url and set the protocol convention
+	sBaseUrl = _mergeProto(dOut, dProps)
 	
 	# make an ID for the datasource if requested
 	#if sIdRoot:
@@ -904,7 +976,6 @@ def fromDsdf(dConf, sDsdf, sBaseUrl, fLog, bInternal=False):
 	#if 'uris' in dNode:
 	#	dOut['uris'] = dNode['uris']
 		
-		
 	_mergeContacts(dOut, dProps)
 	
 	_mergeSrcCoordInfo(dOut, dProps)
@@ -914,11 +985,8 @@ def fromDsdf(dConf, sDsdf, sBaseUrl, fLog, bInternal=False):
 	_mergeFormat(dOut, dProps)   # Just the format for now, but hand edited
 	                             # items could be in there
 	
-	# Make sure this base url is included
-	lUrls = _getList(dProto, 'base_urls')
-	lUrls.clear()
-	lUrls = [sBaseUrl]
-		
+	# Set the authentication information
+	dProto = _getDict(dOut, 'protocol')	
 	if 'securityRealm' in dProps:
 		dProto['authentication'] = {
 			'required':True, 'realm':dProps['securityRealm']['00']
@@ -929,35 +997,42 @@ def fromDsdf(dConf, sDsdf, sBaseUrl, fLog, bInternal=False):
 	dGet = {}
 	dProto['http_params'] = dGet
 	
-	dGet['start_time'] = {
+	# For now we are really just supporting the old 2.2 API, so auto
+	# add old start time & end time parameters.  Hopefully this will
+	# change soon.  Will need a new internal interface for command
+	# generation before this can be changed.
+
+	(sBegKey, sEndKey, sResKey, sIntKey) = stdTimeKeys(dProto['convention'])
+
+	dGet[sBegKey] = {
 		'required':True, 'type':'isotime',
 		'name':'Min Time', 'title':'Minimum time value to stream',
 	}
 		
-	dGet['end_time'] = {
+	dGet[sEndKey] = {
 		'required':True, 'type':'isotime',
 		'name':'Max Time', 'title':'Maximum Time Value to stream',
 	}
 	
 	# See if requires interval is set, if not
 	if _isPropTrue(dProps, 'requiresInterval'):
-		dGet['interval'] = {
+		dGet[sIntKey] = {
 			'required':True, 'type':'real', 'units':'s',
 			'name':'Interval', 
 			'title':'Time interval between model calculations/interpolations',
 			'description': 'This parameter is used with data generated from models '
-			        'or table interpolations such as SPICE Ephemerides and '
-					  'magnetic field models',
+			   'or table interpolations such as SPICE Ephemerides and '
+				'magnetic field models',
 		}
 
 	else:
-		dGet['resolution'] = {
+		dGet[sResKey] = {
 			'required':False, 'type':'real', 'units':'s',
 			'name':'Resolution', 
-			'title':'Maximum resolution between output time points',
+			'title':'The maximum time bin width for bin-reduced data in seconds',
 			'description':'The server will return data at or better than the given '
-                'resolution if possible.  Leave un-specified to get data '
-			       'at intrinsic resolution without server side averages',
+            'x-axis resolution if possible.  Leave un-specified to get data '
+			   'at intrinsic resolution without server side averages',
 		}
 
 		
