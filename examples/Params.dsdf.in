@@ -46,7 +46,6 @@ exampleRange_00 = '2008-06-29T17:11:51 to 2008-06-29T17:11:53 | BxBx Autocorrela
 exampleParams_00 = 'BxBx'
 
 exampleRange_01 = '2008-06-29T17:11:51 to 2008-06-29T17:11:53 | All Autocorrelations'
-exampleParams_01 = 'BxBx ByBy BzBz ExEx EyEy EzEz'
 
 exampleRange_02 = '2008-06-29T17:11:51 to 2008-06-29T17:11:53 | BxEx Cross-correlation'
 exampleParams_02 = 'BxEx complex'
@@ -66,19 +65,21 @@ param_05 = 'BxBz | Output BxBz* Cross-correlations'
 param_06 = 'ByBz | Output ByBz* Cross-correlations'
 
 param_11 = 'ExEx | Output ExEx* Autocorrelations'
-param_12 = 'EyEy | Output ExEx* Autocorrelations'
-param_13 = 'EzEz | Output ExEx* Autocorrelations'
+param_12 = 'EyEy | Output EyEy* Autocorrelations'
+param_13 = 'EzEz | Output EzEz* Autocorrelations'
 
-param_14 = 'ExEy | Output BxEy* Cross-correlations'
-param_15 = 'ExEz | Output BxEz* Cross-correlations'
-param_16 = 'EyEz | Output ByEz* Cross-correlations'
+param_14 = 'ExEy | Output ExEy* Cross-correlations'
+param_15 = 'ExEz | Output ExEz* Cross-correlations'
+param_16 = 'EyEz | Output EyEz* Cross-correlations'
 
 param_21 = 'BxEx | Output BxEx* Cross-correlations'
 param_22 = 'BxEy | Output BxEy* Cross-correlations'
 param_23 = 'BxEz | Output BxEz* Cross-correlations'
+
 param_24 = 'ByEx | Output ByEx* Cross-correlations'
 param_25 = 'ByEy | Output ByEy* Cross-correlations'
 param_26 = 'ByEz | Output ByEz* Cross-correlations'
+
 param_27 = 'BzEx | Output BzEx* Cross-correlations'
 param_28 = 'BzEy | Output BzEy* Cross-correlations'
 param_29 = 'BzEz | Output BzEz* Cross-correlations'

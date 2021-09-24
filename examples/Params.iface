@@ -1,0 +1,271 @@
+// This is an example of overriding the default user interface generated
+// automatically from a .dsdf file.
+//
+// Syntax:
+//   The syntax is mostly JSON, with the exception that javascript style 
+//   comments are allowed.  C-style comments: /* */ are *not* handled by
+//   the parser.
+//
+// Procedure:
+//   The easiest way to generate an interface file is to download the 
+//   auto generated api.json file from the das2 server, copy sections to
+//   to here, and adjust to taste.  The following dictionaries will be
+//   read from this if present:
+//
+//      http_params  --> protocol/http_params  in api.json
+//      coordinates  --> interface/coordinates in api.json
+//      data         --> interface/coordinates in api.json
+//      options      --> interface/options     in api.json
+//
+//   If you don't wish to customize a section, just leave it out.
+//
+//   The most common customization is to move general options into a data
+//   section, since the automatic *.dsdf -to-> api.json file creator has
+//   no way to how a general reader options are supposed to affect data
+//   values.
+
+
+{ // BEGIN
+
+
+// HTTP GET Parameters
+// -------------------
+// This section defines what values are acceptable for extra reader
+// parameters.  To remain compatible with older das2/v2.2 clients (which
+// as of 2021-09-30 includes Autoplot) only alter the HTTP GET parameter
+// named "params".
+//
+// Input from the web for the given GET parameters will be checked against
+// the definitions below.  If it matches, the value will be passed down to
+// the data reader program as extra command line arguments.  By default
+// space separated values are passed to the reader as multiple command
+// line options.
+
+"http_params":{
+
+   "params": {
+		"title": "Optional reader arguments",  // user documentation
+		"required": false,                     // this param is not required
+		
+		// The value will be a set of strings, each one is a boolean flag
+		"type": "flag_set",                    
+		
+		// The flag strings are separated by spaces and will thus expand
+		// to multiple command line arguments when given to the reader
+		"flag_sep": " ",
+
+      // Define an ID and string value for each flag.  The ID is used
+		// to connect user settings in the "coordinates", "data" and 
+		// "options" sections below with these flag strings
+      "flags": {
+			"00": {"value": "complex"},
+ 
+			"01": {"value": "no-BxBx" },
+			"02": {"value": "no-ByBy" },
+			"03": {"value": "no-BzBz" },
+ 
+			"04": {"value": "BxBy" },
+			"05": {"value": "BxBz" },
+			"06": {"value": "ByBz" },
+ 
+			"11": {"value": "no-ExEx" },
+			"12": {"value": "no-EyEy" },
+			"13": {"value": "no-EzEz" },
+ 
+			"14": {"value": "ExEy" },
+			"15": {"value": "ExEz" },
+			"16": {"value": "EyEz" },
+ 
+			"21": {"value": "BxEx" },
+			"22": {"value": "BxEy" },
+			"23": {"value": "BxEz" },
+ 
+			"24": {"value": "ByEx" },
+			"25": {"value": "ByEy" },
+			"26": {"value": "ByEz" },
+ 
+			"27": {"value": "BzEx" },
+			"28": {"value": "BzEy" },
+			"29": {"value": "BzEz" }
+		}
+	}
+},
+
+// Coordinates
+// -----------
+// By default (for now) all das2 sources are assumed to emitt data with a
+// time coordinate for the X-axis.  Define extra coordinates here and any
+// options that effect them.  
+//
+// These data are also output in frequency coordinates, though there
+// are no options to control this aspect of the stream.
+
+"coordinates" {
+	"frequency":{
+		"name":"Frequency"
+	}
+}
+
+
+// Data Values
+// -----------
+// Most of the options affect data output.  Here we define for the
+// end user how these option affect the data stream they will receive.
+
+"data":{
+	// Block 1
+	"bxbx": { "title": "BxBx* Autocorrelations",
+		"enabled":{
+			"value": true, // default enabled, set flag 01 to disable
+			"set": {"value":false, "param": "params", "flag":"01"},
+		}
+	},
+	"byby": {"title": "ByBy* Autocorrelations",
+	   "enabled":{
+			"value": true, // default enabled, set flag 02 to disable
+			"set": {"value":false, "param": "params", "flag": "02"},
+		}
+	},
+	"bzbz": {"title": "BzBz* Autocorrelations",
+	   "enabled":{
+			"value": true, // default enabled, set flag 03 to disable
+			"set": {"value":false, "param": "params", "flag": "03"},
+		}
+	},	
+	
+	// Block 2
+	"bxby": { "title": "BxBy* Cross-correlations",
+		"enabled":{
+			"value": false, // default disabled, set flag 04 to enable
+			"set": {"value": true, "param": "params", "flag": "04"},
+		}
+   },
+	"bxbz": { "title": "BxBz* Cross-correlations",
+	   "enabled":{
+		   "value": false, // default disabled, set flag 05 to enable
+			"set": {"value": true, "param": "params", "flag": "05"},
+		}
+	},
+	"bybz": { "title": "ByBz* Cross-correlations",
+	   "enabled":{
+		   "value": false, // default disabled, set flag 06 to enable
+			"set": {"value": true, "param": "params", "flag": "06"}
+		}
+	},
+
+	// Block 3
+   "exex": { "title": "ExEx* Autocorrelations",
+		"enabled":{
+	  		"value": true, // default enabled set flag 11 to disable
+	  		"set": {"value": false, "param": "params", "flag": "11"}
+		}
+	},
+	"eyey": { "title": "EyEy* Autocorrelations",
+		"enabled":{
+	  		"value": true, // default enabled set flag 12 to disable
+			"set": {"value": false, "param": "params", "flag": "12"}
+		}
+	},
+	"ezez": { "title": "EzEz* Autocorrelations",
+		"enabled":{
+			"value": true, // default enabled, set flag 13 to disable
+			"set": {"value": true, "param": "params", "flag": "13"}
+		}
+	},
+	
+	// Block 4
+	"exey": { "title": "ExEy* Cross-correlations",
+		"enabled":{
+			"value": false, // default disabled, set flag 14 to enable	  
+			"set": {"value": true, "param": "params", "flag": "14"}
+		 }
+	},
+	"exez": { "title": "ExEz* Cross-correlations",
+		"enabled":{
+			"value": false, // default disabled, set flag 15 to enable	
+			"set": {"value": true, "param": "params", "flag": "15"}
+		}
+	},
+	"eyez": {
+		"enabled":{"title": "EyEz* Cross-correlations",
+			"value": false, // default disabled, set flag 16 to enable		
+			"set": {"value": true, "param": "params", "flag": "16"}
+		}
+	},
+
+	// Block 5
+	"bxex": { "title": "BxEx* Cross-correlations",
+	   "enabled":{
+		   "value": false, // default disabled, set flag 21 to enable
+			"set": {"value": true, "param": "params", "flag": "21"}
+		}
+	},
+	"bxey": { "title": "BxEy* Cross-correlations",
+	   "enabled":{
+		   "value": false, // default disabled, set flag 22 to enable
+			"set": {"value": true, "param": "params", "flag": "22"}
+		}
+	},
+	"bxez": { "title": "BxEz* Cross-correlations",
+	   "enabled":{
+		   "value": false, // default disabled, set flag 23 to enable
+			"set": {"value": true, "param": "params", "flag": "23"}
+		}
+	},
+	
+	// Block 6
+	"byex": { "title": "ByEx* Cross-correlations",
+	   "enabled":{
+		   "value": false, // default disabled, set flag 24 to enable
+			"set": {"value": true, "param": "params", "flag": "24"}
+		}
+	},
+	"byey": { "title": "ByEy* Cross-correlations",
+	   "enabled":{
+		   "value": false, // default disabled, set flag 25 to enable
+			"set": {"value": true, "param": "params", "flag": "25"}
+		}
+	},
+	"byez": { "title": "ByEz* Cross-correlations",
+	   "enabled":{
+		   "value": false, // default disabled, set flag 26 to enable
+			"set": {"value": true, "param": "params", "flag": "26"}
+		}
+	},
+	
+	// Block 7
+	"bzex": { "title": "BzEx* Cross-correlations",
+	   "enabled":{
+		   "value": false, // default disabled, set flag 27 to enable
+			"set": {"value": true, "param": "params", "flag": "27"}
+		}
+	},
+	"bzey": { "title": "BzEy* Cross-correlations",
+	   "enabled":{
+		   "value": false, // default disabled, set flag 28 to enable
+			"set": {"value": true, "param": "params", "flag": "28"}
+		}
+	},
+	"bzez": { "title": "BzEz* Cross-correlations",
+	   "enabled":{
+		   "value": false, // default disabled, set flag 29 to enable
+			"set": {"value": true, "param": "params", "flag": "29"}
+		}
+	}
+},
+
+// General Options
+// ---------------
+//
+// Define general options here that that don't seem to fit in anywhere else
+
+"options": {
+
+   "complex": {
+		"title": "For cross-correlations output real and imaginary parts instead of magnitude and phase angle",
+		"value": false,  // Defaults to false, set flag 00 to enable
+      "set": {"value": true, "param": "params", "flag": "00"}
+   }
+}
+
+} // END

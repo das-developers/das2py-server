@@ -53,20 +53,9 @@ from os.path import join as pjoin
 import numpy as np
 import das2
 
-try:
-	# Try one of the included pycdf modules, we do this first because
-	# it should not be on the path if it's not needed.
-	import pycdf
-	from pycdf import const
-except ImportError:
-	try:
-		from spacepy import pycdf        # actually, the normal situation
-		from spacepy.pycdf import const
-	except ImportError:
-		sMsg = "ERROR: Install spacepy or symlink a fallback pycdf module "+\
-		       "into das2srv/lib/pythonX.X as described in fallback_pycdf.txt.\n"
-		sys.stderr.write(sMsg)
-		sys.exit(7)
+# Use included version to avoid spacepy home-dir write problem
+import das2.pycdf as pycdf
+import das2.pycdf.const as const
 
 # ########################################################################### #
 # General code to deal with python2/3 and unicode/bytes
