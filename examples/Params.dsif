@@ -12,10 +12,10 @@
 //   to here, and adjust to taste.  The following dictionaries will be
 //   read from this if present:
 //
-//      http_params  --> protocol/http_params  in api.json
-//      coordinates  --> interface/coordinates in api.json
-//      data         --> interface/coordinates in api.json
-//      options      --> interface/options     in api.json
+//      http_params  --> protocol/http_params/*   in api.json
+//      coordinates  --> interface/coordinates/*  in api.json
+//      data         --> interface/data           in api.json
+//      options      --> interface/options        in api.json
 //
 //   If you don't wish to customize a section, just leave it out.
 //
@@ -27,23 +27,26 @@
 
 { // BEGIN
 
+"version":"0.1",  // This is a version 0.1 DSIF (Data Source Inteface File)
 
 // HTTP GET Parameters
 // -------------------
-// This section defines what values are acceptable for extra reader
-// parameters.  To remain compatible with older das2/v2.2 clients (which
-// as of 2021-09-30 includes Autoplot) only alter the HTTP GET parameter
-// named "params".
+// This section defines what values are acceptable for extra reader options.
+// In the future other parameters may be customized here, but for now only
+// 
+//    http_params/read.options
+//
+// may be changed.
 //
 // Input from the web for the given GET parameters will be checked against
 // the definitions below.  If it matches, the value will be passed down to
 // the data reader program as extra command line arguments.  By default
-// space separated values are passed to the reader as multiple command
-// line options.
+// space separated values are passed to the reader as multiple command line
+// options.
 
 "http_params":{
 
-   "params": {
+   "read.options": {
 		"title": "Optional reader arguments",  // user documentation
 		"required": false,                     // this param is not required
 		
@@ -100,11 +103,11 @@
 // These data are also output in frequency coordinates, though there
 // are no options to control this aspect of the stream.
 
-"coordinates" {
+"coordinates" : {
 	"frequency":{
 		"name":"Frequency"
 	}
-}
+},
 
 
 // Data Values
@@ -117,19 +120,19 @@
 	"bxbx": { "title": "BxBx* Autocorrelations",
 		"enabled":{
 			"value": true, // default enabled, set flag 01 to disable
-			"set": {"value":false, "param": "params", "flag":"01"},
+			"set": {"value":false, "param": "read.options", "flag":"01"}
 		}
 	},
 	"byby": {"title": "ByBy* Autocorrelations",
 	   "enabled":{
 			"value": true, // default enabled, set flag 02 to disable
-			"set": {"value":false, "param": "params", "flag": "02"},
+			"set": {"value":false, "param": "read.options", "flag": "02"}
 		}
 	},
 	"bzbz": {"title": "BzBz* Autocorrelations",
 	   "enabled":{
 			"value": true, // default enabled, set flag 03 to disable
-			"set": {"value":false, "param": "params", "flag": "03"},
+			"set": {"value":false, "param": "read.options", "flag": "03"}
 		}
 	},	
 	
@@ -137,19 +140,19 @@
 	"bxby": { "title": "BxBy* Cross-correlations",
 		"enabled":{
 			"value": false, // default disabled, set flag 04 to enable
-			"set": {"value": true, "param": "params", "flag": "04"},
+			"set": {"value": true, "param": "read.options", "flag": "04"}
 		}
    },
 	"bxbz": { "title": "BxBz* Cross-correlations",
 	   "enabled":{
 		   "value": false, // default disabled, set flag 05 to enable
-			"set": {"value": true, "param": "params", "flag": "05"},
+			"set": {"value": true, "param": "read.options", "flag": "05"}
 		}
 	},
 	"bybz": { "title": "ByBz* Cross-correlations",
 	   "enabled":{
 		   "value": false, // default disabled, set flag 06 to enable
-			"set": {"value": true, "param": "params", "flag": "06"}
+			"set": {"value": true, "param": "read.options", "flag": "06"}
 		}
 	},
 
@@ -157,19 +160,19 @@
    "exex": { "title": "ExEx* Autocorrelations",
 		"enabled":{
 	  		"value": true, // default enabled set flag 11 to disable
-	  		"set": {"value": false, "param": "params", "flag": "11"}
+	  		"set": {"value": false, "param": "read.options", "flag": "11"}
 		}
 	},
 	"eyey": { "title": "EyEy* Autocorrelations",
 		"enabled":{
 	  		"value": true, // default enabled set flag 12 to disable
-			"set": {"value": false, "param": "params", "flag": "12"}
+			"set": {"value": false, "param": "read.options", "flag": "12"}
 		}
 	},
 	"ezez": { "title": "EzEz* Autocorrelations",
 		"enabled":{
 			"value": true, // default enabled, set flag 13 to disable
-			"set": {"value": true, "param": "params", "flag": "13"}
+			"set": {"value": true, "param": "read.options", "flag": "13"}
 		}
 	},
 	
@@ -177,19 +180,19 @@
 	"exey": { "title": "ExEy* Cross-correlations",
 		"enabled":{
 			"value": false, // default disabled, set flag 14 to enable	  
-			"set": {"value": true, "param": "params", "flag": "14"}
+			"set": {"value": true, "param": "read.options", "flag": "14"}
 		 }
 	},
 	"exez": { "title": "ExEz* Cross-correlations",
 		"enabled":{
 			"value": false, // default disabled, set flag 15 to enable	
-			"set": {"value": true, "param": "params", "flag": "15"}
+			"set": {"value": true, "param": "read.options", "flag": "15"}
 		}
 	},
 	"eyez": {
 		"enabled":{"title": "EyEz* Cross-correlations",
 			"value": false, // default disabled, set flag 16 to enable		
-			"set": {"value": true, "param": "params", "flag": "16"}
+			"set": {"value": true, "param": "read.options", "flag": "16"}
 		}
 	},
 
@@ -197,19 +200,19 @@
 	"bxex": { "title": "BxEx* Cross-correlations",
 	   "enabled":{
 		   "value": false, // default disabled, set flag 21 to enable
-			"set": {"value": true, "param": "params", "flag": "21"}
+			"set": {"value": true, "param": "read.options", "flag": "21"}
 		}
 	},
 	"bxey": { "title": "BxEy* Cross-correlations",
 	   "enabled":{
 		   "value": false, // default disabled, set flag 22 to enable
-			"set": {"value": true, "param": "params", "flag": "22"}
+			"set": {"value": true, "param": "read.options", "flag": "22"}
 		}
 	},
 	"bxez": { "title": "BxEz* Cross-correlations",
 	   "enabled":{
 		   "value": false, // default disabled, set flag 23 to enable
-			"set": {"value": true, "param": "params", "flag": "23"}
+			"set": {"value": true, "param": "read.options", "flag": "23"}
 		}
 	},
 	
@@ -217,19 +220,19 @@
 	"byex": { "title": "ByEx* Cross-correlations",
 	   "enabled":{
 		   "value": false, // default disabled, set flag 24 to enable
-			"set": {"value": true, "param": "params", "flag": "24"}
+			"set": {"value": true, "param": "read.options", "flag": "24"}
 		}
 	},
 	"byey": { "title": "ByEy* Cross-correlations",
 	   "enabled":{
 		   "value": false, // default disabled, set flag 25 to enable
-			"set": {"value": true, "param": "params", "flag": "25"}
+			"set": {"value": true, "param": "read.options", "flag": "25"}
 		}
 	},
 	"byez": { "title": "ByEz* Cross-correlations",
 	   "enabled":{
 		   "value": false, // default disabled, set flag 26 to enable
-			"set": {"value": true, "param": "params", "flag": "26"}
+			"set": {"value": true, "param": "read.options", "flag": "26"}
 		}
 	},
 	
@@ -237,19 +240,19 @@
 	"bzex": { "title": "BzEx* Cross-correlations",
 	   "enabled":{
 		   "value": false, // default disabled, set flag 27 to enable
-			"set": {"value": true, "param": "params", "flag": "27"}
+			"set": {"value": true, "param": "read.options", "flag": "27"}
 		}
 	},
 	"bzey": { "title": "BzEy* Cross-correlations",
 	   "enabled":{
 		   "value": false, // default disabled, set flag 28 to enable
-			"set": {"value": true, "param": "params", "flag": "28"}
+			"set": {"value": true, "param": "read.options", "flag": "28"}
 		}
 	},
 	"bzez": { "title": "BzEz* Cross-correlations",
 	   "enabled":{
 		   "value": false, // default disabled, set flag 29 to enable
-			"set": {"value": true, "param": "params", "flag": "29"}
+			"set": {"value": true, "param": "read.options", "flag": "29"}
 		}
 	}
 },
@@ -264,7 +267,7 @@
    "complex": {
 		"title": "For cross-correlations output real and imaginary parts instead of magnitude and phase angle",
 		"value": false,  // Defaults to false, set flag 00 to enable
-      "set": {"value": true, "param": "params", "flag": "00"}
+      "set": {"value": true, "param": "read.options", "flag": "00"}
    }
 }
 

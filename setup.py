@@ -60,86 +60,6 @@ class build_scripts_wconf(build_scripts):
 				lLines[i] = "g_sConfPath = '%s'\n"%g_sConfig
 		
 		return lLines
-		
-	
-	def copy_scripts_2(self):
-		"""Copy each script listed in 'self.scripts'; if it's marked as a
-		Python script in the Unix way (first line matches 'first_line_re',
-		ie. starts with "\#!" and contains "python"), then adjust the first
-		line to refer to the current Python interpreter as we copy.
-		"""
-		_sysconfig = __import__('sysconfig')
-		self.mkpath(self.build_dir)
-		outfiles = []
-		for script in self.scripts:
-			adjust = 0
-			script = convert_path(script)
-			outfile = os.path.join(self.build_dir, os.path.basename(script))
-			outfiles.append(outfile)
-
-			if not self.force and not newer(script, outfile):
-				log.debug("not copying %s (up-to-date)", script)
-				continue
-
-			# Always open the file, but ignore failures in dry-run mode --
-			# that way, we'll get accurate feedback if we can read the
-			# script.
-			try:
-				f = open(script, "r")
-			except IOError:
-				if not self.dry_run:
-					raise
-				f = None
-			else:
-				first_line = f.readline()
-				if not first_line:
-					self.warn("%s is an empty file (skipping)" % script)
-					continue
-
-				match = self.first_line_re.match(first_line)
-				if match:
-					adjust = 1
-					post_interp = match.group(1) or ''
-
-			if adjust:
-				log.info("copying and adjusting %s -> %s", script,
-						 self.build_dir)
-				if not self.dry_run:
-					outf = open(outfile, "w")
-					if not _sysconfig.is_python_build():
-						outf.write("#!%s%s\n" %
-								   (self.executable,
-									post_interp))
-					else:
-						outf.write("#!%s%s\n" %
-								   (os.path.join(
-							_sysconfig.get_config_var("BINDIR"),
-						   "python%s%s" % (_sysconfig.get_config_var("VERSION"),
-										   _sysconfig.get_config_var("EXE"))),
-									post_interp))
-					outf.writelines(self.embed_config(f.readlines(), None))
-					outf.close()
-				if f:
-					f.close()
-			else:
-				if f:
-					f.close()
-				self.copy_file(script, outfile)
-
-		if os.name == 'posix':
-			for file in outfiles:
-				if self.dry_run:
-					log.info("changing mode of %s", file)
-				else:
-					oldmode = os.stat(file)[ST_MODE] & 0o7777
-					newmode = (oldmode | 0o555) & 0o7777
-					if newmode != oldmode:
-						log.info("changing mode of %s from %o to %o",
-								 file, oldmode, newmode)
-						os.chmod(file, newmode)
-						
-		# copy_scripts_2()
-	
 	
 	def copy_scripts_3(self):
 		r"""Copy each script listed in 'self.scripts'; if it's marked as a
@@ -245,16 +165,10 @@ class build_scripts_wconf(build_scripts):
 
 	def copy_scripts (self):
 		
-		if sys.version_info.major > 2:
-			self.config_re = re.compile(b'^g_sConfPath\s+=\s+.*$')
-			self.first_line_re = re.compile(b'^#!.*python[0-9.]*([ \t].*)?$')
-			self.copy_scripts_3()
+		self.config_re = re.compile(b'^g_sConfPath\s+=\s+.*$')
+		self.first_line_re = re.compile(b'^#!.*python[0-9.]*([ \t].*)?$')
+		self.copy_scripts_3()
 			
-		else:
-			# Attempt to get python 2.6 by not including b prefix in non 3 code
-			self.config_re = re.compile('^g_sConfPath\s+=\s+.*$')
-			self.first_line_re = re.compile('^#!.*python[0-9.]*([ \t].*)?$')
-			self.copy_scripts_2()
 
 
 ##############################################################################
@@ -426,6 +340,7 @@ else:
 		('datasets/Examples', [
 			'examples/Random.dsdf.in', 'examples/Spectra.dsdf.in',
 			'examples/Waveform.dsdf.in', 'examples/Params.dsdf.in',
+			'examples/Params.dsif', # <-- interface override
 			'examples/Auth.dsdf.in', 'examples/_dirinfo_.dsdf'
 		])
 	)

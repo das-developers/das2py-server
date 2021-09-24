@@ -36,16 +36,11 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	"""
 	
 	sDsdf = getVal(form, 'dataset', '')
-	if sDsdf == '':
-		sDsdf = os.getenv("PATH_INFO")  # Knock off leading '/source/'
-		if sDsdf.startswith('/data/'):
-			sDsdf = sDsdf[len('/data/'):]
-	
-	if sDsdf.find('_dirinfo_') != -1:
-		U.webio.queryError(fLog, u"Invalid das2.3 query")
+	if len(sDsdf) == 0:
+		U.webio.queryError(fLog, "dataset parameter is required")
 		return 17
 	
-	fLog.write("\nDas 2.3 Dataset Handler")
+	fLog.write("\nDas 2.2 Dataset Handler")
 	
 	if sys.platform.startswith('win'):
 		U.webio.todoError(fLog, u"Not yet compatible with windows:\n"+\

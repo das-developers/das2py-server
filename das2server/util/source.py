@@ -2,32 +2,37 @@
    doesn't need the (overloaded) dsdf module.
 """
 import os
+import sys
 import os.path
 from os.path import join as pjoin
 from os.path import basename as bname
 from os.path import dirname as dname
 from urllib.parse import quote_plus
+import json
 
 from . import errors
 from . import webio
+from . import output
 
 import das2
 
 #########################################################################
 
-def stdTimeKeys(sConvention):
+def stdFormKeys(sConvention):
 	"""Get the standard time parameter keys based on the call convention
 	In das2/v2.3 the key names are picked for coordinate names to help
 	the developer keep different physical dimensions separate.
 
-	Returns (sTimeBegKey, sTimeEndKey, sTimeMaxBinSzKey, sIntervalKey)
+	Returns 
+		(sTimeBegKey, sTimeEndKey, sTimeMaxBinSzKey, sIntervalKey, sParamKey)
 	"""
-	if sConvention in ("das2.3","das2/v2.3"):
+	if sConvention in ("das2.3","das2/v2.3","v2.3"):
 		return (
 			"read.time.min",
 			"read.time.max",
 			"bin.time.max",
-			"read.time.interval"
+			"read.time.interval",
+			"read.options"
 			# Other possible future keys
 			# bin.freq.max
          # bin.merge.avg
@@ -39,8 +44,7 @@ def stdTimeKeys(sConvention):
          # format.mime
 		)
 	else:
-		return ('start_time','end_time','resolution','interval')
-
+		return ('start_time','end_time','resolution','interval','params')
 
 #########################################################################
 #def _getInternalInterface(self, fLog, dConf, dSrc):
@@ -300,7 +304,7 @@ def _rawReadDsdf(fIn, fLog):
 
 # ########################################################################## #
 
-def _loadDsdf(dConf, sDsdf, fLog):
+def _loadDsdf(dConf, sName, sPath, fLog):
 		"""Load a dsdf as a dictionary of dictionaries.  Every parameter becomes
 		the key name for a dictionary of values.  Thus single values and
 		lists take on the same form.
@@ -317,11 +321,6 @@ def _loadDsdf(dConf, sDsdf, fLog):
 		
 		"""
 		dDsdf = {}
-
-		# New for v2.3, allow dataset IDs to be case insensitive
-		(sName, sPath) = _findDsdfNoCase(dConf['DSDF_ROOT'], sDsdf, fLog);
-		if sPath == None:
-			raise errors.QueryError(u"Data source %s doesn't exist on this server"%sDsdf)
 
 		fLog.write("   Reading: %s"%sPath)
 
@@ -346,6 +345,48 @@ def _loadDsdf(dConf, sDsdf, fLog):
 		dDsdf['__caseid__'] = dDsdf['__caseid__'].strip('/')
 
 		return dDsdf
+
+
+##############################################################################
+def _loadOverride(dConf, sPath, fLog):
+
+	fLog.write("INFO: Reading %s"%sPath)
+	
+	lLines = []
+	if not os.path.isfile(sPath):
+		return {}
+
+	fIn = open(sPath, encoding='UTF-8')
+	for sLine in fIn:
+		sLine = sLine.strip()
+		# Walk the line, if we are not in quotes and see '//' ignore everything
+		# from there to the end
+		iQuote = 0
+		iComment = -1
+		n = len(sLine)
+		for i in range(n):
+			if sLine[i] == '"': 
+				iQuote += 1
+				continue
+			if sLine[i] == '/' and (i < n-1) and (sLine[i+1] == '/') \
+				and (iQuote % 2 == 0):
+				iComment = i
+				break;
+				
+		if iComment > -1:
+			sLine = sLine[:iComment]
+			sLine = sLine.strip()
+		
+		lLines.append(sLine)
+
+	sData = '\n'.join(lLines)
+	fIn.close()
+	
+	try:
+		d = json.loads(sData)
+	except ValueError as e:
+		raise errors.ServerError("Syntax error in %s: %s\n"%(sPath, str(e)))
+	return d
 
 ##############################################################################
 # These are used so much, just give it a variable
@@ -413,7 +454,7 @@ def _isPropTrue(dProps, key):
 
 
 ##############################################################################
-def _mergeContacts(dOut, dProps):
+def _mergeContacts(dOut, dProps, fLog):
 	"""Dsdfs list sci contacts using the following format:
 	
 	name <email>[ , NEXT_NAME, <NEXT_EMAIL> ] ...
@@ -458,7 +499,7 @@ def _mergeContacts(dOut, dProps):
 		
 			if dContact not in lOut: lOut.append( dContact )
 
-def _mergeProto(dOut, dProps):
+def _mergeProto(dOut, dProps, fLog):
 	# If this is a remote server assume it's das2.2 until proved otherwise
 	# This can be confusing, because this server can be listed in the dsdf
 	# as well as remote servers.
@@ -466,9 +507,8 @@ def _mergeProto(dOut, dProps):
 	# Also, the server value may have one or two parts
 	
 	dProto = _getDict(dOut, 'protocol')
-	lUrls  = _getList(dProto, 'base_urls')
-	lUrls.clear()
-
+	dProto['method'] = 'GET'
+	
 	sMe = webio.getScriptUrl().strip('/')
 	sSrvType = 'das2.3'
 	
@@ -490,49 +530,17 @@ def _mergeProto(dOut, dProps):
 	
 	if sSrvType == "das2.3":
 		dProto['convention']	= 'das2/v2.3'
-		sBaseUrl = "%s/%s/data"%(sServer, dProps["__caseid__"].lower())
+		sBaseUrl = "%s/source/%s/data"%(sServer, dProps["__caseid__"].lower())
 	else:
 		dProto['convention']	= 'das2/v2.2'
 		sBaseUrl = "%s?server=dataset&dataset=%s"%(sServer, dProps["__caseid__"])
 
-	lUrls = [sBaseUrl]
+	dProto['base_urls'] = [sBaseUrl]
 	return sBaseUrl
 
 
-def _mergeColCoordInfo(dOut, dProps):
-	dCoords = _getDict(dOut, 'coordinates')
-	
-	# By default das2/2.2 servers only know that there is a time coordinate
-	# so set that one up.  
-	dTime = _getDict(dCoords, 'time')
-	
-	if 'name' not in dTime: dTime['name']  = 'Time'
-		
-	if 'validRange' in dProps:
-		lRng = [ s.strip() for s in dProps['validRange']['00'].split('to') ]
-		if len(lRng) > 1:
-			dTime['valid_min'] = lRng[0]
-			dTime['valid_max'] = lRng[1]
-
-				
-	# See if any other coordinates are mentioned, if so give them a 
-	# token entry assume the values are 'name','description','units'
-	if 'coord' in dProps:
-		for sNum in dProps['coord']:
-			lItem = [s.strip() for s in dProps['coord'][sNum].split('|')]
-			if lItem[0].lower() == 'time':
-				if len(lItem) > 1:  dTime['title'] = lItem[1]
-			else:
-				dVar = _getDict(dCoords, lItem[0])
-				dVar['name'] = lItem[0][0].upper() + lItem[0][1:]
-				if len(lItem) > 1: dVar['title'] = lItem[1]
-				if len(lItem) > 2: dVar['units'] = lItem[2]
-	
-
-def _mergeSrcCoordInfo(dOut, dProps):
-	"""Add COORDs info to the output dictionary.  There are two styles,
-	complete - used for actual HttpStreamSrc entries
-	overview - used for collection entries
+def _mergeSrcCoordInfo(dOut, dProps, dUser, fLog):
+	"""Add "coordinates" info to the output dictionary.
 	"""
 	dIface  = _getDict(dOut, 'interface')
 	dCoords = _getDict(dIface, 'coordinates')
@@ -541,7 +549,9 @@ def _mergeSrcCoordInfo(dOut, dProps):
 	# so set that one up.  
 	dTime = _getDict(dCoords, 'time')
 
-	(sBegKey, sEndKey, sResKey, sIntKey) = stdTimeKeys(dOut['protocol']['convention'])
+	(sBegKey, sEndKey, sResKey, sIntKey, sParamKey) = stdFormKeys(
+		dOut['protocol']['convention']
+	)
 	
 	if 'name' not in dTime: dTime['name']  = 'Time'
 
@@ -574,7 +584,7 @@ def _mergeSrcCoordInfo(dOut, dProps):
 			lNums.sort()
 			sNum = lNums[0]
 		if 'interval' not in dTime:
-			print("Error updating from %s"%dOut['path'])
+			fLog.write("ERROR: Updating from %s\n"%dOut['path'])
 			
 		dTime['interval'][sV] = dProps['exampleInterval'][sNum]
 	else:	
@@ -599,49 +609,44 @@ def _mergeSrcCoordInfo(dOut, dProps):
 		dTime['interval']['set'] = {'param':sIntKey, 'required':True}
 	else:
 		dTime['resolution']['set'] = {'param':sResKey, 'required':False}
-		
-	
-	# See if any other coordinates are mentioned, if so give them a 
-	# token entry assume the values are 'name','description','units'
-	if 'coord' in dProps:
-		for sNum in dProps['coord']:
-			lItem = [s.strip() for s in dProps['coord'][sNum].split('|')]
-			if lItem[0].lower() == 'time':
-				if len(lItem) > 1:  dTime['title'] = lItem[1]
-			else:
-				dVar = _getDict(dCoords, lItem[0])
-				dVar['name'] = lItem[0][0].upper() + lItem[0][1:]
-				if len(lItem) > 1: dVar['title'] = lItem[1]
-				if len(lItem) > 2: dVar['units'] = {'value':lItem[2]}
 
 
-def _mergeColDataInfo(dOut, dProps):
-
-	if ('item' not in dProps) and ('data' not in dProps): return
-	
-	# Make minimal entries for the data items
-	dData = _getDict(dOut, 'data')
-	if 'item' in dProps:
-		for sNum in dProps['item']:
-			lItem = [s.strip() for s in dProps['item'][sNum].split('|')]
-			
-			dVar = _getDict(dData, lItem[0])
-			dVar['name'] = lItem[0][0].upper() + lItem[0][1:]
-			if len(lItem) > 1: dVar['title'] = lItem[1]
-			if len(lItem) > 2: dVar['units'] = {'value':lItem[2]}
-		
-	if 'data' in dProps:
-		for sNum in dProps['data']:
-			lItem = [s.strip() for s in dProps['data'][sNum].split('|')]
-		
-			dVar = _getDict(dData, lItem[0])
-			dVar['name'] = lItem[0][0].upper() + lItem[0][1:]
-			if len(lItem) > 1: dVar['title'] = lItem[1]
-			if len(lItem) > 2: dVar['units'] = {'value':lItem[2]}
+	# If I have a *.dsif file, take extra coordinates from there
+	if ('coordinates' in dUser) and (len(dUser['coordinates']) > 0):
+		for key in dUser['coordinates']:
+			dCoords[key] = dUser['coordinates'][key]
+	else:
+		# See if any other coordinates are mentioned, if so give them a 
+		# token entry assume the values are 'name','description','units'
+		if 'coord' in dProps:
+			for sNum in dProps['coord']:
+				lItem = [s.strip() for s in dProps['coord'][sNum].split('|')]
+				if lItem[0].lower() == 'time':
+					if len(lItem) > 1:  dTime['title'] = lItem[1]
+				else:
+					dVar = _getDict(dCoords, lItem[0])
+					dVar['name'] = lItem[0][0].upper() + lItem[0][1:]
+					if len(lItem) > 1: dVar['title'] = lItem[1]
+					if len(lItem) > 2: dVar['units'] = {'value':lItem[2]}
 	
 
-def _mergeSrcDataInfo(dOut, dProps):
+def _mergeSrcDataInfo(dOut, dProps, dUser, fLog):
+	"""In general the das2 server has no understanding of output data 
+	values.  This information can be given explicitly in a .dsif file
+	or as a fallback, the .dsdf file can be scraped for hints.
+	"""
 
+	# If I have a *.dsif file, take data value information from there
+	if ('data' in dUser) and (len(dUser['data']) > 0) :
+		dIface  = _getDict(dOut, 'interface')
+		dData = _getDict(dIface, 'data')
+
+		for key in dUser['data']:
+			dData[key] = dUser['data'][key]	
+		return
+
+	# Fallback to scraping the dsdf, if nothing here don't make an
+	# empty section
 	if ('item' not in dProps) and ('data' not in dProps): return
 	
 	# Make minimal entries for the data items
@@ -665,8 +670,7 @@ def _mergeSrcDataInfo(dOut, dProps):
 			if len(lItem) > 1: dVar['title'] = lItem[1]
 			if len(lItem) > 2: dVar['units'] = lItem[2]
 
-
-def _mergeDas2Params(dOut, dProps):
+def _mergeDas2Params(dOut, dProps, fLog):
 	"""Merge in params.  This is a das 2.2 thing.  Any option that is needs
 	to be handled by the reader and is not a time parameter is crammed into
 	params, seriously overloading that one setting.  
@@ -687,6 +691,11 @@ def _mergeDas2Params(dOut, dProps):
 	Though the final file will likely be hand edited make an Reader Options
 	entry as a courtesy.
 	"""
+
+	(sBegKey, sEndKey, sResKey, sIntKey, sOptKey) = stdFormKeys("das2/v2.3")
+
+	dProto = _getDict(dOut, 'protocol')
+	dGet = dProto['http_params']
 	
 	bAnyParams = False
 	bFlagSet = False
@@ -702,15 +711,12 @@ def _mergeDas2Params(dOut, dProps):
 	# Some readers have no options at all
 	if not bAnyParams: return
 	
-	dProto = _getDict(dOut, 'protocol')
-	dGet = dProto['http_params']
-	
 	lNums = list(dProps['param'])
 	lNums.sort()
 	
 	if bFlagSet:
 		dFlags = {}
-		dGet['params'] = {
+		dGet[sOptKey] = {
 			'type':'flag_set',
 			'required':False,
 			'title': 'Optional reader arguments',
@@ -732,7 +738,7 @@ def _mergeDas2Params(dOut, dProps):
 		# new lines
 		lLines = [ dProps['param'][sNum] for sNum in lNums]
 
-		dGet['params'] = {
+		dGet[sOptKey] = {
 			'type':'string', 
 			'required':False, 
 			'title':'Optional reader arguments',
@@ -747,7 +753,7 @@ def _mergeDas2Params(dOut, dProps):
 	# If the params element is handled as a string then just output a single
 	# text option.
 	
-	if dGet['params']['type'] == 'string':
+	if dGet[sOptKey]['type'] == 'string':
 		dOpt = _getDict(dOpts, 'extra')
 		dOpt['value'] = ''
 		
@@ -758,10 +764,10 @@ def _mergeDas2Params(dOut, dProps):
 				break # Only take the first one since that's what's used for the
 				      # example time.  We want the entire example to hang together
 				
-		dOpt['set'] = {'param':'params'}
+		dOpt['set'] = {'param':sOptKey}
 		dOpt['name'] = 'Extra Reader Parameters'
-		if 'description' in dGet['params']:
-			dOpt['description'] = dGet['params']['description']
+		if 'description' in dGet[sOptKey]:
+			dOpt['description'] = dGet[sOptKey]['description']
 		
 	# If it's a flag_set, output one option per flag.  Be on the lookout
 	# for flags that have type 'integer' and 'real'  These should became
@@ -775,19 +781,19 @@ def _mergeDas2Params(dOut, dProps):
 			
 			if ('type' in dFlag) and (dFlag['type'] in ('real','integer')):
 				dOpt['value'] = None
-				dOpt['set'] = {'param':'params', 'flag':sFlag}
+				dOpt['set'] = {'param':sOptKey, 'flag':sFlag}
 						
 			else:
 				dOpt['type'] = 'boolean'
 				dOpt['value'] = False
-				dOpt['set'] = {'value':True, 'param':'params', 'flag':sFlag}
+				dOpt['set'] = {'value':True, 'param':sOptKey, 'flag':sFlag}
 				
 	# If we want to do this as an enum this it would look like:
 	#
 	#    "units":{
 	#    "value":"V/m",
 	#    "set":{
-	#    	"param":"params",
+	#    	"param":"read.options",
 	#    	"map":[
 	#    		{"value":"raw", "flag":"--units=DN"},
 	#    		{"value":"V**2 m**-2 Hz**-1", "flag":"--units=SD"},
@@ -796,12 +802,12 @@ def _mergeDas2Params(dOut, dProps):
 	#    }	
 						
 	
-def _mergeExamples(dOut, dProps, sBaseUrl):
+def _mergeExamples(dOut, dProps, sBaseUrl, fLog):
 	# A das 2.1 example looks like:
 	#
 	#   "QUERY":{
 	#      "end_time":   (required)
-	#      "params":     (optional)
+	#      "read.options":     (optional)
 	#      "resolution": (present if interval missing)
 	#      "interval":   (optional)
 	#      "start_time": (required)
@@ -817,7 +823,9 @@ def _mergeExamples(dOut, dProps, sBaseUrl):
 	lParams = []
 	lInterval = []
 
-	(sBegKey, sEndKey, sResKey, sIntKey) = stdTimeKeys(dOut['protocol']['convention'])
+	(sBegKey, sEndKey, sResKey, sIntKey, sOptKey) = stdFormKeys(
+		dOut['protocol']['convention']
+	)
 	
 	if 'exampleRange' in dProps:
 		lRange = list(dProps['exampleRange'].keys())
@@ -863,7 +871,7 @@ def _mergeExamples(dOut, dProps, sBaseUrl):
 			dQuery[sResKey] = (dtEnd - dtBeg) / 2000.0
 			
 		if sNum in lParams:
-			dQuery['params'] = dProps['exampleParams'][sNum]
+			dQuery[sOptKey] = dProps['exampleParams'][sNum]
 		
 		lQuery = [
 			"%s=%s"%(sKey, quote_plus(str(dQuery[sKey])))
@@ -880,7 +888,7 @@ def _mergeExamples(dOut, dProps, sBaseUrl):
 		dProto['examples'] = dExamples
 	
 
-def _mergeFormat(dOut, dProps):
+def _mergeFormat(dConf, dOut, dProps, fLog):
 
 	# Set base reader output format, downstream processors may add other
 	# avaialble formats.
@@ -911,6 +919,33 @@ def _mergeFormat(dOut, dProps):
 
 	dOut['interface']['format'] = {'default':dDefFmt}
 
+	
+	# Different das2/v2.3 servers can have different capabilities so 
+	# we *really* shouldn't make api.json files for others.  I have here
+	# but they aren't in the catalog at least and they are hidden from
+	# wget.
+	
+	# If this really is one of my data sources, add in the extra formatting
+	# options provided by this server
+
+	sMe = webio.getScriptUrl().strip('/')
+	bIsMe = True
+	
+	if 'server' in dProps and '00' in dProps['server']:
+		sSrv = dProps['server']['00']
+		lSrv = [ s.strip() for s in sSrv.split('|')]
+		if len(lSrv) > 1:
+			sServer = lSrv[1].strip('/')
+		else:
+			sServer = lSrv[0].strip('/')
+
+		bIsMe = (sServer == sMe)
+	
+	if bIsMe and not _isPropTrue(dProps, 'qstream'):
+		# Add our supported output conversion interface controls and parameters
+		output.addFormatSelection(dConf, dOut['interface']['format'])
+		output.addFormatHttpParams(dConf, dOut['protocol']['http_params'])
+
 
 # ########################################################################## #
 
@@ -940,7 +975,9 @@ def fromDsdf(dConf, sDsdf, fLog, bInternal=False):
 	if sPath == None:
 		raise errors.QueryError(u"Data source %s doesn't exist on this server"%sDsdf)
 
-	dProps = _loadDsdf(dConf, sDsdf, fLog)
+	dProps = _loadDsdf(dConf, sName, sPath, fLog)
+
+	dUser = _loadOverride(dConf, sPath.replace('.dsdf','.dsif'), fLog)
 	
 	# TODO: Could merge in json data from disk here, but skip it for now...
 	dOut = {}
@@ -962,7 +999,7 @@ def fromDsdf(dConf, sDsdf, fLog, bInternal=False):
 	dOut['version'] = "0.6"
 
 	# potentially override the base url and set the protocol convention
-	sBaseUrl = _mergeProto(dOut, dProps)
+	sBaseUrl = _mergeProto(dOut, dProps, fLog)
 	
 	# make an ID for the datasource if requested
 	#if sIdRoot:
@@ -976,17 +1013,14 @@ def fromDsdf(dConf, sDsdf, fLog, bInternal=False):
 	#if 'uris' in dNode:
 	#	dOut['uris'] = dNode['uris']
 		
-	_mergeContacts(dOut, dProps)
+	_mergeContacts(dOut, dProps, fLog)
 	
-	_mergeSrcCoordInfo(dOut, dProps)
+	_mergeSrcCoordInfo(dOut, dProps, dUser, fLog)
 	
-	_mergeSrcDataInfo(dOut, dProps)
-	
-	_mergeFormat(dOut, dProps)   # Just the format for now, but hand edited
-	                             # items could be in there
+	_mergeSrcDataInfo(dOut, dProps, dUser, fLog)
 	
 	# Set the authentication information
-	dProto = _getDict(dOut, 'protocol')	
+	dProto = dOut['protocol']	
 	if 'securityRealm' in dProps:
 		dProto['authentication'] = {
 			'required':True, 'realm':dProps['securityRealm']['00']
@@ -1002,7 +1036,7 @@ def fromDsdf(dConf, sDsdf, fLog, bInternal=False):
 	# change soon.  Will need a new internal interface for command
 	# generation before this can be changed.
 
-	(sBegKey, sEndKey, sResKey, sIntKey) = stdTimeKeys(dProto['convention'])
+	(sBegKey, sEndKey, sResKey, sIntKey, sOptKey) = stdFormKeys(dProto['convention'])
 
 	dGet[sBegKey] = {
 		'required':True, 'type':'isotime',
@@ -1035,13 +1069,27 @@ def fromDsdf(dConf, sDsdf, fLog, bInternal=False):
 			   'at intrinsic resolution without server side averages',
 		}
 
-		
-	# See if there is any sign of this source supporting extra parameters
-	# this could come from having a param or exampleParams
-	_mergeDas2Params(dOut, dProps)
+	# Take extra reader parameters from the new *.dsif files, or try to get
+	# them from the old *.dsdf files
+	if ('http_params' in dUser) and (sOptKey in dUser['http_params']):
+		dGet[sOptKey] = dUser['http_params'][sOptKey]
+
+		if 'options' in dUser:
+			dIface = _getDict(dOut, 'interface')
+			dOpts = _getDict(dIface, 'options')
+			
+			for key in dUser['options']:
+				dOpts[key] = dUser['options'][key]
+				
+	else:
+		# Fall back to auto-generating these from dsdf hints.
+		_mergeDas2Params(dOut, dProps, fLog)
 		
 	# Could ask server if text output is supported, old servers don't 
 	# have a way to do this.
-	_mergeExamples(dOut, dProps, sBaseUrl)
+	_mergeExamples(dOut, dProps, sBaseUrl, fLog)
+
+	# Set our data output options
+	_mergeFormat(dConf, dOut, dProps, fLog)
 
 	return dOut

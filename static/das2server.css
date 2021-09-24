@@ -169,6 +169,29 @@ pre {
 	border: solid 1px #033385;
 }
 
+/* Styles used by the data download form */
+
+.srcopts_scroll_div{
+	height: 20em;
+	overflow-y: scroll;
+	padding: 0.5em;
+	background-color: #f4f4e9;
+	border: 1px solid #084d88;
+}
+
+
+div.article input[type="text"] {
+	flex: 1 1 auto;
+	border: 1px solid #999;
+	margin: 0.2em;
+}
+
+div.article input[type="text"][required] {
+	flex: 1 1 auto;
+	border: 2px solid #a1fbff;
+	margin: 0.2em;
+}
+
 /* Styles used by the log reader */
 .day {
 	#border: solid 1px black;

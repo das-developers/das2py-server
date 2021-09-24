@@ -9,7 +9,15 @@ from os.path import basename as bname
 ##############################################################################
 def pout(sOut):
 	sys.stdout.write(sOut)
-	sys.stdout.write('\r\n')
+	sys.stdout.write('\n')
+
+#############################################################################
+def _missingKeyError(sKey, sUrl):
+	pout(
+'''<p class="error">Schema error in node from <a href="%s">%s</a>, 
+key <b>%s</b> is missing.</p>
+'''%(sUrl, sUrl, sKey))
+	return None
 
 #############################################################################
 def _isTrue(d, key):
@@ -174,7 +182,7 @@ def _inputItemEnum(dParams, dItem, sMsg, sCtrlId):
 	# "units" : {
 	#   "value": "V/m",
 	#   "set": {
-	#      "param":"params",
+	#      "param":"read.options",
 	#      "enum":[
 	#          {"value":"raw", "flag":"00"},
 	#          {"value":"V**2 m**-2 Hz**-1", "flag":"01"},
@@ -191,7 +199,7 @@ def _inputItemEnum(dParams, dItem, sMsg, sCtrlId):
 	#			"title": "Spectrum analyzer channel to output",
 	#			"value": "all",
 	#			"set" : { 
-	#				"param":"params", 
+	#				"param":"read.options", 
 	#				"flag":"07",
 	#				"enum" : [
 	#					{"value":"10.0Hz"},
@@ -258,7 +266,6 @@ def _inputItemEnum(dParams, dItem, sMsg, sCtrlId):
 		else:
 			dParams[ dSet['param'] ]['_inCtrlId'] = sCtrlId
 			dParams[ dSet['param'] ]['_inIfCtrlVal'] = sVal
-
 
 	pout('</select>')
 	
@@ -355,7 +362,7 @@ def prnOptGroupForm(sCtrlPre, dParams, sGroup, dGroup, sSrcUrl, bVar=False):
 	# Any option name can be used, but some are recognized as having particular 
 	# meanings, especially in the context of a variable.  If this is a variable
 	# make sure min,max,res,int are presented in that order.
-	tOneLiner = ('minimum','maximum','resolution','interval')
+	tOneLiner = ('enabled','minimum','maximum','resolution','interval')
 	sGrpUnits = None
 	if bVar:
 		lFirst = []
@@ -370,8 +377,11 @@ def prnOptGroupForm(sCtrlPre, dParams, sGroup, dGroup, sSrcUrl, bVar=False):
 	# Weed out all the props that aren't settable
 	lSettable = []
 	for sProp in lProps:
-		if 'set' in dGroup[sProp]: lSettable.append(sProp)
+		if isinstance(dGroup[sProp], dict) and 'set' in dGroup[sProp]: 
+			lSettable.append(sProp)
 	lProps = lSettable
+
+	#sys.stderr.write("Settable props for %s: %s\n"%(sGrpName, lSettable))
 
 	for iProp in range(len(lProps)):
 		sProp = lProps[iProp]
@@ -454,7 +464,7 @@ def prnOptGroupForm(sCtrlPre, dParams, sGroup, dGroup, sSrcUrl, bVar=False):
 	
 			
 		elif sType == 'select':
-			if 'title'  in dProp:  sMsg = dProp['title']
+			if 'title'  in dProp: sMsg = dProp['title']
 			elif 'name' in dProp: sMsg = dProp['name']
 			else:                 sMsg = sProp[0].upper() + sProp[1:]
 			
@@ -531,7 +541,7 @@ def _getAction(sBase):
 	else: return sBase
 
 
-def prnHttpSource(dSrc):
+def prnHttpSource(dSrc, fLog):
 	""" Print an http source, this is complicated
 
 	Handling input forms.
@@ -585,10 +595,10 @@ def prnHttpSource(dSrc):
 	
 	sSrcUrl = dSrc['_url']
 
-	if 'tech_contacts' in dSrc:
+	if 'contacts' in dSrc:
 		pout("<p>Technical problems using this data source should be "
 		     "directed to: <b>")
-		lTmp = [d['name'].strip() for d in dSrc['tech_contacts']]
+		lTmp = [d['name'].strip() for d in dSrc['contacts']]
 		pout(", ".join(lTmp))
 		pout("</b>.</p>")
 
@@ -599,7 +609,7 @@ def prnHttpSource(dSrc):
 
 	if 'authentication' in dProto:
 		if _isTrue(dProto['authentication'], 'required'):
-			pout('<p><i><span class="error">Resticted data source</span>.</i>')
+			pout('<p><i><span class="error">Restricted data source</span>.</i>')
 			if 'REALM' in dProto['authentication']:
 				 pout('You will be asked to authentication to the realm "' +\
 				      '<b>%s</b>" on submit.</p>'%dProto['authentication']['realm'])
@@ -717,7 +727,6 @@ def prnHttpSource(dSrc):
 
 			pout("</div>")
 			pout("</fieldset>")
-
 		
 		#for sData in dData:
 		#	for sAspect in ('units','enabled'):
@@ -762,10 +771,52 @@ def prnHttpSource(dSrc):
 			pout("<fieldset><legend><b>Additional Options:</b></legend>")
 				
 			nSettables += prnOptGroupForm(
-				sBaseUri, dParams, 'options', dOptions, sSrcUrl
+				sBaseUri, dParams, 'options', dOptions, sSrcUrl, 
 			)
 	
 			pout("</fieldset>")
+
+	# Handle setting format options
+	if dParams and ('format' in dIface):
+		dFmt = dIface['format']
+		fLog.write('INFO: Inspecting formats %s'%str(dFmt.keys()))
+		bEnable = False
+		
+		# See if any of the formats have settable parameters
+		nFmtOpts = 0
+		lModFmts = []
+		for sFmt in dFmt:
+			if sFmt == 'default': continue
+			for sAspect in dFmt[sFmt]:
+				for sKey in dFmt[sFmt][sAspect]:
+					if sKey.startswith('set'):
+						if sFmt not in lModFmts: lModFmts.append(sFmt)
+						nFmtOpts += 1
+						break
+
+		if nFmtOpts > 0:
+			# TODO: Handle undo and revert back to the default
+			pout('<fieldset><legend><b>Format Options:</b></legend>')
+			
+			if 'default' in dFmt and 'title' in dFmt['default']:
+				pout('The default output type is %s<br>'%dFmt['default']['title'])
+			pout('Use the options below to select a different output type.')
+
+			sStyle = ''
+			if nFmtOpts > 10: sStyle = 'class="srcopts_scroll_div"'
+			pout('<div %s>'%sStyle)
+
+			lModFmts.sort()
+			for sFmt in lModFmts:
+				nSettables += prnOptGroupForm(
+					sBaseUri, dParams, sFmt, dFmt[sFmt], sSrcUrl, True
+				)
+
+			pout("</div>")
+			pout("</fieldset>")
+	else:
+		fLog.write('INFO: Output format is not selectable.')
+
 
 	# Stage 4, inspect http_params and output hidden controls with no name.
 	if dParams and (nSettables > 0):
@@ -931,8 +982,8 @@ function %s(sActionUrl) {
 	pout('</form>')
 
 	pout('<div class="identifers">')
-	pout('<br><br>Catalog Path: %s &nbsp; <br>Read From: &nbsp; <a href="%s">%s</a></a>'%(
-	     dSrc['_path'], dSrc['_url'], dSrc['_url']))
+	pout('<br><br>Catalog Path: %s &nbsp; <br>'%dSrc['_path'])
+	pout('Read From: &nbsp; <a href="%s">%s</a></a>'%(dSrc['_url'], dSrc['_url']))
 	
 	if 'uris' in dSrc and len(dSrc['uris']) > 0:
 		pout('<br>Permanent IDs:')
@@ -940,10 +991,6 @@ function %s(sActionUrl) {
 		for sUri in dSrc['uris']: pout(" &nbsp; <i>%s</i>"%sUri)
 	
 	pout('</div>')	
-		  
-	pout('<hr class="datasrc_sep">')
-
-
 
 	
 ##############################################################################
@@ -983,7 +1030,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	)
 
 	# ...okay should output something 
-	pout('Content-Type: text/html; charset=utf-8\r\n')
+	sys.stdout.write('Content-Type: text/html; charset=utf-8\r\n\r\n')
 	
 	dReplace = {"script":sScriptUrl}
 
@@ -1023,7 +1070,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 
 	U.page.navheader(dConf, fLog, sPathInfo.replace('form.html','download'))
 	
-	prnHttpSource(dNode)
+	prnHttpSource(dNode, fLog)
 
 	# END Article Div, and Main DIV ######################################### #
 	pout('  </div>\n</div>\n') 

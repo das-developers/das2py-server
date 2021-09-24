@@ -519,16 +519,9 @@ class Dsdf(object):
 			self.d[u'cacheReader'] = sDefCacheRdr
 
 	###########################################################################
-	def getExamples(self, fLog, sBaseUrl=None, bDas23=False):
+	def getExamples(self, fLog):
 		"""Returns a list of examples.  Each one has a set of all the get
 		parameters that need to be specifed for the example
-
-		If bDas23 is True then it means this interface uses command translation
-		and that exampleOpts_00 should be used instead of example params
-
-		Note! sBaseURL must end with the separator, since this can be '/' or '&'
-
-
 		"""
 
 		# We are still working off the old DSDF inputs, so for now just
@@ -563,76 +556,31 @@ class Dsdf(object):
 					self.sName, key
 				))
 
-			if bDas23:
-				dParams['time.min'] = lRng[0]
-				dParams['time.max'] = lRng[1]
-			else:
-				dParams['start_time'] = lRng[0]
-				dParams['end_time'] = lRng[1]
-
-			if bDas23:
-				sInfoKey = sKey.replace('exampleRange','exampleInfo')
-				if sInfoKey in self.d:
-					dExample['title'] = self.d[sInfoKey]
+			dParams['start_time'] = lRng[0]
+			dParams['end_time'] = lRng[1]
 			
 			sIntKey = sKey.replace('exampleRange','exampleInterval')
 
 			if sIntKey in self.d:
-				if bDas23:
-					dParams['time.int'] = self.d[sIntKey]
-				else:
-					dParams['interval'] = self.d[sIntKey]
+				dParams['time.int'] = self.d[sIntKey]
 
-			if not bDas23:
-				sParamKey = sKey.replace('exampleRange','exampleParams')
-				if sParamKey in self.d:
-					dParams['params'] = self.d[sParamKey]
-			else:
-				# For das 2.3 prefer exampleQuery_, but fall back to example params
-				sParamKey = sKey.replace('exampleRange','exampleQuery')
-				if sParamKey in self.d:
-					lPairs = [x.strip() for x in self.d[sParamKey].split('|')]
-					for pair in lPairs:
-						l = [x.strip() for x in pair.split('=')]
-						if len(l) != 2:
-							raise errors.ServerError(
-								"Datasource %s, key %s malformed GET query pair"%(
-								self.sName, key
-							))
-						dParams[l[0]] = l[1]
-				else:
-					sParamKey = sKey.replace('exampleRange','exampleParams')
-					if sParamKey in self.d:
-						dParams['params'] = self.d[sParamKey]
-
+			sParamKey = sKey.replace('exampleRange','exampleParams')
+			if sParamKey in self.d:
+				dParams['params'] = self.d[sParamKey]
+			
 
 			# Resolution is handled a bit diferently  First if a key is
 			# set just use it, though this is rare
 			sResKey = sKey.replace('exampleRange','exampleResolution')
 			if sResKey in self.d:
-				if bDas23:
-					dParams['time.res'] = self.d[sResKey]
-				else:
-					dParams['resolution'] = self.d[sResKey]
+				dParams['resolution'] = self.d[sResKey]
 
 			elif ('time.int' not in dParams) and ('interval' not in dParams):
 				fLog.write("%s\n"%dParams.keys())
 				rSec = das2.DasTime(lRng[1].encode('ascii')) - \
 			   	    das2.DasTime(lRng[0].encode('ascii'))
-				if bDas23:
-					dParams['time.res'] = (rSec / 2000)
-				else:
-					dParams['resolution'] = (rSec / 2000)
+				dParams['resolution'] = (rSec / 2000)
 
-			# If the base URL is set, then provide a complete url for the example
-			if sBaseUrl:
-				if sBaseUrl.find('?') == -1:
-					sFmt = "%s%s?%s"
-				else:
-					sFmt = "%s%s&%s"
-				dExample['URL'] = sFmt%(
-					   sBaseUrl, self.sName, urlencode(dParams)
-				)
 			self.lExamples.append(dExample)
 
 		return self.lExamples
