@@ -4,6 +4,50 @@ import os
 from . import webio
 
 ##############################################################################
+def normalizeOpts(sParams):
+	"""This is to support caching.
+
+	Take an arbitrary parameter string and normalize it.  Here's the rules:
+
+	 1. an empty string becomes the string '_noparam'
+
+	 2. arguments that simply space separated items are sorted alphabetically
+	    and groups of spaces are replaced by _
+
+	 3. '-' characters are transformed to '_'
+
+	 4. -r thing and --big-option=thing needs more work...  Should keep these
+	    together
+	"""
+
+	if sParams == None or len(sParams) == 0:
+		return "_noparam"
+
+	lWords = [ s.replace('-','_') for s in sParams.split()]
+	lWords.sort()
+	sNorm = '_'.join(lWords)
+
+	return sNorm
+
+
+##############################################################################
+def checkParams(fLog, form):
+	"""Check the parameter values for obvious shell injection stuff such as
+	pipes, redirects, ../ directories, etc"""
+
+	for sKey in form.keys():
+		sValue = form.getfirst(sKey, '')	
+		for sTest in [';', '|','../','..\\', ':\\', '>', '&', '$']:
+			if sValue.find(sTest) != -1:
+				webio.queryError(fLog,
+					"Illegal character(s) in the value for query parmeter: %s"%sKey
+				)
+				return False
+
+		return True
+
+
+##############################################################################
 class recursionError(Exception):
 	"""Little exception class to denote reaching a recursion limit, didn't
 	see one built into the standard library"""

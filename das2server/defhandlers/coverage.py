@@ -61,7 +61,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		
 	sInterval = form.getfirst('interval', '')
 	sParams = form.getfirst('params','')
-	sNormParams = U.dsdf.normalizeParams(sParams)
+	sNormParams = U.misc.normalizeOpts(sParams)
 	
 	lTmpKey = ['start_time','end_time','resolution','interval','params']
 	lTmpVal = [sBeg, sEnd, sRes, sInterval, sParams];

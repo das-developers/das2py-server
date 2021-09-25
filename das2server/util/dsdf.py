@@ -342,7 +342,7 @@ class Dsdf(object):
 		be the None object.
 
 		Note that the params string is *NOT* normalized.  If a normalized params
-		string is needed used the normalizeParams function below.
+		string is needed use misc.normalizeOpts()
 		"""
 
 		lKeys = list(self.d.keys())
@@ -567,7 +567,6 @@ class Dsdf(object):
 			sParamKey = sKey.replace('exampleRange','exampleParams')
 			if sParamKey in self.d:
 				dParams['params'] = self.d[sParamKey]
-			
 
 			# Resolution is handled a bit diferently  First if a key is
 			# set just use it, though this is rare
@@ -787,50 +786,6 @@ def sourceGetParamDict(dSrc):
 		_sourceGetParamDictHelper(dQuerySection[sBlock], dParams)
 
 	return dParams
-
-
-##############################################################################
-def normalizeParams(sParams):
-	"""This is to support caching.
-
-	Take an arbitrary parameter string and normalize it.  Here's the rules:
-
-	 1. an empty string becomes the string '_noparam'
-
-	 2. arguments that simply space separated items are sorted alphabetically
-	    and groups of spaces are replaced by _
-
-	 3. '-' characters are transformed to '_'
-
-	 4. -r thing and --big-option=thing needs more work...  Should keep these
-	    together
-	"""
-
-	if sParams == None or len(sParams) == 0:
-		return "_noparam"
-
-	lWords = [ s.replace('-','_') for s in sParams.split()]
-	lWords.sort()
-	sNorm = '_'.join(lWords)
-
-	return sNorm
-
-
-##############################################################################
-def checkParam(fLog, sKey, sValue):
-	"""Check the parameter values for obvious shell injection stuff such as
-	pipes, redirects, ../ directories, etc"""
-
-	for sTest in [';', '|','../','..\\', ':\\', '>', '&']:
-		if sValue.find(sTest) != -1:
-			webio.queryError(
-				fLog,
-				"Illegal character(s): '%s', in value: '%s' for query parmeter: %s"%(
-			   sTest, sValue, sKey)
-			)
-			return False
-
-	return True
 
 ##############################################################################
 def handleRedirect(fLog, sOldName, dsdf):

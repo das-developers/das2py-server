@@ -6,84 +6,73 @@ import os
 
 from os.path import basename as bname
 from os.path import join as pjoin
-
-
-# Module moved in python3
-try:
-	from urllib import quote_plus as urlEnc
-	from urllib import unquote_plus as urlDec
-except ImportError:
-	from urllib.parse import quote_plus as urlEnc
-	from urllib.parse import unquote_plus as urlDec
-
+from urllib.parse import quote_plus as urlEnc
+from urllib.parse import unquote_plus as urlDec
 
 ##############################################################################
 def pout(sOut):
 	sys.stdout.write(sOut)
 	sys.stdout.write('\r\n')
 
-
-##############################################################################
-def getVal(form, sKey, sDefault):
-	# form.getfirst does url decoding, no need to wrap the call below in urlDec
-	return form.getfirst(sKey, sDefault)
-	
-
 ##############################################################################
 def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	"""See das2server.defhandlers.intro.py for a decription of this function
 	interface
 	"""
-	
-	sDsdf = getVal(form, 'dataset', '')
-	if len(sDsdf) == 0:
-		U.webio.queryError(fLog, "dataset parameter is required")
+
+	fLog.write("\ndas2/v2.3 data request handler")
+
+	if 'DSDF_ROOT' not in dConf:
+		U.webio.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
 		return 17
 	
-	fLog.write("\nDas 2.2 Dataset Handler")
-	
+	sSrc = os.getenv("PATH_INFO")  # Knock off leading '/source'
+	if sSrc.startswith('/source/'):
+		sSrc = sSrc[len('/source/'):]
+	else:
+		U.webio.serverError(fLog, u"PATH_INFO did not start with /source/")
+
+	if sSrc.endswith('/data'): sSrc = sSrc.replace('/data','');
+	elif: sSrc.endswith('/data/'): sSrc = sSrc.replace('/data/','')
+	else:
+		U.webio.serverError(fLog, u"PATH_INFO did not end with /data")
+
 	if sys.platform.startswith('win'):
 		U.webio.todoError(fLog, u"Not yet compatible with windows:\n"+\
 		      u"Change the shell pipelines to use the python subprocess "+\
 				u"module before running on windows.")
 		return 7	
 	
-	if 'DSDF_ROOT' not in dConf:
-		U.webio.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
+
+	# Get the source definition including the internal protocol stuff.
+	try:
+		dSrc = U.source.load(dConf, sSrc, fLog, True)
+	except U.errors.QueryError:
+		U.webio.queryError(fLog, "Data source does not exist")
 		return 17
-					
-	# All das2.2 queries require a start and end time
-	sBeg = getVal(form, 'start_time','')
-	if len(sBeg) == 0:
-		sBeg = getVal(form, 'time.min', '')
-		
-	sEnd = getVal(form, 'end_time','')
-	if len(sEnd) == 0:
-		sEnd = getVal(form, 'time.max','')
+	except U.errors.ServerError as e:
+		U.webio.serverError(str(e));
+		return 17
 	
-	sRes = getVal(form, 'resolution', '')
+	sBeg = form.getfirst(sBegKey,'')	
+	sEnd = form.getfirst(sEndKey,'')
+	sRes = form.getfirst(sResKey, '')
 	if sRes == '':
 		rRes = 0.0
 	else:
 		try:
 			rRes = float(sRes)
 		except ValueError as e:
-			U.webio.queryError(fLog, u"Invalid das2.2 query, resolution '%s'"%sRes+\
+			U.webio.queryError(fLog, u"Invalid query, %s '%s'"%(sResKey, sRes)+\
 			                "is not convertable to a floating point number")
 			return 17			
 		
-	sInterval = getVal(form, 'interval', '')
-	sParams = getVal(form, 'params','')
-	sNormParams = U.dsdf.normalizeParams(sParams)
+	sInterval   = form.getfirst(sIntKey, '')
+	sParams     = form.getfirst(sOptKey,'')
+	sNormParams = U.misc.normalizeOpts(sParams)
 	
-	# Key just used for error messages
-	lTmpKey = ['start_time or time.min','end_time or time.max',
-				  'resolution','interval','params']
-	lTmpVal = [sBeg, sEnd, sRes, sInterval, sParams]
-	for i in range(0, len(lTmpVal)):
-		if not U.dsdf.checkParam(fLog, lTmpKey[i], lTmpVal[i]):
-			return 17
-	
+	# Do we always need this now?
+
 	if sBeg == '':
 		U.webio.queryError(fLog, u"Invalid das2.2 query, start_time was not specified")
 		return 17
@@ -130,7 +119,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 
 	# Handle authorization
 	if 'readAccess' in dsdf:
-		nRet = U.auth.authorize(dConf, fLog, form, sDsdf, dsdf['readAccess'])
+		nRet = U.auth.authorize(dConf, fLog, sDsdf, dsdf['readAccess'], sBeg, sEnd)
 
 		if nRet == U.auth.AUTH_SVR_ERR:
 			sys.stdout.write("Status: 501 Internal Server Error\r\n\r\n")

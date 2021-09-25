@@ -12,6 +12,7 @@ import das2server.util.dsdf as D
 import das2server.util.task as T
 import das2server.util.errors as E
 import das2server.util.command as C
+import das2server.util.misc as M
 
 import cache  # This is the hapi subsystem cache file, not the Das2 one
 
@@ -100,7 +101,7 @@ class Task(T.TaskHandler):
 		else:
 			rResolution = rTmp      #  for this variable
 		
-		sNormParams = D.normalizeParams(sRdrParams)
+		sNormParams = M.normalizeOpts(sRdrParams)
 		
 		
 		# Check to see if this datasource is compatable with the HAPI protocol

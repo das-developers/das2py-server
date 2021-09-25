@@ -22,14 +22,14 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	interface
 	"""
 
-	sDsdf = os.getenv("PATH_INFO")  # Knock off leading '/source'
-	if sDsdf.startswith('/source/'):
-		sDsdf = sDsdf[len('/source/'):]
+	sSource = os.getenv("PATH_INFO")  # Knock off leading '/source'
+	if sSource.startswith('/source/'):
+		sSource = sSource[len('/source/'):]
 	else:
 		U.webio.serverError(fLog, u"PATH_INFO did not start with /source/")
 
-	if sDsdf.endswith('/api.json'):
-		sDsdf = sDsdf.replace("/api.json", '.dsdf')
+	if sSource.endswith('/api.json'):
+		sSource = sSource.replace("/api.json", '.dsdf')
 	else:
 		U.webio.notFoundError(fLog, u"PATH_INFO did not end with /api.json")
 	
@@ -49,7 +49,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	# the server itself.
 	
 	try:
-		dDef = U.source.fromDsdf(dConf, sDsdf,fLog)
+		dDef = U.source.load(dConf, sSource,fLog)
 	except U.errors.QueryError:
 		U.webio.queryError(fLog, "Data source does not exist")
 		return 17

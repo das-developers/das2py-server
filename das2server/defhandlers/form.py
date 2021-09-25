@@ -1000,19 +1000,19 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	sScriptUrl = U.webio.getScriptUrl()
 
-	sDsdf = os.getenv("PATH_INFO")  # Knock off leading '/source'
-	if sDsdf.startswith('/source/'):
-		sDsdf = sDsdf[len('/source/'):]
+	sSource = os.getenv("PATH_INFO")  # Knock off leading '/source'
+	if sSource.startswith('/source/'):
+		sSource = sSource[len('/source/'):]
 	else:
 		U.webio.serverError(fLog, u"PATH_INFO did not start with /source/")
 
-	if sDsdf.endswith('/form.html'):
-		sDsdf = sDsdf.replace("/form.html", '.dsdf')
+	if sSource.endswith('/form.html'):
+		sSource = sSource.replace("/form.html", '.dsdf')
 	else:
 		U.webio.notFoundError(fLog, u"PATH_INFO did not end with /form.html")
 
 	try:
-		dNode = U.source.fromDsdf(dConf, sDsdf, fLog)
+		dNode = U.source.load(dConf, sSource, fLog)
 	except U.errors.QueryError:
 		U.webio.queryError(fLog, "Data source does not exist")
 		return 17
@@ -1026,7 +1026,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	)
 	dNode["_path"] = "%s:/%s/%s"%(
 		dConf['SITE_CATALOG_TAG'], dConf['SERVER_ID'].lower(),
-		sDsdf.replace('.dsdf','').lower()
+		sSource.replace('.dsdf','').lower()
 	)
 
 	# ...okay should output something 

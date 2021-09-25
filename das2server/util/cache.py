@@ -15,7 +15,7 @@ if not sys.platform.lower().startswith('win'):
 import das2
 
 from . import task as T
-from . import dsdf as D
+from . import misc as M
 from . import errors as E
 
 
@@ -42,7 +42,7 @@ def isCacheable(dsdf, sNormParam, rReqRes):
 		if rReqRes < rRes:
 			continue
 		
-		if D.normalizeParams(sParams) != sNormParam:
+		if M.normalizeOpts(sParams) != sNormParam:
 			continue
 	
 		return True
@@ -68,7 +68,7 @@ def isExactlyCacheable(dsdf, sNormParam, rReqRes):
 			rRes /= 1000.0
 		
 		# If the params don't match ignore the request
-		if D.normalizeParams(sParams) != sNormParam:
+		if M.normalizeOpts(sParams) != sNormParam:
 			continue 
 		
 		# If we have non-zero values see if they are close enough
@@ -295,7 +295,7 @@ def missList(fLog, dConf, dsdf, sNormParam, rRes, sBeg, sEnd, bCoverage=True):
 	dRes = {}
 	for nLevel in dsdf['cacheLevel']:
 		(nRes, sUnits, sMethod, sParams) = dsdf['cacheLevel'][nLevel]
-		if sNormParam == D.normalizeParams(sParams):
+		if sNormParam == M.normalizeOpts(sParams):
 			fRes = float(nRes)
 			if sUnits == 'ms':
 				fRes /= 1000.0

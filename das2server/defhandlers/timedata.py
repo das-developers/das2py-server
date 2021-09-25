@@ -7,40 +7,33 @@ import os
 from os.path import basename as bname
 from os.path import join as pjoin
 
-
-# Module moved in python3
-try:
-	from urllib import quote_plus as urlEnc
-	from urllib import unquote_plus as urlDec
-except ImportError:
-	from urllib.parse import quote_plus as urlEnc
-	from urllib.parse import unquote_plus as urlDec
-
+from urllib.parse import quote_plus as urlEnc
+from urllib.parse import unquote_plus as urlDec
 
 ##############################################################################
 def pout(sOut):
 	sys.stdout.write(sOut)
-	sys.stdout.write('\r\n')
-
-
-##############################################################################
-def getVal(form, sKey, sDefault):
-	# form.getfirst does url decoding, no need to wrap the call below in urlDec
-	return form.getfirst(sKey, sDefault)
-	
+	sys.stdout.write('\r\n')	
 
 ##############################################################################
 def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	"""See das2server.defhandlers.intro.py for a decription of this function
 	interface
 	"""
+
+	fLog.write("\nDas 2.2 Dataset Handler")
+
+	if not U.misc.checkParams(fLog, form):  # check for obvious problems
+		U.webio.queryError(fLog, 
+			"One or more of the query parameters looks like a shell injection "+\
+			"attack, data output halted."
+		)
+		return 13
 	
 	sDsdf = getVal(form, 'dataset', '')
 	if len(sDsdf) == 0:
 		U.webio.queryError(fLog, "dataset parameter is required")
 		return 17
-	
-	fLog.write("\nDas 2.2 Dataset Handler")
 	
 	if sys.platform.startswith('win'):
 		U.webio.todoError(fLog, u"Not yet compatible with windows:\n"+\
@@ -53,15 +46,12 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		return 17
 					
 	# All das2.2 queries require a start and end time
-	sBeg = getVal(form, 'start_time','')
-	if len(sBeg) == 0:
-		sBeg = getVal(form, 'time.min', '')
-		
-	sEnd = getVal(form, 'end_time','')
-	if len(sEnd) == 0:
-		sEnd = getVal(form, 'time.max','')
+	sBeg      = form.getfirst('start_time','')
+	sEnd      = form.getfirst('end_time','')
+	sRes      = form.getfirst('resolution', '')
+	sInterval = form.getfirst('interval', '')
+	sParams   =   form.getfirst('params','')
 	
-	sRes = getVal(form, 'resolution', '')
 	if sRes == '':
 		rRes = 0.0
 	else:
@@ -72,17 +62,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 			                "is not convertable to a floating point number")
 			return 17			
 		
-	sInterval = getVal(form, 'interval', '')
-	sParams = getVal(form, 'params','')
-	sNormParams = U.dsdf.normalizeParams(sParams)
-	
-	# Key just used for error messages
-	lTmpKey = ['start_time or time.min','end_time or time.max',
-				  'resolution','interval','params']
-	lTmpVal = [sBeg, sEnd, sRes, sInterval, sParams]
-	for i in range(0, len(lTmpVal)):
-		if not U.dsdf.checkParam(fLog, lTmpKey[i], lTmpVal[i]):
-			return 17
+	sNormParams = U.misc.normalizeOpts(sParams)
 	
 	if sBeg == '':
 		U.webio.queryError(fLog, u"Invalid das2.2 query, start_time was not specified")
@@ -130,7 +110,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 
 	# Handle authorization
 	if 'readAccess' in dsdf:
-		nRet = U.auth.authorize(dConf, fLog, form, sDsdf, dsdf['readAccess'])
+		nRet = U.auth.authorize(dConf, fLog, sDsdf, dsdf['readAccess'], sBeg, sEnd)
 
 		if nRet == U.auth.AUTH_SVR_ERR:
 			sys.stdout.write("Status: 501 Internal Server Error\r\n\r\n")

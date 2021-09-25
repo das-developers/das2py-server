@@ -12,10 +12,11 @@
 //   to here, and adjust to taste.  The following dictionaries will be
 //   read from this if present:
 //
-//      http_params  --> protocol/http_params/*   in api.json
-//      coordinates  --> interface/coordinates/*  in api.json
-//      data         --> interface/data           in api.json
-//      options      --> interface/options        in api.json
+//      commands/*     --> commands/*               (internal)
+//      http_params/*  --> protocol/http_params/*   in api.json
+//      coordinates/*  --> interface/coordinates/*  in api.json
+//      data           --> interface/data           in api.json (whole section)
+//      options/*      --> interface/options        in api.json
 //
 //   If you don't wish to customize a section, just leave it out.
 //
@@ -28,6 +29,97 @@
 { // BEGIN
 
 "version":"0.1",  // This is a version 0.1 DSIF (Data Source Inteface File)
+
+
+// Commands
+// --------
+// Interally das2-pyserver has to run commands to generate data and to operate
+// on streams.  By default your reader is assumed to support one of the following
+// command line patterns:
+//
+//   reader BEGIN_TIME END_TIME [OPTION 1 | OPTION 2 | ....]
+//
+//   reader INTERVAL BEGIN_TIME END_TIME [OPTION 1 | OPTION 2 | ....]
+//
+// In the commands section you can change how various programs are initiated by
+// the server using command templates.  
+//
+// The commands block typically consists of a "read" and sometimes a "bin"
+// section.  Though the following sections are supported:
+//
+//    read           - the data reader
+//    bin            - a bin reducer
+//    psd            - a power spectral density estimator
+//    format.csv     - a CSV formatter
+//    format.votable - a das2 stream to votable formatter
+//    format.hapi    - a das2 stream to hapi stream formatter
+//    format.png     - An image creator
+//
+// Since $ has meaning for posix shells, and %% has meaning for cmd.exe but the
+// '#' character only matters to twitter, # was chosen to indicate repacement
+// text. Plus it's safer in a unix environment as a stray # just erases part of
+// a command line, it dosen't trigger potentially dangerous effects.
+//
+// The command templates look like this:
+//
+//    waves_pds_srvrdr -r #KEY1#  #[ -k #KEY2@FLAG# | default ]#
+//    ^                   ^       ^          ^      ^
+//    |                   |       |          |      |
+//    |                   |       |          |      + default value if any
+//    |                   |       |          +-- only replace flag value
+//    |                   |       +-- begin optional section
+//    +- General text     +-- HTTP GET key name, full value replace
+//
+// General Forms:
+//    #PARAM  <-- Generic required parameter replacement
+//
+//     #[ stuff #PARAM more stuff ]  <-- required parameter with extra text
+//
+//     #[ #PARAM | ]  <-- an optional parameter with no replacement text
+//
+//    #[ #PARAM | default ] <-- an optional parameter with default value.
+//                               the default value can't contain a '#' 
+//
+// To avoid long lines in the config file.  The template is provided as a list
+// of strings with implicit space separators. 
+//
+// For now the full range of replacement HTTP GET keys is:
+//
+//    read.time.min    (expected data read start time)
+//    read.time.max    (expected data read stop time)
+//    read.time.interval (expected output interval for model based data)
+//    read.options     (exta options for the data reader, may be customized here)
+//
+//    bin.time.max     (expected max bin size for reduced streams)
+//    bin.merge        (how to merge data values when binning, a flag value)
+//
+//    dft.length       (the DFT length for power spectral density calculations)
+//    dft.slide        (DFT step over is given by dft.length/dft.slide)
+//
+//    format.mime      (the expected output format)
+//
+//    format.secfrac   (number of fractional seconds for text ISO-8601 times)
+//    format.sigdigit  (number of significant digits for general text data output)
+//    format.delim     (the delimiter to use for "comma" separated values files)
+//    format.width     (the pixel width for output images)
+//    format.height    (the pixel height for output images)
+//
+// Though the cmd.py script mentioned in Params.dsdf that implements this
+// reader does not need customzed command line template, it is written here
+// anyway as an example.
+
+"commands":{
+	"read":{
+		"title":"Themis Data Reader",
+		"template":[
+			"env PYTHONPATH=%(PREFIX)s/lib/python%(PYVER)s",
+			"python%(PYVER)s %(PREFIX)s/examples/cdf.py",
+			"%(PREFIX)s/examples/themis_data",
+			"#read.time.min# #read.time.max# #[#read.options# | ]#"
+		],
+		"output":"application/vnd.das2.das2stream"
+	}
+},
 
 // HTTP GET Parameters
 // -------------------

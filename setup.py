@@ -340,7 +340,7 @@ else:
 		('datasets/Examples', [
 			'examples/Random.dsdf.in', 'examples/Spectra.dsdf.in',
 			'examples/Waveform.dsdf.in', 'examples/Params.dsdf.in',
-			'examples/Params.dsif', # <-- interface override
+			'examples/Params.dsif.in', # <-- interface override
 			'examples/Auth.dsdf.in', 'examples/_dirinfo_.dsdf'
 		])
 	)

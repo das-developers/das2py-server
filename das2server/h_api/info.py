@@ -122,7 +122,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	else:
 		rResolution = rTmp      #  for this variable
 		
-	sNormParams = U.dsdf.normalizeParams(sRdrParams)
+	sNormParams = U.misc.normalizeOpts(sRdrParams)
 	
 	# Check to see if this datasource is compatable with the HAPI protocol
 	if bReqInterval and rInterval == 0.0:

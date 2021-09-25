@@ -107,7 +107,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	else:
 		rResolution = rTmp      #  for this variable
 		
-	sNormParams = U.dsdf.normalizeParams(sRdrParams)
+	sNormParams = U.misc.normalizeOpts(sRdrParams)
 	
 	# Handle authorization
 	if 'readAccess' in dsdf:

@@ -225,7 +225,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	lOut = [] 
 	tData = ("%s/"%dConf['DSDF_ROOT'], lOut, fLog)
 	
-	sPath = os.getenv("PATH_INFO")  # Knock off leading '/source'
+	sPath = os.getenv("PATH_INFO")  
 	
 	U.webio.pout("Status: 200 OK\r\n")
 	U.webio.pout('Access-Control-Allow-Origin: *\r\n')

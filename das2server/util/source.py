@@ -24,7 +24,7 @@ def stdFormKeys(sConvention):
 	the developer keep different physical dimensions separate.
 
 	Returns 
-		(sTimeBegKey, sTimeEndKey, sTimeMaxBinSzKey, sIntervalKey, sParamKey)
+		(sTimeBegKey, sTimeEndKey, sTimeMaxBinSzKey, sIntervalKey, sOptKey)
 	"""
 	if sConvention in ("das2.3","das2/v2.3","v2.3"):
 		return (
@@ -549,7 +549,7 @@ def _mergeSrcCoordInfo(dOut, dProps, dUser, fLog):
 	# so set that one up.  
 	dTime = _getDict(dCoords, 'time')
 
-	(sBegKey, sEndKey, sResKey, sIntKey, sParamKey) = stdFormKeys(
+	(sBegKey, sEndKey, sResKey, sIntKey, sOptKey) = stdFormKeys(
 		dOut['protocol']['convention']
 	)
 	
@@ -803,14 +803,14 @@ def _mergeDas2Params(dOut, dProps, fLog):
 						
 	
 def _mergeExamples(dOut, dProps, sBaseUrl, fLog):
-	# A das 2.1 example looks like:
+	# A typical example looks like:
 	#
 	#   "QUERY":{
-	#      "end_time":   (required)
-	#      "read.options":     (optional)
-	#      "resolution": (present if interval missing)
-	#      "interval":   (optional)
-	#      "start_time": (required)
+	#      "read.time.max":      (required)
+	#      "read.options":       (optional)
+	#      "bin.time.max":       (present if interval missing)
+	#      "read.time.interval": (optional)
+	#      "read.time.min":      (required)
 	#   }
 	#   "name": (required)
 	#   "title" (optional)
@@ -947,15 +947,86 @@ def _mergeFormat(dConf, dOut, dProps, fLog):
 		output.addFormatHttpParams(dConf, dOut['protocol']['http_params'])
 
 
+def _mergeInternal(dConf, dOut, dProps, fLog):
+	"""Add in the internal "commands" block and the internal "cache" 
+	The commands block typically consists of a "read" section and a
+	"bin" section.  Though the following are supported:
+
+		read - the reader
+		bin  - a bin reducer
+		dft  - a Fourier transformer
+		format.csv - a formatter
+		format.votable
+		format.hapi
+		format.png - An image creator
+
+	Since $ has meaning for posix shells, and % has meaning for cmd.exe
+	but # only matters to twitter, # was chosen to indicate repacement
+	text. Plus it's safer in a unix environment as a stray # just 
+	erases part of a command line, it dosen't add to it.
+
+	The command templates look like this:
+
+	   waves_pds_srvrdr #[ -r #PARAM ]  #[ #PARAM | default ]
+      ^                ^     ^                   ^
+      |                |     |                   |
+      |                |     +-- HTTP GET value  +-- indicate optional param
+      |                |
+      +- General text  +- Start replace
+
+	General Forms:
+	   #PARAM  <-- Generic required parameter replacement
+
+      #[ stuff #PARAM more stuff ]  <-- required parameter with extra text
+
+      #[ #PARAM | ]  <-- an optional parameter with no replacement text
+
+	   #[ #PARAM | default ] <-- an optional parameter with default value.
+                                the default value can't contain a '#' 
+
+	Here's a few examples for clarity:
+
+	GET:
+	   read.time.min=2021-01-04&bin.time.max=0.30&read.time.max=2021-01-05
+
+	Command Templates:
+	   1. myreader #read.time.min #read.time.max #[ #read.options | ]
+
+	   2. mybinner #[-b #read.time.min] #["#bin.time.max"]
+
+	Command lines:
+	   1. myreader time.gt.2021-01-04 time.lt.2021-01-05
+
+      2. mybinner -b 2021-01-04 "0.30"
+
+	To make it easier to read the config.  The template can be provided
+	as a string, or as a list.  If you use a list, all list elements are
+   merged using space separators.
+
+   "commands":{
+		"read":{
+			"command":[
+				"/project/juno/etc/invoke.sh myreader",
+				"time.gt.#read.time.min",
+				"time.lt.#read.time.max"
+			]	"#[#read.options| ]"
+		}
+	"""
+
+	dCmds = _getDict(dOut, "commands")
+
+	
+
+
 # ########################################################################## #
 
-def fromDsdf(dConf, sDsdf, fLog, bInternal=False):
+def load(dConf, sDsdf, fLog, bInternal=False):
 	"""Create an HttpStreamSrc object from a DSDF file and the given server
 	configuration information.
 
 	If bInternal is true, an aditional top level section named:
 
-			"internal"
+			"commands"
 
 	is added to the dictionary which contains stuff like cache levels
 	sub sources, and various commandlines.
@@ -1091,5 +1162,8 @@ def fromDsdf(dConf, sDsdf, fLog, bInternal=False):
 
 	# Set our data output options
 	_mergeFormat(dConf, dOut, dProps, fLog)
+
+	if bInternal:
+		_mergeInternal(dConf, dOut, dProps, fLog)
 
 	return dOut

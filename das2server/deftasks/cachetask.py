@@ -11,6 +11,7 @@ import das2server.util.dsdf as D
 import das2server.util.task as T
 import das2server.util.errors as E
 import das2server.util.cache as C	
+import das2server.util.misc as M
 
 import sys
 
@@ -145,7 +146,7 @@ class Task(T.TaskHandler):
 		for nLevel in self.lLevels:
 		
 			(nRes, sUnits, sPeriod, sParams) = self.dsdf['cacheLevel'][nLevel]
-			sNormParams = D.normalizeParams(sParams)
+			sNormParams = M.normalizeOpts(sParams)
 			if sParams == None:
 				sParams = ''
 		

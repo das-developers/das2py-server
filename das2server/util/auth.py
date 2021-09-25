@@ -187,17 +187,10 @@ def getUserGroups(dConf, fLog, sUser):
 #  
 #  os.environ - Where to get certian CGI gateway values
 
-def checkAgeAccess(dConf, fLog, form, sResource, sValue):
+def checkAgeAccess(dConf, fLog, sResource, sValue, sBeg, sEnd):
 	"""Checks to see if the query string asks for data that is old
 	enough.  Only works for Das 2.1 queries right now.
 	"""
-	
-	(sBeg, sEnd) = (form.getfirst('start_time',''), form.getfirst('end_time',''))
-	if sBeg == '' or sEnd == '':
-		(sBeg, sEnd) = (form.getfirst('time.min',''), form.getfirst('time.max',''))
-		if sBeg == '' or sEnd == '':
-			fLog.write("   Authorization: Can't determine query time range, start_time or end_time missing")
-			return AUTH_FAIL
 	
 	try:
 		dtBeg = das2.DasTime(sBeg)
@@ -219,7 +212,7 @@ def checkAgeAccess(dConf, fLog, form, sResource, sValue):
 	
 	return AUTH_FAIL
 
-def checkGroupAccess(dConf, fLog, form, sResource, sValue):
+def checkGroupAccess(dConf, fLog, sResource, sValue):
 	"""Checks to see if the given user is in an authorized group"""
 
 	(sUser, sPasswd) = _getUserPasswd(fLog)
@@ -242,7 +235,7 @@ def checkGroupAccess(dConf, fLog, form, sResource, sValue):
 		return AUTH_SUCCESS
 
 
-def checkUserAccess(dConf, fLog, form, sResource, sValue):
+def checkUserAccess(dConf, fLog, sResource, sValue):
 	"""Checks to see if the given user validates"""
 	
 	(sUser, sPasswd) = _getUserPasswd(fLog)
@@ -256,7 +249,7 @@ def checkUserAccess(dConf, fLog, form, sResource, sValue):
 	return authenticate(dConf, fLog, sUser, sPasswd)
 
 ##############################################################################
-def authorize(dConf, fLog, form, sResource, sAccess):
+def authorize(dConf, fLog, sResource, sAccess, sBeg=None, sEnd=None):
 	"""
 	Handle authorization for a Das2 resource
 	
@@ -267,19 +260,21 @@ def authorize(dConf, fLog, form, sResource, sAccess):
 			  	
 	fLog - The logger object
 	
-	form - the cgi.FieldStorage object that contains the GET information
-	       the start_time and end_time in the form may be consulted if the
-	       'AGE' based authorization was specified in sAccess.  Also for		 
-	
 	sResource - A name for this resource to put in log file messages so 
 	       that problems may be found quickly. 
 	
-	sAccess - The contents of an authorization string from the DSDF or DSID
+	sAccess - The contents of an authorization string from the DSDF or DSIF
 	       file.  All access methods are attempted, if at least one
 	       succeeds, then the return value will be True.  If this string
 			 is None or a length 0 string then access is automatically
 			 granted.  If parsing the sAccess string fails, the return 
 			 value is false, and the failure to parse is also logged.
+
+	sBeg - The start time of the request, if None age based access will
+	       always fail.
+
+	sEnd - The end time of the request, if None age based access will
+	       always fail.
 
 	
 	In addition the os.environ dictionary is consulted to get the value
@@ -326,15 +321,15 @@ def authorize(dConf, fLog, form, sResource, sAccess):
 		
 		
 		nRet = AUTH_SUCCESS	
-		if sCheckType == 'AGE':
+		if sCheckType == 'AGE' and sBeg and sEnd:
 			fLog.write("   Authorization: Checking access by data AGE")
-			nRet = checkAgeAccess(dConf, fLog, form, sResource, sValue)
+			nRet = checkAgeAccess(dConf, fLog, sResource, sValue, sBeg, sEnd)
 		elif sCheckType == 'GROUP':
 			fLog.write("   Authorization: Checking access by GROUP membership")
-			nRet = checkGroupAccess(dConf, fLog, form, sResource, sValue)
+			nRet = checkGroupAccess(dConf, fLog, sResource, sValue)
 		elif sCheckType == 'USER':
 			fLog.write("   Authorization: Checking access by USER account")
-			nRet = checkUserAccess(dConf, fLog, form, sResource, sValue)				
+			nRet = checkUserAccess(dConf, fLog, sResource, sValue)				
 		else:
 			fLog.write("  Authorization: ERROR! Auth method '%s' is unknown in access list '%s' for datasource %s"%(
 			           sCheckType, sAccess, sResource))
