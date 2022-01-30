@@ -97,10 +97,12 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 This is a <b>das2/v2.3 (prototype) server</b>.  It provides data streams
 via an HTTP GET query protocol.</p>
 
+<div class="flowdiagram_parent">
 <img src="%(script)s/static/flowdiagram.svg"
-  alt="das2-pyserver data flow diagram" id="flowdiagram"
+  alt="das2-pyserver data flow diagram" class="flowdiagram"
 />
-<center><i><span style="font-size: 80%%">Internal Stream Processing</span></i></center>
+<center><i><span style="font-size: 80%%">Das2 Stream Processing</span></i></center>
+</div>
 
 <p>This server runs full-resolution data stream generators, processes the
 flow, and optionally caches the results.  Almost all processing steps are
