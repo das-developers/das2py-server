@@ -60,25 +60,24 @@
 // text. Plus it's safer in a unix environment as a stray # just erases part of
 // a command line, it dosen't trigger potentially dangerous effects.
 //
-// The command templates look like this:
+// A general command templates look like this:
 //
-//    waves_pds_srvrdr -r #KEY1#  #[ -k #KEY2@FLAG# | default ]#
-//    ^                   ^       ^          ^      ^
-//    |                   |       |          |      |
-//    |                   |       |          |      + default value if any
-//    |                   |       |          +-- only replace flag value
-//    |                   |       +-- begin optional section
-//    +- General text     +-- HTTP GET key name, full value replace
+//   #[KEY_NAME/FLAG_VALUE | text if option received | text if option missing]
 //
-// General Forms:
-//    #PARAM  <-- Generic required parameter replacement
+//   If the option has no sub-flags then "/FLAG_NAME" is omitted.
 //
-//     #[ stuff #PARAM more stuff ]  <-- required parameter with extra text
+//   The symbol @ in the text sections represents the value of the option or
+//   of the flag.
+//  
+// There are two shorter forms:
 //
-//     #[ #PARAM | ]  <-- an optional parameter with no replacement text
+//  1. #[ KEY_NAME/FLAG_VALUE | text if option received ]
+//     Error out if the option is not received.  Having no third section 
+//     makes the option manditory
 //
-//    #[ #PARAM | default ] <-- an optional parameter with default value.
-//                               the default value can't contain a '#' 
+//  2. #[ KEY_NAME/FLAG_VALUE ]
+//     This is the same as #[KEY_NAME/FLAG_VALUE | @ ].  So like the version
+//     above, having no third section makes this option manditory.
 //
 // To avoid long lines in the config file.  The template is provided as a list
 // of strings with implicit space separators. 

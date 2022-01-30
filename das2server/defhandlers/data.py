@@ -33,7 +33,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		U.webio.serverError(fLog, u"PATH_INFO did not start with /source/")
 
 	if sSrc.endswith('/data'): sSrc = sSrc.replace('/data','');
-	elif: sSrc.endswith('/data/'): sSrc = sSrc.replace('/data/','')
+	elif sSrc.endswith('/data/'): sSrc = sSrc.replace('/data/','')
 	else:
 		U.webio.serverError(fLog, u"PATH_INFO did not end with /data")
 

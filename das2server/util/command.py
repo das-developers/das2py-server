@@ -16,17 +16,17 @@ g_dDefCmds = {
 "psd":{
 	"trigger":{"key":"dft.length"},
 	"order":2,
-	"template":["das2_psd -d -j 0.05 #dft.length# #dft.slide# "],
+	"template":["das2_psd -d -j 0.05 #[dft.length] #[dft.slide] "],
 	"input":"application/vnd.das2.das2stream",
 	"output":"application/vnd.das2.das2stream"
 },
 
 "bin":{
-	"trigger":{"key","bin.time.max"},
+	"trigger":{"key":"bin.time.max","value":0,"compare":"gt"},
 	"order":3,
 	"template":[ 
 		"das2_bin_avgsec #bin.time.max# ",
-		"#[-b #read.time.min# |]# #[ #bin.merge@min# | ]# #[ #bin.merge@max# | ]#",
+		"#[read.time.min| -b @ | ]  #[bin.merge/min| -r | ] #[bin.merge/max| -r | ]#",
 	],
 	"input":"application/vnd.das2.das2stream",
 	"output":"application/vnd.das2.das2stream"

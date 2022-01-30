@@ -225,6 +225,11 @@ def _inputItemEnum(dParams, dItem, sMsg, sCtrlId):
 	
 	pout(sMsg)
 	pout('<select id=%s>'%sCtrlId)
+
+
+	#program begin end other_stuff
+
+   #program #[key/flag |  @ | stuff if don't   ]
 	
 	
 	# If the current value is not in the enum, put it here without mapping 
@@ -513,6 +518,7 @@ def prnOptGroupForm(sCtrlPre, dParams, sGroup, dGroup, sSrcUrl, bVar=False):
 			if sPropUnits and sPropUnits.lower() == 'utc': nSize = 16
 			elif len(sCtrlVal) > 90: nSize = 75
 			else: nSize = int( len(sCtrlVal)*0.7)
+			if nSize < 2: nSize = 2
 			
 			sReq = ""
 			if ('required' in dSet) and dSet['required']: sReq = 'required'
