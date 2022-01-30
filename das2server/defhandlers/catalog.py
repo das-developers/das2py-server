@@ -304,12 +304,14 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		U.webio.pout("Expires: now\r\n")
 		U.webio.pout('Content-Disposition: inline; filename="sources.json"\r\n\r\n')
 	
+		if 'SITE_NAME' in dConf: sSiteName = dConf['SITE_NAME']
+		else: sSiteName = 'local_site'
 		dCatalog = {	
 			'version':'0.5',
 			'type':'Catalog',
 			'name':dConf['SERVER_ID'],
 			'title': "Data source catalog from das2 server %s at %s"%(
-				dConf['SERVER_ID'], dConf['SITE_NAME']
+				dConf['SERVER_ID'], sSiteName
 			),
 			'catalog':{}
 		}
