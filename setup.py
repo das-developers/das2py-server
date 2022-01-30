@@ -6,6 +6,7 @@ import sys
 import os
 import re
 import tokenize
+import platform
 from os.path import join as pjoin
 from stat import ST_MODE
 
@@ -30,6 +31,9 @@ if not g_sPrefix:
 
 g_sEtc	= pjoin(g_sPrefix, 'etc')
 g_sConfig = pjoin(g_sEtc, 'das2server.conf')
+
+if 'SERVER_ID' not in os.environ:
+	os.environ['SERVER_ID'] = platform.node()
 
 
 ##############################################################################
@@ -309,7 +313,7 @@ lPkg = [
 
 lScripts = [ 'scripts/%s'%s for s in [
 	'das2_srv_arbiter', 'das2_srvcgi_logrdr', 'das2_srvcgi_main',
-	'das2_srv_passwd',  'das2_srv_todo'
+	'das2_srv_passwd',  'das2_srv_todo', 'das2_srvws_main'
 ]]
 
 lDataFiles = [
