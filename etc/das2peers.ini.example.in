@@ -5,12 +5,12 @@ description = Primary Das2 server at Iowa.  Provides access to plasma wave data 
  Operated by the Department of Physics and Astronmy at University of Iowa
 
 [jupiter]
-url = http://jupiter.physics.uiowa.edu/das/server
+url = https://jupiter.physics.uiowa.edu/das/server
 description = Off-loads Juno processing from the central server, planet.
  Operated by the Department of Physics and Astronmy at University of Iowa
 
 [zeus]
-url = http://zeus.physics.uiowa.edu/das/server
+url = https://zeus.physics.uiowa.edu/das/server
 description = Provides Jupiter radio astronomy data from the Long Wave Array
   Operated by the Department of Physics and Astronmy at University of Iowa
 
