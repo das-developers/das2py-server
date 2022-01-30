@@ -55,20 +55,6 @@ def perr(item):
 			sys.stderr.buffer.write(item)
 
 ##############################################################################
-# A generic version reporting block
-
-def stripSVNkey(s):
-	if s.find(':') == -1:
-		return s.strip(" $") + ": unknown"
-	else:
-		return s.strip(' $')
-
-g_sRev = stripSVNkey("$Rev: 8605 $")
-g_sURL = stripSVNkey("$URL: https://saturn.physics.uiowa.edu/svn/das2/servers/stable/pyserver/scripts/das2_srv_arbiter.in $")
-g_sWho = stripSVNkey("$LastChangedBy: cwp $")
-g_sWhen = stripSVNkey("$LastChangedDate: 2015-03-27 20:26:55 -0500 (Fri, 27 Mar 2015) $")
-
-##############################################################################
 # Get my config file, boiler plate that has to be re-included in each script
 # since the location of the modules can be configured in the config file
 
@@ -472,7 +458,7 @@ DESCRIPTION:
    processes may insert tasks at the same time without corrupting the task 
    queue.  Tasks within the queue are represented as simple strings with pipe,
    '|', delimited fields.  This program appends new strings to the 'das2_todo'
-   list within the Redis server.  The companion program das2_srv_arbiter
+   list within the Redis server.  The companion program das2_srv_worker
    handles retreiving task strings from the list and running the requested
    processing jobs.  Task strings are moved off of the das2_todo list as they
    are finished.
@@ -540,7 +526,7 @@ FILES:
       %s
 		
 SEE ALSO:
-   das2_srv_arbiter, das2_cache_rdr, qstream_cache_rdr, and the 'Das2 PyServer
+   das2_srv_workd, das2_cache_rdr, qstream_cache_rdr, and the 'Das2 PyServer
    Reference Guide' at http://das2.org/PyServer-RG.pdf .
 """%g_sConfPath)
 	

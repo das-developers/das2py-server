@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys
 import os
@@ -64,10 +64,10 @@ def perr(item):
 # Default Task handler dictionary
 
 g_dDefHandlers = {
-	'TASK_CACHE':    'das2server.deftasks.cachetask',
-	'TASK_USAGE':    'das2server.deftasks.debugtask',
-	'TASK_COVERAGE': 'das2server.deftasks.covertask',
-	'TASK_LIST':     'das2server.deftasks.listtask',
+	'TASK_CACHE':    'das2server.tasks.cachetask',
+	'TASK_USAGE':    'das2server.tasks.debugtask',
+	'TASK_COVERAGE': 'das2server.tasks.covertask',
+	'TASK_LIST':     'das2server.tasks.listtask',
 	'HAPI_INFO_CACHE': 'das2server.h_api.infotask'
 }
 
@@ -119,7 +119,7 @@ def stripSVNkey(s):
 		return s.strip(' $')
 
 g_sRev = stripSVNkey("$Rev: 10500 $")
-g_sURL = stripSVNkey("$URL: https://saturn.physics.uiowa.edu/svn/das2/servers/devel/pyserver/scripts/das2_srv_arbiter.in $")
+g_sURL = stripSVNkey("$URL: https://saturn.physics.uiowa.edu/svn/das2/servers/devel/pyserver/scripts/das2_srv_workd.in $")
 g_sWho = stripSVNkey("$LastChangedBy: cwp $")
 g_sWhen = stripSVNkey("$LastChangedDate: 2018-02-26 17:29:16 -0600 (Mon, 26 Feb 2018) $")
 
@@ -273,7 +273,7 @@ def daemonize(fLog, sPidFile):
 	open(sPidFile,'w+').write("%s\n" % pid)
 	
 	fLog.newPrefix()
-	fLog.write("das2_srv_arbiter started, PID written to %s"%sPidFile)
+	fLog.write("das2_srv_workd started, PID written to %s"%sPidFile)
 	return 0
 
 ##############################################################################
@@ -342,7 +342,7 @@ def main(argv):
 
 	global g_bShutdown, g_broker, g_lCurTask, U
 
-	sUsage="das2_srv_arbiter [-D]"
+	sUsage="das2_srv_workd [-D]"
 	sDesc="""
 This is a background processing program for the Das2 server defined by the
 configuration file:
@@ -353,7 +353,7 @@ The current version can't process more than one job at a time.
 """%g_sConfPath
 
 	psr = optparse.OptionParser(
-		prog="das2_srv_arbiter", usage=sUsage, description=sDesc, 
+		prog="das2_srv_workd", usage=sUsage, description=sDesc, 
 		version=" \n".join( [g_sRev, g_sWho, g_sWhen, g_sURL] )
 	)
 	
@@ -400,7 +400,7 @@ The current version can't process more than one job at a time.
 	
 		# The switch to using fLog over stderr happens within daemonize
 		fLog = U.webio.DasLogFile(dConf['LOG_PATH'], 
-		       "arbiter_%s"%socket.gethostname())
+		       "worker_%s"%socket.gethostname())
 		nRet = daemonize(fLog, opts.sPidFile)	
 		if nRet != 0:
 			return nRet
@@ -503,7 +503,7 @@ The current version can't process more than one job at a time.
 	# Make sure this always runs
 	if broker != None:
 		broker.delete(sWorkQueue)
-	fLog.write("das2_srv_arbiter normal shut down")
+	fLog.write("das2_srv_workd normal shut down")
 	return 0
 	
 ##############################################################################

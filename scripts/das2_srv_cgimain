@@ -91,49 +91,49 @@ _g_BrowserAgent = ['firefox','explorer','chrome','safari','edge']
 g_dDefHandlers = {
 
 	# No path given
-	'HANDLE_NONE':     'das2server.defhandlers.intro',
+	'HANDLE_NONE':     'das2server.handlers.intro',
 
 	# ?server=debug /debug
-	'HANDLE_DEBUG':    'das2server.defhandlers.debug',
+	'HANDLE_DEBUG':    'das2server.handlers.debug',
 
 	# ?server=peers  /peers.xml
-	'HANDLE_PEERS':    'das2server.defhandlers.peers',
+	'HANDLE_PEERS':    'das2server.handlers.peers',
 
 	# /static/*
-	'HANDLE_RESOURCE': 'das2server.defhandlers.resource',
+	'HANDLE_RESOURCE': 'das2server.handlers.resource',
 
 	# ?server=logo  /logo.png
-	'HANDLE_LOGO':   'das2server.defhandlers.logo',
+	'HANDLE_LOGO':   'das2server.handlers.logo',
 
 	# ?server=id    /id.txt  /id.json
-	'HANDLE_ID':     'das2server.defhandlers.id',
+	'HANDLE_ID':     'das2server.handlers.id',
 	
 	# ?server=discovery ?server=list /sources.csv /sources.json
-	'HANDLE_LIST':   'das2server.defhandlers.catalog',
+	'HANDLE_LIST':   'das2server.handlers.catalog',
 	
 	# Effectively index.html files for wget... /source /static
-	'HANDLE_DIR':      'das2server.defhandlers.directory',
+	'HANDLE_DIR':      'das2server.handlers.directory',
 
 	# Directory info pages leading to a data source page
-	'HANDLE_INFO':     'das2server.defhandlers.info',
+	'HANDLE_INFO':     'das2server.handlers.info',
 
 	# ?server=dsdf&dsdf=/Juno/WAV/Survey  /source/juno/wav/survey/dsdf.d2t
-	'HANDLE_DSDF':     'das2server.defhandlers.src_d2t',
+	'HANDLE_DSDF':     'das2server.handlers.src_d2t',
 	
 	# /source/juno/wav/survey.json
-	'HANDLE_SOURCE':  'das2server.defhandlers.src_fedcat',
+	'HANDLE_SOURCE':  'das2server.handlers.src_fedcat',
 
 	# /source/juno/wav/survey.html
-	'HANDLE_FORM':     'das2server.defhandlers.form',
+	'HANDLE_FORM':     'das2server.handlers.form',
 
 	# ?server=dataset&dataset=/Juno/WAV/Survey
 	# /source/juno/wav/survey/data?
-	'HANDLE_TIME_DATA':     'das2server.defhandlers.timedata',
+	'HANDLE_TIME_DATA':     'das2server.handlers.timedata',
 	
 	# List of services offered by this server
-	#'HANDLE_SERVICES': 'das2server.defhandlers.services',
+	#'HANDLE_SERVICES': 'das2server.handlers.services',
 	
-	'HANDLE_DATA':         'das2server.defhandlers.data',
+	'HANDLE_DATA':         'das2server.handlers.data',
 	
 	# Helophysics API substem
 	'HANDLE_H_API_NONE':         'das2server.h_api.root',

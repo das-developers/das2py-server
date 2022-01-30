@@ -1045,10 +1045,10 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	else:
 		sCssLink = "%s/static/das2server.css"%sScriptUrl
 
-	if 'SITE_NAME' in dConf:
-		sSiteId = dConf['SITE_NAME']
+	if 'SITE_TITLE' in dConf:
+		sSiteId = dConf['SITE_TITLE']
 	else:
-		sSiteId = "Set SITE_NAME in %s"%dConf['__file__']
+		sSiteId = "Set SITE_TITLE in %s"%dConf['__file__']
 
 	pout('''<html>
 <head>

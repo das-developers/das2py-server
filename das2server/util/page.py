@@ -124,10 +124,10 @@ def header(dConf, fLog):
 	
 	dReplace = {'script':webio.getScriptUrl()}
 	
-	if 'SITE_NAME' in dConf:
-		dReplace['SITE_NAME'] = dConf['SITE_NAME']
+	if 'SITE_TITLE' in dConf:
+		dReplace['SITE_TITLE'] = dConf['SITE_TITLE']
 	else:
-		dReplace['SITE_NAME'] = "Set SITE_NAME in %s"%dConf['__file__']
+		dReplace['SITE_TITLE'] = "Set SITE_TITLE in %s"%dConf['__file__']
 
 	if 'SERVER_ID' in dConf:
 		sServerId = dConf['SERVER_ID'].upper()
@@ -146,7 +146,7 @@ def header(dConf, fLog):
 	</div> 
 	<div class="hdr_center">
 	%(SERVER_ID)s, a %(SERVER_VER)s Server
-	<h1>%(SITE_NAME)s</h1>
+	<h1>%(SITE_TITLE)s</h1>
 	</div>
 	<div class="hdr_right">
 		<a href="http://das2.org">

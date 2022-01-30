@@ -1,0 +1,27 @@
+#!/usr/bin/env python
+"""
+A websocket server for das2 streams.  Written in python so we can ride off the dsdf
+and dsif parsing to determine what command to run.
+"""
+import sys
+import asyncio
+import websockets
+
+g_sConfPath = REPLACED_ON_BUILD
+
+
+# ########################################################################## #
+async def echo(websocket):
+	async for message in websocket:
+		await websocket.send(message + "(hi from das2)")
+		await websocket.send("my config file is: %s"%g_sConfPath)
+
+# ########################################################################## #
+async def main():
+	async with websockets.serve(echo, "localhost", 52242):
+		await asyncio.Future()  # run forever
+
+
+if __name__ == "__main__":
+	asyncio.run(main())
+

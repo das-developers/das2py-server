@@ -6,7 +6,7 @@ import mimetypes
 
 ##############################################################################
 def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
-	"""See das2server.defhandlers.intro.py for a decription the handler
+	"""See das2server.handlers.intro.py for a decription the handler
 	interface
 	"""
 	

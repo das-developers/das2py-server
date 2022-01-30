@@ -197,7 +197,7 @@ instead of httpd.conf because das2 clients may transmit passwords.
 
 By default, authorization headers are not made available to CGI scripts.
 The re-write rule above allows the `Authorization` header to be passed down
-to the `das2_srvcgi_main` script.  This is needed to allow your server to
+to the `das2_srv_cgimain` script.  This is needed to allow your server to
 support password protected datasets.
 
 Now symlink the top level CGI scripts into your new CGI directory.  Choose
@@ -206,8 +206,8 @@ your site:
 
 ```bash
 $ cd /var/www/cgi-das
-$ sudo ln -s $PREFIX/bin/das2_srvcgi_main server
-$ sudo ln -s $PREFIX/bin/das2_srvcgi_logrdr log
+$ sudo ln -s $PREFIX/bin/das2_srv_cgimain server
+$ sudo ln -s $PREFIX/bin/das2_srv_cgilog log
 ```
 
 The main server script needs to be able to find the main log reader
@@ -257,7 +257,7 @@ $PREFIX/etc/das2server.conf
 ```
 
 Take time to customize a few items in your config file such as the 
-`site_name` and the `contact_email`.   You may also want change the file
+`site_title` and the `contact_email`.   You may also want change the file
 `${PREFIX}/static/logo.png` or even the style sheet at 
 `${PREFIX}/static/das2server.css` to something a little nicer.
 

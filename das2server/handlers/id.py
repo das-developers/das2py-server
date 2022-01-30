@@ -11,21 +11,21 @@ def pout(sOut):
 
 ##############################################################################
 def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
-	"""See das2server.defhandlers.intro.py for a decription the handler
+	"""See das2server.handlers.intro.py for a decription the handler
 	interface
 	"""
 	
 	pout = sys.stdout.write
 	
-	if 'SITE_NAME' in dConf and len(dConf['SITE_NAME'].strip()) > 0:
+	if 'SITE_TITLE' in dConf and len(dConf['SITE_TITLE'].strip()) > 0:
 		pout('Access-Control-Allow-Origin: *\r\n')
 		pout('Access-Control-Allow-Methods: GET\r\n')
 		pout('Access-Control-Allow-Headers: Content-Type\r\n')
 		pout("Content-Type: text/plain; charset=utf-8\r\n\r\n")
-		pout("%s\r\n"%dConf['SITE_NAME'])
+		pout("%s\r\n"%dConf['SITE_TITLE'])
 		return 0
 
-	U.webio.serverError(fLog, u"Bad Server Configuration, SITE_IDENTITY missing")
+	U.webio.serverError(fLog, u"Bad Server Configuration, SITE_TITLE missing")
 	return 17
 	
 

@@ -1,5 +1,5 @@
 # Site name.  Many das2 servers can be located at the same site, please
-# use the same SITE_NAME for all the das2 servers in a given organization.
+# use the same SITE_TITLE for all the das2 servers in a given organization.
 
 SITE_TITLE = "My Data Source Site"
 
@@ -46,20 +46,20 @@ LIB_PATH = "%(PREFIX)s/lib"
 # Where to put log files.  You should probably pick an alternate location
 LOG_PATH = "%(PREFIX)s/log"
 
-# The URL to the das2_srvcgi_logrdr program.  If this value doesn't
+# The URL to the das2_srv_cgilog program.  If this value doesn't
 # contain '//' then it is assumed to be relative to the path to the 
-# parent of the das2_srvcgi_main script.  If '//' is present it is 
+# parent of the das2_srv_cgimain script.  If '//' is present it is 
 # assumed to be an absolute link
 VIEW_LOG_URL = "log"
 
-# The URL to the das2_srvcgi_main program.  If this value doesn't
+# The URL to the das2_srv_cgimain program.  If this value doesn't
 # contain '//' then it is assumed to be relative to the path to the 
-# parent of the das2_srvcgi_log script.  If '//' is present it is 
+# parent of the das2_srv_cgilog script.  If '//' is present it is 
 # assumed to be an absolute link
 MAIN_SRV_URL = "server"
 
 
-# Restricting the das2_srvcgi_logrdr program to only allow local LAN
+# Restricting the das2_srv_cgilog program to only allow local LAN
 # traffic is part of your Apache setup.
 VIEW_LOG_ALLOW = 127.0.0.1
 
@@ -127,7 +127,7 @@ TEST_FROM = 127.0.0.1
 # data caches.  Since many CGI instances may be running at a single time a
 # distributed work queue broker is used to handling the task queue.  By 
 # default redis is the only broker supported.  If you don't want to allow
-# background tasks, or das2_svr_arbiter is not running then comment out the
+# background tasks, or das2_svr_worker is not running then comment out the
 # setting below.
 
 WORK_QUEUE_BROKER = redis

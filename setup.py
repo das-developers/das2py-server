@@ -307,13 +307,14 @@ class install_data_wconf(install_data):
 ##############################################################################
 
 lPkg = [
-	'das2server','das2server.util','das2server.defhandlers', 
-	'das2server.deftasks', 'das2server.h_api'
+	'das2server','das2server.util','das2server.handlers', 
+	'das2server.tasks', 'das2server.h_api'
 ]
 
 lScripts = [ 'scripts/%s'%s for s in [
-	'das2_srv_arbiter', 'das2_srvcgi_logrdr', 'das2_srvcgi_main',
-	'das2_srv_passwd',  'das2_srv_todo', 'das2_srvws_main'
+	'das2_srv_cgimain', 'das2_srv_cgilog', 'das2_srv_wsockd',
+	'das2_srv_workd', 'das2_srv_passwd',  'das2_srv_todo', 
+	'das2_srv_cgivalid', # 'das2_svr_cgiadm' someday we'll have an admin module
 ]]
 
 lDataFiles = [

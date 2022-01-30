@@ -22,20 +22,20 @@
 //
 //   The most common customization is to move general options into a data
 //   section, since the automatic *.dsdf -to-> api.json file creator has
-//   no way to how a general reader options are supposed to affect data
-//   values.
+//   no way to know how a general reader options are supposed to affect
+//   data values.
 
 
 { // BEGIN
 
-"version":"0.1",  // This is a version 0.1 DSIF (Data Source Inteface File)
+"version":"0.1",  // This is a version 0.1 DSIF (Data Source Interface File)
 
 
 // Commands
 // --------
 // Interally das2-pyserver has to run commands to generate data and to operate
-// on streams.  By default your reader is assumed to support one of the following
-// command line patterns:
+// on streams.  By default your reader is assumed to support one of the
+// following command line patterns:
 //
 //   reader BEGIN_TIME END_TIME [OPTION 1 | OPTION 2 | ....]
 //
@@ -55,27 +55,30 @@
 //    format.hapi    - a das2 stream to hapi stream formatter
 //    format.png     - An image creator
 //
+// Command line Substitutions
+// --------------------------
 // Since $ has meaning for posix shells, and %% has meaning for cmd.exe but the
 // '#' character only matters to twitter, # was chosen to indicate repacement
 // text. Plus it's safer in a unix environment as a stray # just erases part of
 // a command line, it dosen't trigger potentially dangerous effects.
 //
-// A general command templates look like this:
+// A general command template looks like this:
 //
-//   #[KEY_NAME/FLAG_VALUE | text if option received | text if option missing]
+//   #[KEY_NAME/FLAG_VALUE # text if option received # text if option missing]#
 //
-//   If the option has no sub-flags then "/FLAG_NAME" is omitted.
+// If the option has no sub-flags then "/FLAG_NAME" is omitted.
 //
 //   The symbol @ in the text sections represents the value of the option or
-//   of the flag.
+//   of the flag.  To avoid shell injection attacks, option and flag values
+//   will have un-safe characters stripped
 //  
 // There are two shorter forms:
 //
-//  1. #[ KEY_NAME/FLAG_VALUE | text if option received ]
+//  1. #[ KEY_NAME/FLAG_VALUE # text if option received ]#
 //     Error out if the option is not received.  Having no third section 
 //     makes the option manditory
 //
-//  2. #[ KEY_NAME/FLAG_VALUE ]
+//  2. #[ KEY_NAME/FLAG_VALUE ]#
 //     This is the same as #[KEY_NAME/FLAG_VALUE | @ ].  So like the version
 //     above, having no third section makes this option manditory.
 //
@@ -187,7 +190,7 @@
 
 // Coordinates
 // -----------
-// By default (for now) all das2 sources are assumed to emitt data with a
+// By default (for now) all das2 sources are assumed to emit data with a
 // time coordinate for the X-axis.  Define extra coordinates here and any
 // options that effect them.  
 //

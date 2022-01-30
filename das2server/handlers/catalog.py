@@ -212,7 +212,7 @@ def _addEntries(sScriptUrl, lOut, lIgnore, dCat, fLog):
 
 ##############################################################################
 def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
-	"""See das2server.defhandlers.intro.py for a decription of this function
+	"""See das2server.handlers.intro.py for a decription of this function
 	interface
 	"""
 	
@@ -304,7 +304,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		U.webio.pout("Expires: now\r\n")
 		U.webio.pout('Content-Disposition: inline; filename="sources.json"\r\n\r\n')
 	
-		if 'SITE_NAME' in dConf: sSiteName = dConf['SITE_NAME']
+		if 'SITE_TITLE' in dConf: sSiteName = dConf['SITE_TITLE']
 		else: sSiteName = 'local_site'
 		dCatalog = {	
 			'version':'0.5',

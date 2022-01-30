@@ -182,7 +182,7 @@ def sendDict(fLog, dDict):
 
 ##############################################################################
 def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
-	"""See das2server.defhandlers.intro.py for a decription of this function
+	"""See das2server.handlers.intro.py for a decription of this function
 	interface
 	"""
 	pout = sys.stdout.write

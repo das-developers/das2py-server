@@ -187,10 +187,10 @@ def main():
 	}
 	
 	# Get replacement parameters for HTML text output
-	if 'SITE_NAME' in dConf:
-		dReplace['site-id'] = dConf['SITE_NAME']
+	if 'SITE_TITLE' in dConf:
+		dReplace['site-id'] = dConf['SITE_TITLE']
 	else:
-		dReplace['site-id'] = "Set SITE_NAME in %s"%dConf['__file__']
+		dReplace['site-id'] = "Set SITE_TITLE in %s"%dConf['__file__']
 
 	if 'SERVER_ID' in dConf:
 		dReplace['server-id'] = dConf['SERVER_ID'].upper()
