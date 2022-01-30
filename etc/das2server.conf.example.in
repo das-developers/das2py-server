@@ -141,6 +141,37 @@ WORK_QUEUE_BROKER = redis
 
 WORK_QUEUE_CONN = localhost:6379:0
 
+# This server can send das2 streams over websocket frames.  To enable this
+# functionality set the value below to true. This allows a client to select
+# a data source using a websocket address such as
+# 
+#   wss://jupiter.physics.uiowa.edu:/dasws/juno/wav/survey 
+# 
+# and communicate with it in a bi-directional manner using the das2 stream
+# over websockets protocol.  In addition the das2 websocket server will 
+# have to be started by systemd or other init service.
+
+ENABLE_WEBSOCKET = true
+
+# The das2 websocket service should sit behind a more secure webserver
+# such as apache.  To do this irst enable the apache2 proxy_wstunnel module:
+#
+#  sudo a2enmod proxy_wstunnel
+#
+# Then name the path on your server to map to the das2 websocket server in
+# your apache2 configuration:
+#
+#  <Location "/dasws/">
+#     ProxyPass "ws://localhost:52242/"
+#  </Location>
+#
+# Where the apache URI path and local server location match the
+# WEBSOCKET_PATH and WEBSOCKET_CONN below.  The 
+
+WEBSOCKET_PATH   = /dasws/
+WEBSOCKET_LISTEN = localhost:52242
+
+
 # PNG Image generator script, will be provided the following command line
 # arguments (with value examples):  
 #
