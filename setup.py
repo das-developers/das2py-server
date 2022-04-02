@@ -313,8 +313,8 @@ lPkg = [
 
 lScripts = [ 'scripts/%s'%s for s in [
 	'das2_srv_cgimain', 'das2_srv_cgilog', 'das2_srv_wsockd',
-	'das2_srv_workd', 'das2_srv_passwd',  'das2_srv_todo', 
-	'das2_srv_cgivalid', # 'das2_svr_cgiadm' someday we'll have an admin module
+	'das2_srv_workd', 'das2_srv_passwd',  'das2_srv_todo' 
+	# 'das2_svr_cgiadm' someday we'll have an admin module
 ]]
 
 lDataFiles = [

@@ -10,7 +10,7 @@ import time
 import os.path
 import os
 import codecs
-import traceback
+import traceback  
 
 from io import StringIO        # handles unicode strings
 from os.path import join as pjoin
@@ -128,13 +128,16 @@ g_dDefHandlers = {
 
 	# ?server=dataset&dataset=/Juno/WAV/Survey
 	# /source/juno/wav/survey/data?
-	'HANDLE_TIME_DATA':     'das2server.handlers.timedata',
+	'HANDLE_TIME_DATA':  'das2server.handlers.timedata',
 	
 	# List of services offered by this server
 	#'HANDLE_SERVICES': 'das2server.handlers.services',
 	
-	'HANDLE_DATA':         'das2server.handlers.data',
-	
+	'HANDLE_DATA':  'das2server.handlers.data',
+
+	# /verify the validation service from (if no post data) or action
+	'HANDLE_VERIFY': 'das2server.handlers.verify',
+
 	# Helophysics API substem
 	'HANDLE_H_API_NONE':         'das2server.h_api.root',
 	'HANDLE_H_API_CAPS':         'das2server.h_api.caps',
@@ -483,13 +486,16 @@ def main(form):
 		elif sPathInfo.startswith('/static'):
 			sReqType = 'HANDLE_RESOURCE'		
 		
+		elif sPathInfo.startswith('/verify'):
+			sReqType = 'HANDLE_VERIFY'
+
 		elif sPathInfo.startswith('/source'):
 			if sPathInfo.endswith('/') or sPathInfo.endswith('index.html'):
 				sReqType = 'HANDLE_DIR'
 			elif sPathInfo.endswith('info.html'):
 				sReqType = 'HANDLE_INFO'
 			elif sPathInfo.endswith('form.html'):
-				sReqType = 'HANDLE_FORM'
+				sReqType = 'HANDLE_FORM'  
 			elif sPathInfo.endswith('dsdf.d2t'):
 				sReqType = 'HANDLE_DSDF'
 			elif sPathInfo.endswith('api.json'):

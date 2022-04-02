@@ -117,14 +117,16 @@ def getWebTargets(dConf, fLog, sRelPath):
 
 # ########################################################################## #
 
-def header(dConf, fLog): 
+def header(dConf, fLog, sTitle=None): 
 	"""Write a div with CSS class 'header'
 		the div will contain 3 sub divs: hdr_left, hdr_center, hdr_right
 	"""
 	
 	dReplace = {'script':webio.getScriptUrl()}
 	
-	if 'SITE_TITLE' in dConf:
+	if sTitle:
+		dReplace['SITE_TITLE'] = sTitle
+	elif 'SITE_TITLE' in dConf:
 		dReplace['SITE_TITLE'] = dConf['SITE_TITLE']
 	else:
 		dReplace['SITE_TITLE'] = "Set SITE_TITLE in %s"%dConf['__file__']

@@ -183,7 +183,11 @@ pre {
 	border: solid 1px #033385;
 }
 
-/* Styles used by the data download form */
+p.error {
+	color:  #c80;
+}
+
+/* Styles used by the data download form ********************************** */
 
 .srcopts_scroll_div{
 	height: 20em;
@@ -206,7 +210,34 @@ div.article input[type="text"][required] {
 	margin: 0.2em;
 }
 
-/* Styles used by the log reader */
+/* Style by class and attributes ******************************************* */
+
+input{
+	margin: 0.2em;
+}
+
+input[required][type="file"]{
+	flex: 1 1 auto;
+	border: 2px solid #a1fbff;
+}
+
+input[required][type="url"]{
+	flex: 1 1 auto;
+	border: 2px solid #a1fbff;
+}
+
+input[type="text"]{
+	flex: 1;
+	border: 2px solid #dcdcdc;
+}
+input[type="password"]{
+	flex: 1;
+	border: 2px solid #dcdcdc;
+	margin: 0.2em;
+}
+
+/* Styles used by the log reader ****************************************** */
+
 .day {
 	#border: solid 1px black;
 	padding: 1em;
@@ -259,6 +290,3 @@ div.navlinks {
 	font-size: 1.6em;
 	font-weight: bold;
 }
-
-
-

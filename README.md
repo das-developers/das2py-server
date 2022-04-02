@@ -37,7 +37,9 @@ environments and depends on the following tools:
 2. Apache2, any remotely recent version
 3. [Redis](https://redis.io), known to work with version 3.2 or higher
 4. [redis-py](https://redislabs.com/lp/python-redis/), known to work with version 2.10 or higher
+5. [lxml](https://github.com/lxml/lxml), known to work with version 4.2 or higher
 5. [das2C](https://github.com/das-developers/das2C), latest version recommended
+6. [das2py](https://github.com/das-developers/das2py), latest version recommended
 
 Since das2C provides small binaries needed by das2-pyserver, and since there
 are no pre-built das2C packages, installation instructions for both das2C

@@ -239,7 +239,7 @@ def parseIP4Range(fLog, sNet):
 	xNet = parseIP4Address(fLog, sNet)
 
 	sSig = ""
-	if len(lRng) > 0:
+	if len(lRng) > 1:
 		sSig = lRng[1]
 
 	if len(sSig) == 0:
