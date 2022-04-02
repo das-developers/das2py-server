@@ -1,9 +1,11 @@
-"""Handle Das2 Authentication"""
+"""Handle Das2 Authentication and Authorization"""
 
 import os
 import base64
 import crypt
 import os.path
+
+import unittest
 
 import das2
 
@@ -79,7 +81,308 @@ def _getUserPasswd(fLog):
 		fLog.write("Check you sever config (Hint: Apache need a mod_rewrite rule to set this\n")
 			
 	return (None, None)
+
+
+# ########################################################################### #
+# Address to Address Range matching 
+
+
+def _mkMask(fLog, nBytes, nOnesBits):
+	"""Generate a bytearray that starts with all binary 1's and then switches to 0's 
+
+	Args:
+		fLog - An object with a .write method that takes as string
+		nBytes - The number of bytes (not bits) in the output bytearray
+		nOnesBits - In binary, this many bits will be set to 1 after that
+			all remaining bits in the the returned bytearray will be 0.
+
+	Returns:
+		bytearray
+	"""
+
+	xRet = bytearray([0]*nBytes)
+
+	if (nOnesBits / 8) > nBytes:
+		fLog.write("Not enough output bytes for %d 1's bits"%nOnesBits)
+		return None
+
+	if nOnesBits < 0:
+		fLog.write("Negative number of 1's bits: %d "%nOnesBits)
+		return None
+
+	# Start with full byte setting, depends on truncation
+	for i in range(nOnesBits // 8):
+		xRet[i] = 0xFF
+
+	# Handle the last partial byte's worth of bits
+	if ((nOnesBits / 8) - (nOnesBits // 8)) > 0:
+		
+		i = nOnesBits // 8  # Index depends on truncation
+
+		nLeft = nOnesBits - ((nOnesBits // 8) * 8)
+
+		# "Big-endian" bits mapping
+		dRep = { 1: 0x80, 2: 0xC0, 3: 0xE0, 4: 0xF0, 5: 0xF8, 6: 0xFC, 7: 0xFE }
+
+		xRet[i] = dRep[nLeft]
+
+	return xRet
+
+
+def parseIP4Address(fLog, sAddr):
+	"""Returns: A bytearray containing the address"""
+
+	if not sAddr:
+		fLog.write("Empty IPv4 address '%s'"%sAddr)
+		return None
+
+	lParts = [s.strip() for s in sAddr.split('.')]
+	if len(lParts) == 0 or len(lParts) > 4:
+		fLog.write("Empty IPv4 address '%s'"%sAddr)
+		return None		
+
+	xAddr = bytearray([0]*4)
+
+	for i in range(len(lParts)):
+		if not lParts[i]:
+			fLog.write("Invalid IPv4 address '%s'"%sAddr)
+		try:
+			n = int(lParts[i], 10)
+		except ValueError:
+			fLog.write("Invalid IPv4 address '%s"%sAddr)
+			return None
+
+		xAddr[i] = n
+
+	return xAddr
 	
+
+def parseIP6Address(fLog, sAddr):
+	"""Parse an IPv6 address with standard shortcuts (aka starting with or 
+	ending with :: ).  Assumes hexdecimal
+	"""
+
+	if not sAddr:
+		fLog.write("Empty IPv6 address '%s'"%sAddr)
+		return None
+
+	if sAddr.startswith("::"):
+		sTrim = sAddr[2:]
+		if not sTrim:
+			fLog.write("Invalid IPv6 address '%s'"%sAddr)
+			return None
+
+		bForward = False  # Fill from back
+	else:
+		# Fill from front
+		if sAddr.endswith("::"):
+			sTrim = sAddr[:-2]
+			if not sTrim:
+				fLog.write("Invalid IPv6 address '%s'"%sAddr)
+				return None
+		else:
+			sTrim = sAddr
+
+		bForward = True    # Fill from front
+
+	if sTrim.find('::') != -1:
+		fLog("Invalid IPv6 address '%s'"%sAddr)
+		return None
+
+	lParts = [s.strip() for s in sTrim.split(':')]
+
+	if len(lParts) == 0 or len(lParts) > 8:
+		fLog("Invalid IPv6 address '%s'"%sAddr)
+		return None
+
+	xAddr = bytearray([0]*16)
+
+	if bForward:
+		j = 0
+		for i in range(len(lParts)):
+			try:
+				n = int(lParts[i], 16)
+			except ValueError:
+				fLog("Invalid IPv6 network address '%s'"%sAddr)
+				return None
+
+			xAddr[j] = (n >> 8)&0xFF
+			j += 1
+			xAddr[j] = n & 0xFF
+			j += 1
+
+	else:
+		j = 15
+		for i in range(len(lParts) - 1, -1, -1):
+			try:
+				n = int(lParts[i], 16)
+			except ValueError:
+				fLog("Invalid IPv6 network address '%s'"%sAddr)
+				return None
+
+			xAddr[j] = n & 0xFF
+			j -= 1
+			xAddr[j] = (n >> 8)&0xFF
+			j -= 1
+
+	return xAddr
+
+def parseIP4Range(fLog, sNet):
+	"""Parse an IPv4 network string of *decimal* digits into two bytearray objects"""
+
+	if not sNet:
+		fLog.write("Empty network address provided")
+		return (None, None)
+
+	lRng = [s.strip() for s in sNet.split('/')]
+	sNet = lRng[0]
+
+	if len(sNet) == 0:
+		fLog("Empty network address portion in '%s'"%sNet)
+		return (None, None)
+
+	xNet = parseIP4Address(fLog, sNet)
+
+	sSig = ""
+	if len(lRng) > 0:
+		sSig = lRng[1]
+
+	if len(sSig) == 0:
+		xMask = bytearray([1]*4)
+	else:
+		try:
+			nSig = int(sSig,10)
+		except ValueError:
+			fLog.write("Couldn't convert network significant bits in network range %s, ")
+			return (None, None)
+		xMask = _mkMask(fLog, 4, nSig)
+		if not xMask:
+			return (None, None)
+
+	xMaskNet = bytearray(
+		[a & m for a, m in zip(xNet, xMask)] # 'cause "xNet & xMast" would be too easy :(
+	)
+
+	return (xMaskNet, xMask)
+
+
+def parseIP6Range(fLog, sNet):
+	"""Parse an IPv6 network string of *hexidecimal* digits into two bytearray
+	objects.
+
+	Args:
+		fLog - A logger object
+
+		sNet - A string in standard IPv6 forms, optionally followed by the number
+			of network bits in the address.  Some examples:
+			::1  ::1/128  2620:0:e50::/48 2620:0000:0e50:0000:0000:0000:0000:000/48
+
+	Returns: ( Network - bytearray, Netmask - bytearray)
+		The first array contains the network portion of the range, the second
+		contains the network mask.  If the address could net be parsed,
+		(None,None) is returned
+	"""
+
+	if not sNet:
+		fLog.write("Empty network address provided")
+		return (None, None)
+
+	lRng = [s.strip() for s in sNet.split('/')]
+	sNet = lRng[0]
+
+	if len(sNet) == 0:
+		fLog("Empty network address portion in '%s'"%sNet)
+		return (None, None)
+
+	xNet = parseIP6Address(fLog, sNet)
+
+	sSig = ""
+	if len(lRng) > 0:
+		sSig = lRng[1]
+
+	if len(sSig) == 0:
+		xMask = bytearray([1]*16)
+	else:
+		try:
+			nSig = int(sSig,10)
+		except ValueError:
+			fLog.write("Couldn't convert network significant bits in network range %s, ")
+			return (None, None)
+		xMask = _mkMask(fLog, 16, nSig)
+
+	xMaskNet = bytearray(
+		[a & m for a, m in zip(xNet, xMask)] # 'cause "xNet & xMast" would be too easy :(
+	)
+
+	return (xMaskNet, xMask)
+
+
+def addrInRange(fLog, sAddr, ranges):
+	"""Check to see if an address is in a set of address ranges.
+
+	Works with intermixed IPv6 and IPv4 addresses.
+
+	Args:
+		sAddr - The address to check.  Assumed to be an IPv4 or IPv6 range
+
+		ranges - Either a whitespace separated list of address ranges, or an
+			actual python list containing the forms:
+					 
+		    DDD.DDD.DDD.DDD/bits
+		    HHHH:HHHH:HHHH:HHHH:HHHH:HHHH:HHHH:HHHH/bits
+
+		    Common IPv4 and IPv6 short forms are acceptable, for example:
+
+		    192.168/16
+		    ::1
+		    2620:0:e50::/48
+
+		fLog - Anything with 
+	"""
+
+	if not sAddr:
+		fLog.write("Empty address")
+		return False
+
+	if not isinstance(ranges, list): 
+		ranges = [s.strip() for s in ranges.split() ]
+		ranges = [s for s in ranges if len(s) > 0]
+
+	if len(ranges) == 0:
+		return False
+
+	if ':' in sAddr:
+		xAddr = parseIP6Address(fLog, sAddr)
+		if not xAddr: return False
+
+		for sRng in ranges:
+			if ':' in sRng:
+				(xRng, xMask) = parseIP6Range(fLog, sRng)
+				if not xRng: return False
+
+				# Bytearray doesn't overload '&', so this is  "xAddr & aMask" in 
+				# much less readable form :-( 
+				xMaskAddr = bytearray( [a & m for a, m in zip(xAddr, xMask)] )
+
+				if xMaskAddr == xRng:
+					return True
+
+	else:
+		xAddr = parseIP4Address(fLog, sAddr)
+		if not xAddr: return False
+
+		for sRng in ranges:
+			if ':' not in sRng:
+				(xRng, xMask) = parseIP4Range(fLog, sRng)
+				if not xRng: return False
+
+				xMaskAddr = bytearray( [a & m for a, m in zip(xAddr, xMask)] )
+
+				if xMaskAddr == xRng:
+					return True
+
+	return False
+
 
 ##############################################################################
 # Nitty gritty of user authentication
@@ -310,8 +613,8 @@ def authorize(dConf, fLog, sResource, sAccess, sBeg=None, sEnd=None):
 		
 		# See if the request comes from a system that has been configured with
 		# auto-allow access:
-		if 'TEST_FROM' in dConf and 'REMOTE_ADDR' in os.environ:
-			lHosts = dConf['TEST_FROM'].split()
+		if 'ALLOW_TEST_FROM' in dConf and 'REMOTE_ADDR' in os.environ:
+			lHosts = dConf['ALLOW_TEST_FROM'].split()
 			for i in range(0, len(lHosts)):
 				lHosts[i] = lHosts[i].strip()
 			
@@ -343,3 +646,73 @@ def authorize(dConf, fLog, sResource, sAccess, sBeg=None, sEnd=None):
 	
 	fLog.write("   Authorizaiton: Access denied")
 	return AUTH_FAIL
+
+
+# ########################################################################## #
+# to run these tests from the build area issue:
+#
+#    python3 -m unittest das2server/util/auth.py 
+#
+# from the root das2-pyserver directory
+
+class TestAddrParsing(unittest.TestCase):
+
+	# Define myself as a logger, which writes nothing
+	def write(self, sMessage):
+		pass  # Sometimes I test thing that should fail!
+
+	def test_addr4(self):
+		sAddr = '10.14.237.62'
+		xAddr = bytearray([10, 14, 237, 62])
+		self.assertEqual( parseIP4Address(self, sAddr), xAddr)
+
+		sAddr = ''
+		self.assertEqual( parseIP4Address(self, sAddr), None)
+
+		sAddr = 'a.d.ed.3e'
+		self.assertEqual( parseIP4Address(self, sAddr), None)
+
+		sAddr = '255.255'
+		xAddr = bytearray([0xFF, 0xFF, 0, 0])
+		self.assertEqual( parseIP4Address(self, sAddr), xAddr)
+
+	def test_addr6(self):
+		sAddr = '::1'
+		xAddr = bytearray([0]*15 + [1])
+		self.assertEqual( parseIP6Address(self, sAddr), xAddr)
+
+		sAddr = 'AAAA:BBBB::'
+		xAddr = bytearray([0xAA]*2 + [0xBB]*2 + [0]*12)
+		self.assertEqual( parseIP6Address(self, sAddr), xAddr)
+
+		sAddr = '0001:0203:0405:0607:0809:0a0b:0c0d:0e0f'
+		xAddr = bytearray(list(range(16)))
+		self.assertEqual( parseIP6Address(self, sAddr), xAddr)
+
+	def test_net4(self):
+		sNet = '127.0.0.1/8'
+		xNet  = bytearray([127,0,0,0])
+		xMask = bytearray([255, 0, 0, 0])
+		self.assertEqual( parseIP4Range(self, sNet), (xNet, xMask))
+
+		sNet = '128.0.0.1/33'
+		self.assertEqual( parseIP4Range(self, sNet), (None, None))
+
+		sNet = '255.255.33.127/25'
+		xNet = bytearray([255, 255, 33, 0x00])
+		xMask  = bytearray([0xFF,0xFF,0xFF,0x80])
+		self.assertEqual( parseIP4Range(self, sNet), (xNet, xMask))
+
+	def test_net6(self):
+		sNet = '::1/128'
+		xNet = bytearray([0]*15 + [1])
+		xMask = bytearray([0xFF]*16)
+		self.assertEqual( parseIP6Range(self, sNet), (xNet, xMask))
+
+		sNet = "2620:0:e51::/47"
+		xNet = bytearray([0x26, 0x20, 0, 0, 0x0e, 0x50] + [0]*10)
+		xMask = bytearray( [0xFF]*5 + [0xFE] + [0]*10)
+		self.assertEqual( parseIP6Range(self, sNet), (xNet, xMask))
+
+if __name__ == '__main__':
+	unittest.main()

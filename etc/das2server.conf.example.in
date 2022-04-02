@@ -58,7 +58,6 @@ VIEW_LOG_URL = "log"
 # assumed to be an absolute link
 MAIN_SRV_URL = "server"
 
-
 # Restricting the das2_srv_cgilog program to only allow local LAN
 # traffic is part of your Apache setup.
 VIEW_LOG_ALLOW = 127.0.0.1
@@ -114,14 +113,25 @@ D2S_TO_UTF8 = "das2_ascii"
 
 # Auto-authentication, this is used to setup test servers that can download
 # data from all streams for testing without authentication.  This uses the
-# remote IP address, so no host names here.  Network ranges have not been
-# implemented, so list full host IP addresses.  This has not been tested with
-# IPv6 at this time.
-# TEST_FROM = 192.168.0.10 192.168.0.11
+# remote IP address, so no host names here.
 #
-# WARNING:  Clients with the IP addresses listed below will never be
-#           asked to athenticate *any* data source.
-TEST_FROM = 127.0.0.1
+# Addresses for ALLOW should be a whitespace separated single line of numeric
+# IP's or numeric IP ranges. examples: 
+#
+#    129.255/16  192.168.1.2  ::1  2620:0:e50::/48
+#
+# Basically the classic CIDR notation is supported.  Any string containing a
+# colon is assumed to be an IPv6 range (or address) All other strings are 
+# parsed as IPv4 addresses or ranges.
+#
+# Use the value '*' to represent any host (not recommended on an unfiltered
+# pulic connection).  
+#
+# WARNING:  Clients network ranges below will never be asked to athenticate
+#           *any* data source.
+#
+# ALLOW_TEST_FROM = 127.0.0.1/8  ::1
+ALLOW_TEST_FROM = 
 
 # Das2 CGI scripts can record jobs to be preformed later, such as building
 # data caches.  Since many CGI instances may be running at a single time a
@@ -140,6 +150,14 @@ WORK_QUEUE_BROKER = redis
 #
 
 WORK_QUEUE_CONN = localhost:6379:0
+
+# If desired, this server can be used to validate streams.  Set the hosts
+# allowed to contact the validation service.
+ENABLE_VALIDATOR    = true
+
+# See format in the ALLOW_TEST_FROM description.
+# The default value is "127.0.0.0/8 ::1/128" if keyword is missing.
+ALLOW_VALIDATE_FROM  = 127.0.0.1 ::1
 
 # This server can send das2 streams over websocket frames.  To enable this
 # functionality set the value below to true. This allows a client to select
@@ -170,6 +188,12 @@ ENABLE_WEBSOCKET = true
 
 WEBSOCKET_PATH   = /dasws/
 WEBSOCKET_LISTEN = localhost:52242
+
+
+# Enable the das2 stream verification service.  This will make 
+# $SCRIPT_URL/verify a valid path and can be used for uploading
+# streams to see if they are valid.
+ENABLE_VERIFIER = false
 
 
 # PNG Image generator script, will be provided the following command line
