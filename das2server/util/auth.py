@@ -609,15 +609,11 @@ def authorize(dConf, fLog, sResource, sAccess, sBeg=None, sEnd=None):
 		# See if the request comes from a system that has been configured with
 		# auto-allow access:
 		if 'ALLOW_TEST_FROM' in dConf and 'REMOTE_ADDR' in os.environ:
-			lHosts = dConf['ALLOW_TEST_FROM'].split()
-			for i in range(0, len(lHosts)):
-				lHosts[i] = lHosts[i].strip()
-			
-			if os.environ['REMOTE_ADDR'] in lHosts:
+			if addrInRange(fLog, os.environ['REMOTE_ADDR'], dConf['ALLOW_TEST_FROM']):
 				fLog.write("   Authorization: Host %s allowed access"%os.environ['REMOTE_ADDR'])
 				return AUTH_SUCCESS
 		
-		
+
 		nRet = AUTH_SUCCESS	
 		if sCheckType == 'AGE' and sBeg and sEnd:
 			fLog.write("   Authorization: Checking access by data AGE")
