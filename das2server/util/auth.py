@@ -158,74 +158,69 @@ def parseIP4Address(fLog, sAddr):
 	
 
 def parseIP6Address(fLog, sAddr):
-	"""Parse an IPv6 address with standard shortcuts (aka starting with or 
-	ending with :: ).  Assumes hexdecimal
+	"""Parse an IPv6 address with standard shortcuts (aka :: ). Assumes hexdecimal
 	"""
 
 	if not sAddr:
 		fLog.write("Empty IPv6 address '%s'"%sAddr)
 		return None
 
-	if sAddr.startswith("::"):
-		sTrim = sAddr[2:]
-		if not sTrim:
+
+	lSides = sAddr.split('::')
+	sFront = lSides[0].strip()
+	if len(lSides) == 1:
+		sBack = ''
+	elif len(lSides) == 2:
+		sBack = lSides[1].strip()
+	else:
+		fLog.write("Invalid IPv6 address '%s'"%sAddr)
+		return None
+
+	lDest = [0]*8; # There are 8 16-bit sections to an IPv4 address
+
+	lFront = []
+	lBack = []
+	if len(sFront) > 0: lFront = [s.strip() for s in sFront.split(':') ]
+	if len(sBack) > 0:  lBack =  [s.strip() for s in sBack.split(':')  ]
+
+	if (len(lFront) + len(lBack)) > 8:
+		fLog.write("Invalid IPv6 address '%s'"%sAddr)
+		return None		
+	
+	i = 0
+	for sPart in lFront:
+		try:
+			n = int(sPart, 16)
+		except ValueError:
 			fLog.write("Invalid IPv6 address '%s'"%sAddr)
 			return None
 
-		bForward = False  # Fill from back
-	else:
-		# Fill from front
-		if sAddr.endswith("::"):
-			sTrim = sAddr[:-2]
-			if not sTrim:
-				fLog.write("Invalid IPv6 address '%s'"%sAddr)
-				return None
-		else:
-			sTrim = sAddr
+		lDest[i] = n
+		i += 1
 
-		bForward = True    # Fill from front
+	i = 7
+	for sPart in reversed(lBack):
+		try:
+			n = int(sPart, 16)
+		except ValueError:
+			fLog.write("Invalid IPv6 address '%s'"%sAddr)
+			return None
 
-	if sTrim.find('::') != -1:
-		fLog("Invalid IPv6 address '%s'"%sAddr)
-		return None
+		lDest[i] = n
+		i -= 1
 
-	lParts = [s.strip() for s in sTrim.split(':')]
+	for n in lDest:
+		if (n > 0xFFFF) or (n < 0):
+			fLog.write("Invalid IPv6 address '%s'"%sAddr)
+			return None
 
-	if len(lParts) == 0 or len(lParts) > 8:
-		fLog("Invalid IPv6 address '%s'"%sAddr)
-		return None
 
-	xAddr = bytearray([0]*16)
+	lBytes = [0]*16;
+	for i in range(8):
+		lBytes[2*i]     = (lDest[i] >> 8) & 0xFF
+		lBytes[2*i + 1] = lDest[i] & 0xFF
 
-	if bForward:
-		j = 0
-		for i in range(len(lParts)):
-			try:
-				n = int(lParts[i], 16)
-			except ValueError:
-				fLog("Invalid IPv6 network address '%s'"%sAddr)
-				return None
-
-			xAddr[j] = (n >> 8)&0xFF
-			j += 1
-			xAddr[j] = n & 0xFF
-			j += 1
-
-	else:
-		j = 15
-		for i in range(len(lParts) - 1, -1, -1):
-			try:
-				n = int(lParts[i], 16)
-			except ValueError:
-				fLog("Invalid IPv6 network address '%s'"%sAddr)
-				return None
-
-			xAddr[j] = n & 0xFF
-			j -= 1
-			xAddr[j] = (n >> 8)&0xFF
-			j -= 1
-
-	return xAddr
+	return bytearray(lBytes)
 
 def parseIP4Range(fLog, sNet):
 	"""Parse an IPv4 network string of *decimal* digits into two bytearray objects"""
@@ -238,7 +233,7 @@ def parseIP4Range(fLog, sNet):
 	sNet = lRng[0]
 
 	if len(sNet) == 0:
-		fLog("Empty network address portion in '%s'"%sNet)
+		fLog.write("Empty network address portion in '%s'"%sNet)
 		return (None, None)
 
 	xNet = parseIP4Address(fLog, sNet)
@@ -291,13 +286,13 @@ def parseIP6Range(fLog, sNet):
 	sNet = lRng[0]
 
 	if len(sNet) == 0:
-		fLog("Empty network address portion in '%s'"%sNet)
+		fLog.write("Empty network address portion in '%s'"%sNet)
 		return (None, None)
 
 	xNet = parseIP6Address(fLog, sNet)
 
 	sSig = ""
-	if len(lRng) > 0:
+	if len(lRng) > 1:
 		sSig = lRng[1]
 
 	if len(sSig) == 0:
@@ -659,6 +654,8 @@ class TestAddrParsing(unittest.TestCase):
 
 	# Define myself as a logger, which writes nothing
 	def write(self, sMessage):
+		#import sys
+		#sys.stderr.write("%s\n"%sMessage)
 		pass  # Sometimes I test thing that should fail!
 
 	def test_addr4(self):
@@ -713,6 +710,15 @@ class TestAddrParsing(unittest.TestCase):
 		xNet = bytearray([0x26, 0x20, 0, 0, 0x0e, 0x50] + [0]*10)
 		xMask = bytearray( [0xFF]*5 + [0xFE] + [0]*10)
 		self.assertEqual( parseIP6Range(self, sNet), (xNet, xMask))
+
+	def test_inrange(self):
+
+		ranges = ["::1", "127.0.0.1/8", "10.14.0.0/16", "fe80::/10"]
+		sAddr = "fe80::0807:0605:0403:0201"
+
+		self.assertTrue(  addrInRange(self, sAddr, ranges))
+		self.assertFalse( addrInRange(self, "192.168.1.1", ranges))
+		self.assertFalse( addrInRange(self, "2620:0:e50:1::", ranges) )
 
 if __name__ == '__main__':
 	unittest.main()
