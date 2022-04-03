@@ -131,7 +131,7 @@ D2S_TO_UTF8 = "das2_ascii"
 #           *any* data source.
 #
 # ALLOW_TEST_FROM = 127.0.0.1/8  ::1
-ALLOW_TEST_FROM = 
+#ALLOW_TEST_FROM = 
 
 # Das2 CGI scripts can record jobs to be preformed later, such as building
 # data caches.  Since many CGI instances may be running at a single time a

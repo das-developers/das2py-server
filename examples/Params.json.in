@@ -62,19 +62,21 @@
 // text. Plus it's safer in a unix environment as a stray # just erases part of
 // a command line, it dosen't trigger potentially dangerous effects.
 //
-// A general command template looks like this:
+// A general command value substitution looks like this:
 //
-//   #[KEY_NAME/FLAG_VALUE # text if option received # text if option missing]#
+//   #[KEY_NAME/FLAG_VALUE # value if option received # value if option missing]#
 //
-// If the option has no sub-flags then "/FLAG_NAME" is omitted.
+// If the option has no sub-flags then "/FLAG_NAME" is omitted.  This becames
+//   
+
 //
 //   The symbol @ in the text sections represents the value of the option or
 //   of the flag.  To avoid shell injection attacks, option and flag values
-//   will have un-safe characters stripped
+//   will have un-safe characters stripped.
 //  
 // There are two shorter forms:
 //
-//  1. #[ KEY_NAME/FLAG_VALUE # text if option received ]#
+//  1. #[ KEY_NAME/FLAG_VALUE # value if option received ]#
 //     Error out if the option is not received.  Having no third section 
 //     makes the option manditory
 //
@@ -117,7 +119,7 @@
 			"env PYTHONPATH=%(PREFIX)s/lib/python%(PYVER)s",
 			"python%(PYVER)s %(PREFIX)s/examples/cdf.py",
 			"%(PREFIX)s/examples/themis_data",
-			"#read.time.min# #read.time.max# #[#read.options# | ]#"
+			"#read.time.min# #read.time.max# #[read.options | @ | ]#"
 		],
 		"output":"application/vnd.das2.das2stream"
 	}
