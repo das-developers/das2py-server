@@ -178,6 +178,12 @@ def sidenav(dConf, fLog):
 	
 	sScriptUrl = webio.getScriptUrl()
 
+	sValidationNav = ""
+	if 'ENABLE_VALIDATOR' in dConf:
+		sVal = dConf['ENABLE_VALIDATOR']
+		if sVal.lower() in ('1','true'):
+			sValidationNav = '<a href="%s/verify">Stream Validator</a>'%sScriptUrl
+
 	sViewLogNav = ""
 	if 'VIEW_LOG_URL' in dConf:
 		if len(dConf['VIEW_LOG_URL']) > 0:
@@ -201,10 +207,10 @@ def sidenav(dConf, fLog):
 	pout('  </ul><hr>')
 	pout('<a href="%s/sources.csv">Catalog (csv)</a><br><br>'%sScriptUrl)
 	pout('<a href="%s/sources.json">Catalog (das2)</a><br><br>'%sScriptUrl)
-	pout('''%s
-  <br><br>
+	pout('''%s<br><br>
+  %s<br><br>
   <a href="%s/peers.xml">Peer Servers</a>
-</div>'''%(sViewLogNav, sScriptUrl))
+</div>'''%(sValidationNav, sViewLogNav, sScriptUrl))
 
 # ########################################################################## #
 

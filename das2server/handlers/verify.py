@@ -128,13 +128,15 @@ def printForm(U, dConf, fLog):
 
 	pout('''
 	<p>
-	Check the format of a das2/v2.2 or das2/v2.3-basic stream.
+	Check the format of a das2/v2.2 or das2/v2.3-basic stream.  This validator
+	can parse the following mime types:</br></br>
+	<i>das2</i> text stream: <code><b>text/vnd.das2.das2stream; charset=utf-8</b></code> (*.d2t)<br>
+   <i>das2</i> binary stream: <code><b>application/vnd.das2.das2stream</b></code> (*.d2s)<br>
    </p>
 
 	<h2>Select a file to Upload</h2>
 	<p>
-	Upload a stream file for validation.  Typically these will have the file
-	name pattern *.<b>d2s</b> or *.<b>d2t</b>.  Only the first megabyte of 
+	Upload a stream file for validation.  Only the first megabyte of 
 	the uploaded file will be scanned.
 	</p>
 	<form enctype="multipart/form-data" method="post" action="%s/verify" >
@@ -155,7 +157,7 @@ def printForm(U, dConf, fLog):
 </form>
 	'''%sScriptURL)
 
-	_postArticle(U, dConf)
+	_postArticle(U, dConf, fLog)
 
 	return 0
 

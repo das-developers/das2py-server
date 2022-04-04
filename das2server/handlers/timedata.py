@@ -30,7 +30,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		)
 		return 13
 	
-	sDsdf = getVal(form, 'dataset', '')
+	sDsdf = form.getfirst('dataset', '')
 	if len(sDsdf) == 0:
 		U.webio.queryError(fLog, "dataset parameter is required")
 		return 17
@@ -188,7 +188,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		
 		
 	# Converting to ascii
-	sAscii = getVal(form, 'ascii', '')
+	sAscii = form.getfirst('ascii', '')
 	if U.misc.isTrue(sAscii):
 		sOutCat = 'text'
 			

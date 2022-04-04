@@ -877,8 +877,12 @@ def _mergeExamples(dOut, dProps, sBaseUrl, fLog):
 			"%s=%s"%(sKey, quote_plus(str(dQuery[sKey])))
 			for sKey in dQuery
 		]
-		
-		dExample['url'] = "%s&%s"%(sBaseUrl, '&'.join(lQuery))
+
+		if sBaseUrl[-1] in ('?','&'): sSep = ""
+		elif '?' in sBaseUrl: sSep = '&'
+		else: sSep = '?'
+
+		dExample['url'] = "%s%s%s"%(sBaseUrl, sSep, '&'.join(lQuery))
 		
 		# TODO: Merge in examples from the DSDFs with hand entered ones
 		dExamples[sId] = dExample
@@ -1020,21 +1024,12 @@ def _mergeInternal(dConf, dOut, dProps, fLog):
 
 # ########################################################################## #
 
-def load(dConf, sDsdf, fLog, bInternal=False):
+def external(dConf, sDsdf, fLog):
 	"""Create an HttpStreamSrc object from a DSDF file and the given server
 	configuration information.
 
-	If bInternal is true, an aditional top level section named:
-
-			"commands"
-
-	is added to the dictionary which contains stuff like cache levels
-	sub sources, and various commandlines.
-
 	Output make assumptions about the query parameter interface of the 
 	server and format conversion capabilities.
-
-	Todo: Add overrides for adjacent *.json file.
 
 	Throws:
 		QueryError if dsdf doesn't exist
@@ -1048,7 +1043,7 @@ def load(dConf, sDsdf, fLog, bInternal=False):
 
 	dProps = _loadDsdf(dConf, sName, sPath, fLog)
 
-	dUser = _loadOverride(dConf, sPath.replace('.dsdf','.dsif'), fLog)
+	dUser = _loadOverride(dConf, sPath.replace('.dsdf','.json'), fLog)
 	
 	# TODO: Could merge in json data from disk here, but skip it for now...
 	dOut = {}

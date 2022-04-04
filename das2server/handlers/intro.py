@@ -187,7 +187,7 @@ or <a href="%(script)s/sources.csv">sources.csv</a> is sufficent.</p>
   |
   |- <a href="%(script)s/sources.csv">sources.csv</a> - A listing of all das2/v2.2 source definitions.
   |
-  |- <a href="%(script)s/verify">verify</a> - Included das2 stream verification tool (if enabled)
+  |- <a href="%(script)s/verify">verify/</a> - Included das2 stream verification tool (if enabled)
   |
   |- <a href="%(script)s/id.json">id.json</a> - Server identification information
   |- <a href="%(script)s/id.txt">id.txt</a> - das2 v2.1 style info text

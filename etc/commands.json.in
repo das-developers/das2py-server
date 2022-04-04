@@ -1,0 +1,64 @@
+// Default command templates for all processing stages except data reads.
+//
+// Each command template is matched by the processing stages it supports, 
+// and a mime-type that it accepts.  The built in processing stages are
+// 
+//   "read", "dft", "bin", "format"
+//
+// Others can be added.  HTTP Get parameters passed to a das2 server have
+// the format:
+//
+//  STAGE.[stage specific sub-sections]
+//
+// Thus your custom stage can be triggered just by mentioning it in the http
+// param interfare for a data source.
+{
+
+	"psd":{
+		"trigger":{"key":"dft.length"},
+		"order":20,
+		"template":["das2_psd -d -j 0.05 #[dft.length] #[dft.slide] "],
+		"input":"application/vnd.das2.das2stream",
+		"output":"application/vnd.das2.das2stream"
+	},
+	
+	"bin":{
+		"trigger":{"key":"bin.time.max","value":0,"compare":"gt"},
+		"order":30,
+		"template":[ 
+			"das2_bin_avgsec #[bin.time.max] ",
+			"#[read.time.min # -b @ # ]  #[bin.stats[min] # -r # ] #[bin.stats[max] # -r # ]",
+		],
+		"input":"application/vnd.das2.das2stream",
+		"output":"application/vnd.das2.das2stream"
+	},
+		
+	"format.csv":{
+		"trigger":{"key":"format.mime","value":"text/csv"},
+		"order":40,
+		"template":[
+			"das2_csv -s",
+			"#[format.delim # -d @ # ]",
+			"#[format.secfrac # -s @ # ]",
+			"#[format.sigdigit # -r @ # ]"
+		],
+		"input":"application/vnd.das2.das2stream",
+		"output":"text/csv"
+	},
+	
+	"format.png":{
+		"trigger":{"key":"format.mime","value":"image/png"},
+		"order":40,
+		"template":[
+			"autoplot_url2png.py",
+			"server=#SERVER#",
+			"dataset=#DATASET#",
+			"start_time=#read.time.min#",
+			"end_time=#read.time.max#",
+			"image=#FILE#",
+			"param=#[#read.options#|]#"
+		],
+		"input":"application/vnd.das2.das2stream",
+		"output":"image/png"
+	}
+}

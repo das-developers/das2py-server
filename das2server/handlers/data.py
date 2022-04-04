@@ -17,7 +17,39 @@ def pout(sOut):
 ##############################################################################
 def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	"""See das2server.handlers.intro.py for a decription of this function
-	interface
+	interface.  One of the main jobs of this function is to build a cmd
+	pipeline given a set of http params.  Command building proceeds as follows:
+
+	  Raw HTTP     Default    Source
+	   Params     Templates  Templates
+	     |            |          |
+	     V            V          V
+	+----------+  +---------------+
+	| de-alias |  | Merge, Source |
+	+-----------  |   overrides   |
+	     |        +---------------+
+        |                |
+     Standard      Full Template
+   HTTP Params          Set
+        |                |
+        V                V
+   +--------------------------------+
+	| Delete params not in templates |
+	+--------------------------------+
+        |                |
+     Usable        Full Template
+   HTTP Params          Set
+        |                |
+        V                |
+	+------------------+  |
+	| Check can handle |-------------------> cache read cmd
+	|    from cache    |  |
+	+------------------+  |
+        |                |
+        V                V
+	+--------------------------+
+	| Sub params into template |-----------> standard read cmd
+	+--------------------------+
 	"""
 
 	fLog.write("\ndas2/v2.3 data request handler")
@@ -71,14 +103,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	sParams     = form.getfirst(sOptKey,'')
 	sNormParams = U.misc.normalizeOpts(sParams)
 	
-	# Do we always need this now?
-
-	if sBeg == '':
-		U.webio.queryError(fLog, u"Invalid das2.2 query, start_time was not specified")
-		return 17
-	if sEnd == '':
-		U.webio.queryError(fLog, u"Invalid das2.2 query, end_time was not specified")
-		return 17
+	
 		
 	# Okay this looks like a decent query, load the dsdf, and fill in defaults
 	# If the dsdf wants the data to come from a different location, then 

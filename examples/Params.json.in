@@ -57,14 +57,22 @@
 //
 // Command line Substitutions
 // --------------------------
+//
+// Command templates have the following basic form:
+//
+//   #[ HTTP_GET_KEY  #  Cmdline text if key given  #  Cmdline text if key absent ]#
+//
+// 
 // Since $ has meaning for posix shells, and %% has meaning for cmd.exe but the
 // '#' character only matters to twitter, # was chosen to indicate repacement
 // text. Plus it's safer in a unix environment as a stray # just erases part of
 // a command line, it dosen't trigger potentially dangerous effects.
 //
+// 
+//
 // A general command value substitution looks like this:
 //
-//   #[KEY_NAME/FLAG_VALUE # value if option received # value if option missing]#
+//   #[KEY_NAME/FLAG_VALUE # value if option received # value if option missing]
 //
 // If the option has no sub-flags then "/FLAG_NAME" is omitted.  This becames
 //   
@@ -76,12 +84,12 @@
 //  
 // There are two shorter forms:
 //
-//  1. #[ KEY_NAME/FLAG_VALUE # value if option received ]#
+//  1. #[ KEY_NAME/FLAG_VALUE # value if option received ]
 //     Error out if the option is not received.  Having no third section 
 //     makes the option manditory
 //
-//  2. #[ KEY_NAME/FLAG_VALUE ]#
-//     This is the same as #[KEY_NAME/FLAG_VALUE | @ ].  So like the version
+//  2. #[ KEY_NAME/FLAG_VALUE ]
+//     This is the same as #[KEY_NAME/FLAG_VALUE # @ ].  So like the version
 //     above, having no third section makes this option manditory.
 //
 // To avoid long lines in the config file.  The template is provided as a list
@@ -94,11 +102,11 @@
 //    read.time.interval (expected output interval for model based data)
 //    read.options     (exta options for the data reader, may be customized here)
 //
-//    bin.time.max     (expected max bin size for reduced streams)
-//    bin.merge        (how to merge data values when binning, a flag value)
-//
 //    dft.length       (the DFT length for power spectral density calculations)
 //    dft.slide        (DFT step over is given by dft.length/dft.slide)
+//
+//    bin.time.max     (expected max bin size for reduced streams)
+//    bin.merge        (how to merge data values when binning, a flag value)
 //
 //    format.mime      (the expected output format)
 //

@@ -13,53 +13,6 @@ from . import webio
 
 g_dDefCmds = {
 
-"psd":{
-	"trigger":{"key":"dft.length"},
-	"order":2,
-	"template":["das2_psd -d -j 0.05 #[dft.length] #[dft.slide] "],
-	"input":"application/vnd.das2.das2stream",
-	"output":"application/vnd.das2.das2stream"
-},
-
-"bin":{
-	"trigger":{"key":"bin.time.max","value":0,"compare":"gt"},
-	"order":3,
-	"template":[ 
-		"das2_bin_avgsec #bin.time.max# ",
-		"#[read.time.min| -b @ | ]  #[bin.merge/min| -r | ] #[bin.merge/max| -r | ]#",
-	],
-	"input":"application/vnd.das2.das2stream",
-	"output":"application/vnd.das2.das2stream"
-},
-	
-"format.csv":{
-	"trigger":{"key":"format.mime","value":"text/csv"},
-	"order":4,
-	"template":[
-		"das2_csv",
-		"#[-d #format.delim#|]#",
-		"#[-s #format.secfrac#|]#",
-		"#[-r #format.sigdigit#|]#"
-	],
-	"input":"application/vnd.das2.das2stream",
-	"output":"text/csv"
-},
-
-"format.png":{
-	"trigger":{"key":"format.mime","value":"image/png"},
-	"order":4,
-	"template":[
-		"autoplot_url2png.py",
-		"server=#SERVER#",
-		"dataset=#DATASET#",
-		"start_time=#read.time.min#",
-		"end_time=#read.time.max#",
-		"image=#FILE#",
-		"param=#[#read.options#|]#"
-	],
-	"input":"application/vnd.das2.das2stream",
-	"output":"image/png"
-}
 
 }
 

@@ -12,6 +12,9 @@ ifeq ($(PYVER),)
 	PYVER=$(shell python3 -c "import sys; print('.'.join( sys.version.split()[0].split('.')[:2] ))")
 endif
 
+export PREFIX
+export PYVER
+
 build:
 	python${PYVER} setup.py build
 

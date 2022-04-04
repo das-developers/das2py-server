@@ -28,7 +28,14 @@ There are default templates for:
 The default templates are located in the `etc/commands.json` file in your
 server root install directory.  Most of the commands used by the default 
 templates are provided by the [das2C](https://github.com/das-developers/das2C)
-module.  These stream processes are written in C for efficency.
+module, as these stream processes are written in C for efficency.
+
+**Note** This is not a complete text transformation language, and it's not 
+ment to be.  Of course there are many http query parameter combinations that
+can not be translated into just any command line text.  The desire is to
+provide something flexible enough to handle the many cases encountere over 
+the years while serving space phyiscs data streams.
+
 
 ## Command Template Format
 
@@ -51,10 +58,10 @@ where the `PARAM_SELECTOR` is one of:
   * An HTTP query parameter key
   * An HTTP query parameter key and flag
 
-The special character `@` may be used to reference the query value in the
+The special character `@` may be used to reference the parameter value in the
 replacement text.
 
-### Example 1: Translation of a Query Parameter 
+### Example Set 1: Translation of simple query parameters
 
 In the following example the PARAM_SELECTOR is only triggered on the presence or absence 
 of an HTTP GET parameter.
@@ -74,19 +81,19 @@ HTTP GET:         (read.time.min not given)
 Template Output:  -beg 2020-01-14
 ```
 
-### Example 2: Translation of a Query Parameter and Flag
+### Example Set 2: Translation of a query parameter values with sub-parameters
 
-Query flags bare explaination.  Though it wasn't the original intent of the
-HTTP query interface, it's all too common for protocols to pack many different
+Query sub-parameters bare explaination.  Though it wasn't the original intent of
+the HTTP query interface, it's all too common for protocols to pack many different
 individual settings into the value of a single HTTP query parameter, with each one
-acting as it's own sub-parameter. Take for example the following URL snipit:
+acting as it's own sub-parameter. Take for example the following URL snippit:
 ```
-  ?parameters=Epoch,Bx,By&
+  ?read=Epoch,Bx,By&...
 ```
 The tokens `Epoch`, `Bx`, `By` are acting as flags, where each flag is separated by
 a comma.
 
-For an even more extreme case, observe the following URL snipit from the Cassini
+For an even more extreme case, observe the following URL snippit from the Cassini
 RPWS data source:
 ```
    ?params=lfdr:ExEw,mfdr:ExEw,mfr:13ExEw,hfr:ABC12EuEvExEw
@@ -94,42 +101,83 @@ RPWS data source:
 which has *values* for each flag.  Obviously each flag in this example should be
 it's own query parameter.
 
-To deal with this all too common situation, the PARAM_SELECTOR may denote a flag
-value, the separator for the flags, and even the separator between a flag and it's value!
+To deal with this all too common situation, the PARAM_SELECTOR may denote:
+   * a parameter keyword
+   * a sub-parameter keyword
+   * a separator for sub-parameters
+   * a separator for sub-parameters and thier values
+
+Here's the full syntax for a PARAM_SELECTOR:
 ```
-#[ PARAM[FLAG_NAME][FLAG_SEP][SUB_SEP] #  Replacement if present  #  Replacement if absent]
+#[ PARAM[SUB_PARAM # SUB_SEP # SUB_VAL_SEP] #  Replacement if present  #  Replacement if absent]
+```
+The SUB_SEP defaults to comma `,`.  By default the SUB_VAL_SEP is not defined and 
+everything between two sub-seperators is taken to be the parameter name.  Thus for 
+sub-parameters actin as flags, only the FLAG_NAME is needed.
+
+Here's a few examples demonstrating flag values of increasing complexity.
+
+Flag values separated by commas
+```
+HTTP GET:   bands=Ex,By
+
+Templates:  #[bands[By] # --magnetic # ]  #[bands[Ex] # --electric # ]
+
+Output:     --magnetic --electric
 ```
 
-Here's and example template for extracting the `mfr` value from a flag.  Given the 
-template:
+Flag values separated by spaces
 ```
-#[params[ ][mfr][=] # -mfr @ # ]
+HTTP GET:   bands=Ex By
+
+Templates:  #[bands[By # ] # --magnetic # ]  #[bands[Ex # ] # --electric # ]
+
+Output:     --magnetic --electric
 ```
-the following translations would occur:
+
+Full sub-parameters pushed into a single query param:
 ```
-HTTP GET:         ?params=lfdr=ExEw mfr=13ExEw hfr=ABC12EuEvExEw&
-Template Output:  -mfr 13ExEw
+HTTP GET:   args=lfdr=ExEw mfr=13ExEw hfr=ABC12EuEvExEw
+
+Template:   #[params[mfr# #=] # -mfr @ # ]
+
+Output:     -mfr 13ExEw
 ```
 
 ## Required Parameters
 
-To denote a required parameter leave off the third section of the template.  Since there is
-no information on what to do if a parameter is not given, then the template cannot handle
-the translation.  Thus *required* parameters have the following form:
+To denote a required parameter leave off the third section of the template.  With the
+third section of the template missing, there is no information provided on what text
+to output if a parameter is not given, and thus the template cannot handle the
+translation.  This means *required* parameters have the following form:
 
 ```
    #[ PARAM_SELECTOR # output when selector matches ]
 ```
 
-Since it's common to directly output the value of an HTTP keyword a short form of the
-required parameter template may also be used:
-
+A very common pattern for required parameters is to output the value of the parameter
+if detected.
 ```
-   #[ PARAM_SELECTOR ]
+#[ PARAM_SELECTOR # @ ]
 ```
 
+Since this is so common, an even shorter template form is recognized:
+```
+#[ PARAM_SELECTOR ]
+```
+
+This form is equivalent to `#[ PARAM_SELECTOR # @ ]`
 
 
+## Predefined Parameters
 
+When templates are evaluated by das2-pyserver, the following "parameters" are aways
+defined and may be thus may always be used:
 
+   * `_server` - The URL to the das2-pyserver root URL, for example https://jupiter.physics.uiowa.edu/das/server
+
+   * `_sourcename` - The connical name of the datasource, for example Juno/WAV/Survey
+
+   * `_file` - The automatically calculated output filename in case the attachment
+      disposititon should be used
 
