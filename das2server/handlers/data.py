@@ -35,9 +35,10 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
         V                V
    +--------------------------------+
 	| Delete params not in templates |
+	| Delete commands not triggered  |
 	+--------------------------------+
         |                |
-     Usable        Full Template
+     Usable        Usable Template
    HTTP Params          Set
         |                |
         V                |
