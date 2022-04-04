@@ -308,7 +308,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 
 	# Check authorization to even know about the verify link
 	if ('ALLOW_VALIDATE_FROM' not in dConf):
-		dConf['ALLOW_VALIDATE_FROM'] == '127.0.0.1/8 ::1'
+		dConf['ALLOW_VALIDATE_FROM'] = '127.0.0.1/8 ::1'
 
 	if ('REMOTE_ADDR' not in os.environ) or \
 		(not U.auth.addrInRange(fLog, os.environ['REMOTE_ADDR'], dConf['ALLOW_VALIDATE_FROM'])):
