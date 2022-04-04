@@ -9,9 +9,9 @@ URL --> |  server  | --> command line --> | Shell | --> data stream
         +----------+                      +-------+
 ```
 
-For the das2/v2.3 protocol, the URL path defines the data source.  And the
-URL GET parameters define how the source should select and process data 
-prior to output.
+For the das2/v2.3 protocol, the path component of the URL selects the data
+source.  When data are requested, the URL GET parameters define how the
+source should operate.
 
 In older versions of the server there was a rather fixed translation between
 URL parameters and command lines.  The v2.3 server makes the translation
@@ -26,15 +26,17 @@ There are default templates for:
   * Translating streams to various output formats
 
 The default templates are located in the `etc/commands.json` file in your
-server root install directory.  Most of the commands used by the default 
-templates are provided by the [das2C](https://github.com/das-developers/das2C)
-module, as these stream processes are written in C for efficency.
+server root install directory.  Most of the default stream manipulation 
+commands in default templates are provided by the [das2C](https://github.com/das-developers/das2C) 
+module, as these stream processes are fast C programs with low memory
+overhead.
 
-**Note** This is not a complete text transformation language, and it's not 
-ment to be.  Of course there are many http query parameter combinations that
-can not be translated into just any command line text.  The desire is to
-provide something flexible enough to handle the many cases encountere over 
-the years while serving space phyiscs data streams.
+**Note** The command templates defined here do not form a complete text
+transformation language.  An arbitrary set of query keyword value pairs
+cannot be translated into an arbitrary set of output text, and that's
+okay.  Here das2 developers are providing a template tool that's sufficently
+flexible to handle the many data streaming cases encountered over the years,
+without going overboard.
 
 
 ## Command Template Format
@@ -166,7 +168,7 @@ Since this is so common, an even shorter template form is recognized:
 #[ PARAM_SELECTOR ]
 ```
 
-This form is equivalent to `#[ PARAM_SELECTOR # @ ]`
+which is equivalent to `#[ PARAM_SELECTOR # @ ]` above.
 
 
 ## Predefined Parameters
