@@ -267,7 +267,7 @@ def validateFile(U, dConf, fLog, form):
 			nLine = e.lineno
 		
 		# Print context if we can get it
-		if curPkt and isAnyHeader(curPkt.tag):
+		if curPkt and (curPkt.tag not in ('Dx','Qd')):
 			try:
 				prnErrorContext(curPkt, nLine)
 			except:
@@ -337,8 +337,8 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 
 	pout("</pre>")
 
+	sSchema = das2.getSchemaName(sStreamVer)
 	if nRet == 0:
-		sSchema = das2.getSchemaName(sStreamVer)
 		pout('''
 		<p>Validation successful!</p>
 		<ul>
