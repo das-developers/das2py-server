@@ -9,6 +9,7 @@ from os.path import basename as bname
 from os.path import dirname as dname
 from urllib.parse import quote_plus
 import json
+from copy import deepcopy
 
 from . import errors
 from . import webio
@@ -33,7 +34,7 @@ def stdFormKeys(sConvention):
 			"bin.time.max",
 			"read.time.interval",
 			"read.options"
-			# Other possible future keys
+			# Other possible keys
 			# bin.freq.max
          # bin.merge.avg
          # bin.merge.peaks
@@ -46,145 +47,15 @@ def stdFormKeys(sConvention):
 	else:
 		return ('start_time','end_time','resolution','interval','params')
 
-#########################################################################
-#def _getInternalInterface(self, fLog, dConf, dSrc):
-#	"""Get all the items needed for the internal server interface that are
-#	not to be sent out to the clients.
-
-#	"""
-#	dImpl = {}
-
-
-#	if 'OPTIONS' not in dSrc['QUERY_PARAMS']:
-#		raise errors.ServerError("OPTIONS section missing from QUERY_PARAMS")
-#	dOpts = dSrc['QUERY_PARAMS']['OPTIONS']
-
-
-#	if 'readerCmd' in self.d:
-#		dImpl['_reader'] = {'_cmd':self.d['readerCmd']}
-#	else:
-#		if 'requiresInterval' in self.d:
-#			dImpl['_reader'] = {
-#				'_cmd':"%s %%{time.int} %%{time.min} %%{time.max}"%self.d['reader']
-#			}
-#		else:
-#			dImpl['_reader'] = {'_cmd':
-#				"%s %%{time.min} %%{time.max}"%self.d['reader']
-#			}
-#			if len(dOpts) == 0:
-#				dImpl['_reader']['_cmd'] += " %{params}"
-
-#		# now add in all options...
-#		for sKey in dOpts:
-#			dImpl['_reader']['_cmd'] += " %%{%s}"%sKey
-
-#	if 'reducerCmd' in self.d:
-#		dImpl['_reducer'] = {'_cmd':self.d['reducerCmd']}
-#	else:
-#		if 'reducer' in self.d and \
-#			(self.d['reducer'] not in ('not_reducable','not_reducible')):
-
-#			dImpl['_reducer'] = {'_cmd':"%s %%{time.res}"%self.d['reducer']}
-
-#		elif 'reducer' not in self.d:
-#			# Get default reducer based on the stream type
-#			if 'qstream' in self.d:
-#				if 'QDS_REDUCER' in dConf:
-#					dImpl['_reducer'] = {'_cmd':"%s %%{time.res}"%dConf['QDS_REDUCER']}
-#			else:
-#				if 'D2S_REDUCER' in dConf:
-#					dImpl['_reducer'] = {'_cmd':"%s -b %%{time.min} %%{time.res}"%dConf['D2S_REDUCER']}
-
-#	if 'cacheReader' not in self.d:
-#		sCacheDir =  pjoin(dConf['CACHE_ROOT'], 'data', self.sName)
-#		sCacheRdrArgs = "%s %s ${NORM_OPTIONS} %%{time.beg} %%{time.end} %%{time.res}"%(
-#			self.sPath, sCacheDir)
-
-#		if 'qstream' in self.d:
-#			if 'QDS_CACHE_RDR' in dConf:
-#				dImpl['_cache_reader'] = {'_cmd':"%s %s"%(dConf['QDS_CACHE_RDR'], sCacheRdrArgs)}
-#		else:
-#			if 'D2S_CACHE_RDR' in dConf:
-#				dImpl['_cache_reader'] = {'_cmd':"%s %s"%(dConf['D2S_CACHE_RDR'], sCacheRdrArgs)}
-
-#	else:
-#		dImpl['_cache_reader'] = {'_cmd':self.d['cacheReader']}
-
-#	# Reader command line translations
-#	dTrans = self._getArgTrans(fLog, 'reader', dSrc)
-#	if len(dTrans) > 0:
-#		dImpl['_reader']['_translate'] = dTrans
-
-
-#	# Cache control information (internal)
-
-#	# This is hard locked for now to just be time
-#	# in the future support looking this up, say for example
-#	# ['lat','long']
-#	# ['time','freq']
-#	lCacheCoords = ['time']
-#	dRawLvls = self.getCacheLevels()
-#	if len(dRawLvls) > 0:
-#		if 'time' not in dSrc['COORDINATES']:
-#			raise errors.ServerError(
-#				"Time based cache blocks defined for non-time datasource"
-#			)
-
-#		dCachInCoords = {'_block_by':lCacheCoords}
-#		dLvls = {}
-#		for sKey in dRawLvls:
-#			dLvls[sKey] = {
-#				'_resolution':dRawLvls[sKey][0],
-#				'_units':dRawLvls[sKey][1],
-#				'_scheme':dRawLvls[sKey][2]
-#			}
-#			if dRawLvls[sKey][3]:
-#				dLvls[sKey]['_reader_args'] = dRawLvls[sKey][3]
-
-#		dCachInCoords['_lines'] = dLvls
-#		dImpl['_cache'] = dCachInCoords
-
-#	# Security authorization
-
-#	if 'readAccess' in self.d:
-#		dAuth = {'_dsdf_compat':self.d['readAccess']}
-#		if 'securityRealm' in self.d:
-#			dAuth['_realm'] = self.d['securityRealm']
-
-#		lMethods = [s.strip() for s in self.d['readAccess'].split('|')]
-#		if len(lMethods) > 0:
-#			lMethOut = []
-#			for i in range(0, len(lMethods)):
-
-#				lMeth = [s.strip() for s in lMethods[i].split(':')]
-#				#fLog.write("DEBUG: auth methods %s"%lMeth)
-#				if len(lMeth) < 2:
-#					raise errors.ServerError(
-#						"Syntax error in readAccess key value"
-#					)
-
-#				sCheckType = lMeth[0].upper().strip()
-
-#				lMethOut.append({'_check':sCheckType, '_values': lMeth[1:]})
-
-#			dAuth['_methods'] = lMethOut
-#			dImpl['_authorization'] = dAuth
-
-
-#	dImpl['_local_id'] = self.sName
-#	dImpl['_local_path'] = self.sPath
-
-#	return dImpl
-
 ##############################################################################
 
-def _findDsdfNoCase(sRoot, sSource, fLog):
-	"""Look up dsdf files using a case sensitive root and a case insensitive
-	remaning path.  If sSource doesn't end in .dsdf, that string is appended 
+def _findSrcNoCase(sRoot, sSource, sExt, fLog):
+	"""Look up source files using a case sensitive root and a case insensitive
+	remaning path.  If sSource doesn't end in sExt, that string is appended 
 	"""
 
-	if not sSource.endswith('.dsdf'):
-		sSource = "%s.dsdf"%sSource
+	if not sSource.endswith(sExt):
+		sSource = "%s%s"%(sSource, sExt)
 
 	if not os.path.isdir(sRoot): return (None,None)
 
@@ -346,48 +217,6 @@ def _loadDsdf(dConf, sName, sPath, fLog):
 
 		return dDsdf
 
-
-##############################################################################
-def _loadOverride(dConf, sPath, fLog):
-
-	fLog.write("INFO: Reading %s"%sPath)
-	
-	lLines = []
-	if not os.path.isfile(sPath):
-		return {}
-
-	fIn = open(sPath, encoding='UTF-8')
-	for sLine in fIn:
-		sLine = sLine.strip()
-		# Walk the line, if we are not in quotes and see '//' ignore everything
-		# from there to the end
-		iQuote = 0
-		iComment = -1
-		n = len(sLine)
-		for i in range(n):
-			if sLine[i] == '"': 
-				iQuote += 1
-				continue
-			if sLine[i] == '/' and (i < n-1) and (sLine[i+1] == '/') \
-				and (iQuote % 2 == 0):
-				iComment = i
-				break;
-				
-		if iComment > -1:
-			sLine = sLine[:iComment]
-			sLine = sLine.strip()
-		
-		lLines.append(sLine)
-
-	sData = '\n'.join(lLines)
-	fIn.close()
-	
-	try:
-		d = json.loads(sData)
-	except ValueError as e:
-		raise errors.ServerError("Syntax error in %s: %s\n"%(sPath, str(e)))
-	return d
-
 ##############################################################################
 # These are used so much, just give it a variable
 
@@ -451,6 +280,15 @@ def _isPropTrue(dProps, key):
 		return True
 	
 	return False
+
+def _dropKey(dDict, sKey):
+	"""If the given dictionary has a top level key named 'internal', remove
+	it and return the rest of the dictionary
+	"""
+	if sKey in dDict:
+		dDict.pop(sKey)
+	
+	return dDict
 
 
 ##############################################################################
@@ -543,7 +381,7 @@ def _mergeSrcCoordInfo(dOut, dProps, dUser, fLog):
 	"""Add "coordinates" info to the output dictionary.
 	"""
 	dIface  = _getDict(dOut, 'interface')
-	dCoords = _getDict(dIface, 'coordinates')
+	dCoords = _getDict(dIface, 'coord')
 	
 	# By default das2/2.2 servers only know that there is a time coordinate
 	# so set that one up.  
@@ -556,15 +394,15 @@ def _mergeSrcCoordInfo(dOut, dProps, dUser, fLog):
 	if 'name' not in dTime: dTime['name']  = 'Time'
 
 	# Use the lowest numbered example for the default range, interval
-	dTime['minimum'] = {sV:None}
-	dTime['maximum'] = {sV:None}
+	dTime['min'] = {sV:None}
+	dTime['max'] = {sV:None}
 	
 	dTime['units'] = {'value':'UTC'}
 		
 	if 'requiresInterval' in dProps:
 		dTime['interval'] = {sV:None}
 	else:
-		dTime['resolution'] = {sV:None, "units":"s"}
+		dTime['res'] = {sV:None, "units":"s"}
 	
 	sNum = None
 	if 'exampleRange' in dProps:
@@ -574,9 +412,9 @@ def _mergeSrcCoordInfo(dOut, dProps, dUser, fLog):
 	
 		lTmp = [s.strip() for s in dProps['exampleRange'][sNum].split('|')]
 		lTmp = [s.strip() for s in lTmp[0].split('to')]
-		dTime['minimum'][sV] = lTmp[0]		
+		dTime['min'][sV] = lTmp[0]		
 		if len(lTmp) > 1:
-			dTime['maximum'][sV] = lTmp[1].replace('UTC','').strip()
+			dTime['max'][sV] = lTmp[1].replace('UTC','').strip()
 	
 	if 'exampleInterval' in dProps:
 		lNums = list(dProps['exampleRange'].keys())
@@ -590,60 +428,44 @@ def _mergeSrcCoordInfo(dOut, dProps, dUser, fLog):
 	else:	
 		# Default to 1/2000th of the range, here's where we need the
 		# das2 module.
-		if dTime['minimum'][sV] and dTime['maximum'][sV]:
-			dtBeg = das2.DasTime(dTime['minimum'][sV])
-			dtEnd = das2.DasTime(dTime['maximum'][sV])
-			dTime['resolution'][sV] = (dtEnd - dtBeg) / 2000.0
+		if dTime['min'][sV] and dTime['max'][sV]:
+			dtBeg = das2.DasTime(dTime['min'][sV])
+			dtEnd = das2.DasTime(dTime['max'][sV])
+			dTime['res'][sV] = (dtEnd - dtBeg) / 2000.0
 				
 	# Set up the alteration rules
-	dTime['minimum']['set'] = {'param':sBegKey, 'required':True}
-	dTime['maximum']['set'] = {'param':sEndKey, 'required':True}
+	dTime['min']['set'] = {'param':sBegKey, 'required':True}
+	dTime['max']['set'] = {'param':sEndKey, 'required':True}
 	
 	if 'validRange' in dProps:
 		lTimeRng = [ s.strip() for s in dProps['validRange']['00'].split('to') ]
 		if len(lTimeRng) > 1:
-			dTime['minimum']['set']['range'] = lTimeRng
-			dTime['maximum']['set']['range'] = lTimeRng
+			dTime['min']['set']['range'] = lTimeRng
+			dTime['max']['set']['range'] = lTimeRng
 	
 	if 'interval' in dTime:
 		dTime['interval']['set'] = {'param':sIntKey, 'required':True}
 	else:
-		dTime['resolution']['set'] = {'param':sResKey, 'required':False}
+		dTime['res']['set'] = {'param':sResKey, 'required':False}
 
 
-	# If I have a *.json file, take extra coordinates from there
-	if ('coordinates' in dUser) and (len(dUser['coordinates']) > 0):
-		for key in dUser['coordinates']:
-			dCoords[key] = dUser['coordinates'][key]
-	else:
-		# See if any other coordinates are mentioned, if so give them a 
-		# token entry assume the values are 'name','description','units'
-		if 'coord' in dProps:
-			for sNum in dProps['coord']:
-				lItem = [s.strip() for s in dProps['coord'][sNum].split('|')]
-				if lItem[0].lower() == 'time':
-					if len(lItem) > 1:  dTime['title'] = lItem[1]
-				else:
-					dVar = _getDict(dCoords, lItem[0])
-					dVar['name'] = lItem[0][0].upper() + lItem[0][1:]
-					if len(lItem) > 1: dVar['title'] = lItem[1]
-					if len(lItem) > 2: dVar['units'] = {'value':lItem[2]}
+	if 'coord' in dProps:
+		for sNum in dProps['coord']:
+			lItem = [s.strip() for s in dProps['coord'][sNum].split('|')]
+			if lItem[0].lower() == 'time':
+				if len(lItem) > 1:  dTime['title'] = lItem[1]
+			else:
+				dVar = _getDict(dCoords, lItem[0])
+				dVar['name'] = lItem[0][0].upper() + lItem[0][1:]
+				if len(lItem) > 1: dVar['title'] = lItem[1]
+				if len(lItem) > 2: dVar['units'] = {'value':lItem[2]}
 	
 
-def _mergeSrcDataInfo(dOut, dProps, dUser, fLog):
+def _mergeSrcDataInfo(dOut, dProps, fLog):
 	"""In general the das2 server has no understanding of output data 
 	values.  This information can be given explicitly in a .json file
 	or as a fallback, the .dsdf file can be scraped for hints.
 	"""
-
-	# If I have a *.json file, take data value information from there
-	if ('data' in dUser) and (len(dUser['data']) > 0) :
-		dIface  = _getDict(dOut, 'interface')
-		dData = _getDict(dIface, 'data')
-
-		for key in dUser['data']:
-			dData[key] = dUser['data'][key]	
-		return
 
 	# Fallback to scraping the dsdf, if nothing here don't make an
 	# empty section
@@ -748,7 +570,7 @@ def _mergeDas2Params(dOut, dProps, fLog):
 	
 	
 	dIface = _getDict(dOut, 'interface')
-	dOpts = _getDict(dIface, 'options')
+	dOpts = _getDict(dIface, 'option')
 	
 	# If the params element is handled as a string then just output a single
 	# text option.
@@ -803,18 +625,33 @@ def _mergeDas2Params(dOut, dProps, fLog):
 						
 	
 def _mergeExamples(dOut, dProps, sBaseUrl, fLog):
-	# A typical example looks like:
-	#
-	#   "QUERY":{
-	#      "read.time.max":      (required)
-	#      "read.options":       (optional)
-	#      "bin.time.max":       (present if interval missing)
-	#      "read.time.interval": (optional)
-	#      "read.time.min":      (required)
-	#   }
-	#   "name": (required)
-	#   "title" (optional)
-	#   "URL":  (required)
+	'''Merge in examples from the DSDF into the interface section.
+	
+	Note: This is a bit difficult as examples are specified from the point of
+	view of the final user interface.  This is important because examples 
+	shouldn't change depending on the underlying protocol.  In catalog terms
+	this means examples can be defined at the source collection level.
+
+	By skiping over the protocol level definition for examples, this function
+	must by tightly coupled with decisions made in _mergeDas2Params.  For the
+	
+	"name":  (required)
+	"title": (optional)
+	"query":{
+	   "coord.time.min":  (required)
+	   "coord.time.max":  (required)
+	   "coord.time.res":  (optional - set if reducable, or an interval)
+	   "option.extra":    (optional - Set if extra parameters not parsable)
+	   "option.[A, B, ]:  (optional - Set if extra parameters are flags)
+	}
+	
+	Args:
+		dOut - The output HttpStreamSrc object which must have it's
+		   'interface' section already defined!
+	'''
+
+	if 'interface' not in dOut:
+		raise ValueError('inteface section not defined, call _mergeDas2Params() first')
 	
 	# Match up the example range with example params and example interval
 	# Stuff like this is annoying and why we should have moved to a
@@ -822,10 +659,6 @@ def _mergeExamples(dOut, dProps, sBaseUrl, fLog):
 	lRange = []
 	lParams = []
 	lInterval = []
-
-	(sBegKey, sEndKey, sResKey, sIntKey, sOptKey) = stdFormKeys(
-		dOut['protocol']['convention']
-	)
 	
 	if 'exampleRange' in dProps:
 		lRange = list(dProps['exampleRange'].keys())
@@ -843,7 +676,7 @@ def _mergeExamples(dOut, dProps, sBaseUrl, fLog):
 	for sNum in lRange:
 		bKeep = True
 		dQuery = {}
-		dExample = {"http_params":dQuery}
+		dExample = {"params":dQuery}
 		sId = "example_%s"%sNum
 		dExample['name'] = "Example %s"%sNum
 			
@@ -857,39 +690,68 @@ def _mergeExamples(dOut, dProps, sBaseUrl, fLog):
 			
 		sBeg = lTmp[0]
 		sEnd = lTmp[1].replace('UTC','').strip()
-		dQuery[sBegKey] = sBeg
-		dQuery[sEndKey]   = sEnd
+		dQuery["coord.time.max"] = sBeg
+		dQuery["coord.time.min"] = sEnd
 			
 		# See if we need resolution or interval
 		if sNum in lInterval:
-			dQuery[sIntKey] = dProps['exampleInterval'][sNum]
+			dQuery['coord.time.res'] = dProps['exampleInterval'][sNum]
 		else:
-			# Default to 1/2000th of the range, here's where we need the
-			# das2 module.
+			# Default to 1/2000th of the range, here's where we need the das2 module.
 			dtBeg = das2.DasTime(sBeg)
 			dtEnd = das2.DasTime(sEnd)
-			dQuery[sResKey] = (dtEnd - dtBeg) / 2000.0
-			
+			dQuery["coord.time.res"] = (dtEnd - dtBeg) / 2000.0
+		
+		# By default flags are coverted to individual options by value.  This
+		# means there is a translation from:
+		#
+		#  param_00 = "10khz | display data sampled at 25.2 ksps with a 10 kHz filter"
+		#  param_01 = "1khz | display data sampled at 25.2 ksps with a 1 kHz filter" 
+		#
+		# To these interface values:
+		# 
+		#  option.10kHz = true
+		#  option.1kHz = true
+		#
+		# And to these HTTP param flags:
+		#
+		#  ?read.options=10kHz 1kHz&
+		#
+		# So if a given set of exampleParams exists, we have to determine which
+		# UI options to set based on the example parameters.  The fall back is
+		# Always the option.extra string value.
+		
 		if sNum in lParams:
-			dQuery[sOptKey] = dProps['exampleParams'][sNum]
+			sOpts = dProps['exampleParams'][sNum]
+			if ('option' not in dOut['interface']) or ('extra' in dOut['interface']['option']):
+				# Assume no 'param_' items in the DSDF so all options must just
+				# be crammed into a string.  Same thing is true if the interface
+				# parser just gave up on made an 'extra' item.
+				dQuery['option.extra'] = {'extra': sOuts}
+			else:
+				# Okay, param_00 and friends were defined, so set each one
+				lFlags = sOpts.split()
+				for sFlag in lFlags:
+					dQuery['option.%s'%sFlag] = 'true'
+				
 		
 		lQuery = [
 			"%s=%s"%(sKey, quote_plus(str(dQuery[sKey])))
 			for sKey in dQuery
 		]
 
-		if sBaseUrl[-1] in ('?','&'): sSep = ""
-		elif '?' in sBaseUrl: sSep = '&'
-		else: sSep = '?'
+		#if sBaseUrl[-1] in ('?','&'): sSep = ""
+		#elif '?' in sBaseUrl: sSep = '&'
+		#else: sSep = '?'
 
-		dExample['url'] = "%s%s%s"%(sBaseUrl, sSep, '&'.join(lQuery))
+		#dExample['url'] = "%s%s%s"%(sBaseUrl, sSep, '&'.join(lQuery))
 		
 		# TODO: Merge in examples from the DSDFs with hand entered ones
 		dExamples[sId] = dExample
 		
 	if len(dExamples) > 0:
-		dProto = _getDict(dOut, 'protocol')
-		dProto['examples'] = dExamples
+		dProto = _getDict(dOut, 'interface')
+		dProto['example'] = dExamples
 	
 
 def _mergeFormat(dConf, dOut, dProps, fLog):
@@ -904,6 +766,7 @@ def _mergeFormat(dConf, dOut, dProps, fLog):
 			"extension": ".qds",
 			"enabled": {"value":True },
 		}
+		sDefKey = 'qstream'
 	elif _isPropTrue(dProps, 'das2Stream'):
 		dDefFmt =  {
 			"name":"das2 binary",
@@ -912,6 +775,7 @@ def _mergeFormat(dConf, dOut, dProps, fLog):
 			"extension":".d2s",
 			"enabled":{"value":True},
 		}
+		sDefKey = 'das2binary'
 	else:
 		dDefFmt =  {
 			"name":"das1 binary",
@@ -920,8 +784,10 @@ def _mergeFormat(dConf, dOut, dProps, fLog):
 			"extension":".bin",
 			"enabled":{"value":True},
 		}
+		sDefKey = 'das1binary'
 
-	dOut['interface']['format'] = {'default':dDefFmt}
+	dOut['interface']['format'] = {sDefKey:dDefFmt}
+	dOut['interface']['default'] = sDefKey
 
 	
 	# Different das2/v2.3 servers can have different capabilities so 
@@ -952,28 +818,160 @@ def _mergeFormat(dConf, dOut, dProps, fLog):
 
 
 # ########################################################################## #
+def _mergeInternal(dOut, dDsdf, fLog):
+	"""Get all the items needed for the internal server interface that are
+	not to be sent out to the clients.
 
-def external(dConf, sSource, fLog):
+	"""
+	dImpl = {}
+
+
+	if 'OPTIONS' not in dSrc['QUERY_PARAMS']:
+		raise errors.ServerError("OPTIONS section missing from QUERY_PARAMS")
+	dOpts = dSrc['QUERY_PARAMS']['OPTIONS']
+
+
+	if 'readerCmd' in self.d:
+		dImpl['_reader'] = {'_cmd':self.d['readerCmd']}
+	else:
+		if 'requiresInterval' in self.d:
+			dImpl['_reader'] = {
+				'_cmd':"%s %%{time.int} %%{time.min} %%{time.max}"%self.d['reader']
+			}
+		else:
+			dImpl['_reader'] = {'_cmd':
+				"%s %%{time.min} %%{time.max}"%self.d['reader']
+			}
+			if len(dOpts) == 0:
+				dImpl['_reader']['_cmd'] += " %{params}"
+
+		# now add in all options...
+		for sKey in dOpts:
+			dImpl['_reader']['_cmd'] += " %%{%s}"%sKey
+
+	if 'reducerCmd' in self.d:
+		dImpl['_reducer'] = {'_cmd':self.d['reducerCmd']}
+	else:
+		if 'reducer' in self.d and \
+			(self.d['reducer'] not in ('not_reducable','not_reducible')):
+
+			dImpl['_reducer'] = {'_cmd':"%s %%{time.res}"%self.d['reducer']}
+
+		elif 'reducer' not in self.d:
+			# Get default reducer based on the stream type
+			if 'qstream' in self.d:
+				if 'QDS_REDUCER' in dConf:
+					dImpl['_reducer'] = {'_cmd':"%s %%{time.res}"%dConf['QDS_REDUCER']}
+			else:
+				if 'D2S_REDUCER' in dConf:
+					dImpl['_reducer'] = {'_cmd':"%s -b %%{time.min} %%{time.res}"%dConf['D2S_REDUCER']}
+
+	if 'cacheReader' not in self.d:
+		sCacheDir =  pjoin(dConf['CACHE_ROOT'], 'data', self.sName)
+		sCacheRdrArgs = "%s %s ${NORM_OPTIONS} %%{time.beg} %%{time.end} %%{time.res}"%(
+			self.sPath, sCacheDir)
+
+		if 'qstream' in self.d:
+			if 'QDS_CACHE_RDR' in dConf:
+				dImpl['_cache_reader'] = {'_cmd':"%s %s"%(dConf['QDS_CACHE_RDR'], sCacheRdrArgs)}
+		else:
+			if 'D2S_CACHE_RDR' in dConf:
+				dImpl['_cache_reader'] = {'_cmd':"%s %s"%(dConf['D2S_CACHE_RDR'], sCacheRdrArgs)}
+
+	else:
+		dImpl['_cache_reader'] = {'_cmd':self.d['cacheReader']}
+
+	# Reader command line translations
+	dTrans = self._getArgTrans(fLog, 'reader', dSrc)
+	if len(dTrans) > 0:
+		dImpl['_reader']['_translate'] = dTrans
+
+
+	# Cache control information (internal)
+
+	# This is hard locked for now to just be time
+	# in the future support looking this up, say for example
+	# ['lat','long']
+	# ['time','freq']
+	lCacheCoords = ['time']
+	dRawLvls = self.getCacheLevels()
+	if len(dRawLvls) > 0:
+		if 'time' not in dSrc['COORDINATES']:
+			raise errors.ServerError(
+				"Time based cache blocks defined for non-time datasource"
+			)
+
+		dCachInCoords = {'_block_by':lCacheCoords}
+		dLvls = {}
+		for sKey in dRawLvls:
+			dLvls[sKey] = {
+				'_resolution':dRawLvls[sKey][0],
+				'_units':dRawLvls[sKey][1],
+				'_scheme':dRawLvls[sKey][2]
+			}
+			if dRawLvls[sKey][3]:
+				dLvls[sKey]['_reader_args'] = dRawLvls[sKey][3]
+
+		dCachInCoords['_lines'] = dLvls
+		dImpl['_cache'] = dCachInCoords
+
+	# Security authorization
+
+	if 'readAccess' in self.d:
+		dAuth = {'_dsdf_compat':self.d['readAccess']}
+		if 'securityRealm' in self.d:
+			dAuth['_realm'] = self.d['securityRealm']
+
+		lMethods = [s.strip() for s in self.d['readAccess'].split('|')]
+		if len(lMethods) > 0:
+			lMethOut = []
+			for i in range(0, len(lMethods)):
+
+				lMeth = [s.strip() for s in lMethods[i].split(':')]
+				#fLog.write("DEBUG: auth methods %s"%lMeth)
+				if len(lMeth) < 2:
+					raise errors.ServerError(
+						"Syntax error in readAccess key value"
+					)
+
+				sCheckType = lMeth[0].upper().strip()
+
+				lMethOut.append({'_check':sCheckType, '_values': lMeth[1:]})
+
+			dAuth['_methods'] = lMethOut
+			dImpl['_authorization'] = dAuth
+
+
+	dImpl['_local_id'] = self.sName
+	dImpl['_local_path'] = self.sPath
+
+	return dImpl
+
+
+# ########################################################################## #
+
+def _dsdf2Source(dConf, sPath, fLog, sTarget="any"):
 	"""Create an HttpStreamSrc object from a DSDF file and the given server
 	configuration information.
 
-	Output make assumptions about the query parameter interface of the 
+	Output makes assumptions about the query parameter interface of the 
 	server and format conversion capabilities.
+
+	Args:
+		dConf - The das2 server configuration dictionary
+		sPath - The path to the DSDF file
+		fLog - An object with a .write method
+		sTarget - The information target, one of 'internal', 'exteral' or 
+			'any'.  Mostly used to avoid loading suggested GUI info for 
+			internal processing, or command handling for external clients.
 
 	Throws:
 		QueryError if dsdf doesn't exist
 		RemoteServer if dsdf is for someone else
 		ServerError if there is a syntax error or other misconfiguration
 	"""
-	
-	(sName, sPath) = _findDsdfNoCase(dConf['DSDF_ROOT'], sSource, fLog);
-	if sPath == None:
-		raise errors.QueryError(u"Data source %s doesn't exist on this server"%sSource)
-
 	dDsdf = _loadDsdf(dConf, sName, sPath, fLog)
 
-	dUser = _loadOverride(dConf, sPath.replace('.dsdf','.json'), fLog)
-	
 	dOut = {}
 
 	#sCustom = sSource.replace('.dsdf','.json')
@@ -990,7 +988,12 @@ def external(dConf, sSource, fLog):
 	if 'title' not in dOut and 'description' in dDsdf: 
 		dOut["title"] = dDsdf['description']['00']
 	dOut['type'] = 'HttpStreamSrc'
-	dOut['version'] = "0.6"
+	dOut['version'] = "0.7"
+
+
+	# If this is an internal call load the command and cache info
+	if sTarget in ('internal','any'):
+		_mergeInternal(dOut, dDsdf, fLog)
 
 	# potentially override the base url and set the protocol convention
 	sBaseUrl = _mergeProto(dOut, dDsdf, fLog)
@@ -1009,9 +1012,9 @@ def external(dConf, sSource, fLog):
 		
 	_mergeContacts(dOut, dDsdf, fLog)
 	
-	_mergeSrcCoordInfo(dOut, dDsdf, dUser, fLog)
-	
-	_mergeSrcDataInfo(dOut, dDsdf, dUser, fLog)
+	if sTarget in ('external', 'full'):
+		_mergeSrcCoordInfo(dOut, dDsdf, fLog)
+		_mergeSrcDataInfo(dOut, dDsdf, fLog)
 	
 	# Set the authentication information
 	dProto = dOut['protocol']	
@@ -1025,11 +1028,8 @@ def external(dConf, sSource, fLog):
 	dGet = {}
 	dProto['http_params'] = dGet
 	
-	# For now we are really just supporting the old 2.2 API, so auto
-	# add old start time & end time parameters.  Hopefully this will
-	# change soon.  Will need a new internal interface for command
-	# generation before this can be changed.
-
+	# Assume that dsdf files only support the old das2.2 API.
+	# The .json files can do whatever they want.
 	(sBegKey, sEndKey, sResKey, sIntKey, sOptKey) = stdFormKeys(dProto['convention'])
 
 	dGet[sBegKey] = {
@@ -1063,51 +1063,141 @@ def external(dConf, sSource, fLog):
 			   'at intrinsic resolution without server side averages',
 		}
 
-	# Take extra reader parameters from the new *.json files, or try to get
-	# them from the old *.dsdf files
-	if ('http_params' in dUser) and (sOptKey in dUser['http_params']):
-		dGet[sOptKey] = dUser['http_params'][sOptKey]
-
-		if 'options' in dUser:
-			dIface = _getDict(dOut, 'interface')
-			dOpts = _getDict(dIface, 'options')
-			
-			for key in dUser['options']:
-				dOpts[key] = dUser['options'][key]
-				
-	else:
-		# Fall back to auto-generating these from dsdf hints.
-		_mergeDas2Params(dOut, dDsdf, fLog)
+	# Convert any read params to a read.options parameter
+	_mergeDas2Params(dOut, dDsdf, fLog)
 		
-	# Could ask server if text output is supported, old servers don't 
-	# have a way to do this.
-	_mergeExamples(dOut, dDsdf, sBaseUrl, fLog)
+	# Provide examples for external interfaces
+	if sTarget in ('external', 'full'):
+		_mergeExamples(dOut, dDsdf, sBaseUrl, fLog)
+		_mergeFormat(dConf, dOut, dDsdf, fLog)
 
-	# Set our data output options
-	_mergeFormat(dConf, dOut, dDsdf, fLog)
+	# Provide command and cache handling for internal operations
+	
 
 	return dOut
 
 # ########################################################################## #
 
-def _mergeInternal(dConf, dOut, dProps, fLog):
-	"""Add in the internal 
+def _json2Source(dConf, sPath, fLog, sTarget='external'):
+	"""
+	Since the files on disk are pretty much the expected data source,
+	Function is pretty simple it just loads the file from disk stripping
+	out the comments.
 	"""
 
-	dCmds = _getDict(dOut, "commands")
+	fLog.write("INFO: Reading %s"%sPath)
+	
+	lLines = []
+	if not os.path.isfile(sPath):
+		return None
+
+	fIn = open(sPath, encoding='UTF-8')
+	for sLine in fIn:
+		sLine = sLine.strip()
+		# Walk the line, if we are not in quotes and see '//' ignore everything
+		# from there to the end
+		iQuote = 0
+		iComment = -1
+		n = len(sLine)
+		for i in range(n):
+			if sLine[i] == '"': 
+				iQuote += 1
+				continue
+			if sLine[i] == '/' and (i < n-1) and (sLine[i+1] == '/') \
+				and (iQuote % 2 == 0):
+				iComment = i
+				break;
+				
+		if iComment > -1:
+			sLine = sLine[:iComment]
+			sLine = sLine.strip()
+		
+		lLines.append(sLine)
+
+	sData = '\n'.join(lLines)
+	fIn.close()
+	
+	try:
+		dOut = json.loads(sData)
+	except ValueError as e:
+		raise errors.ServerError("Syntax error in %s: %s\n"%(sPath, str(e)))
+
+	# If the source had no name, give it one based on the filename
+	if 'name' not in dOut:
+		dOut['name'] = basename(sPath).replace('.json','')
+
+	return dOut
 
 
 # ########################################################################## #
 
-def internal(dConf, sSource, fLog):
-	"""Get a JSON description of the interfaces for a given data source.
-	These are the:
+def _dsdfOverRide(dSrcDsdf, dSrcJson):
+	"""Given two partial HttpStreamSrc dictionaries, override the up-converted
+	dsdf dictionary with setting sfrom the new json dictionary.  Sections are
+	overridden as follows:
+	
+	interface.name = Set to 'das2/v2.3 Source'
+	protocol.convention = 'das2/v2.3'
 
-	   protocol
-	   internal
+	Override, .* means sub items overridden
+	------------------
+	name
+	title
+	description
+	interface.example.*
+	interface.coord.*
+	interface.data.*
+	interface.option <-- Entire DSDF option area overridden
 
-	sections.  Protocol is useful for internally generating get parameters
-	in order to drive cache block creation using the front door.
+	protocol.*
+	
+	internal.commands.*
+	internal.cache  <-- Entire DSDF option area overridden
+	"""
+	
+	dOut = dSrcDsdf
+
+	for s in ('name','title','description'):
+		if s in dSrcJson:
+			dOut[s] = dSrcJson[s]
+	
+	if 'interface' in dJsonSrc:
+
+		for sSection in ('example','coord','data'):
+			if sSection in dJsonSrc['interface']:
+				for sKey in dJsonSrc['interface'][sSection]:
+					dSection = _getDict(dOut['interface'], sSection)
+					dSection[sKey] = dJsonSrc['interface'][sSection][sKey]
+			
+	if 'protocol' in dJsonSrc:
+		for sKey in dJsonSrc['protocol']
+			dOut['protocol'][sKey] = dJsonSrc['protocol'][sKey]
+
+	dOut['protocol']['converntion'] = 'das2/v2.3'
+
+	if 'internal' in dJsonSrc:
+		if 'cache' in dJsonSrc['internal']:
+			dOut['internal']['cache'] = dJsonSrc['internal']['cache']
+		if 'command' in dJsonSrc['internal']:
+			for sCmd in dJsonSrc['command']:
+				dOut['internal']['command'][sKey] = dJsonSrc['internal']['command'][sKey]
+	
+	return dOut
+
+# ########################################################################## #
+
+def load(dConf, sSource, fLog, sTarget="external"):
+	"""Create an HttpStreamSrc object from server configuration files
+
+	The three main section of the HttpStreamSrc definition are:
+	
+		interface - What clients present to users, or downstream tools
+ 	   protocol - What clinets use to talk to this server
+	   internal - How protocol requests are turned into command lines
+
+	If the main focus of the load is an external API request then then
+	'internal' section is dropped.  If the main focus is internal 
+	server operations then 'interface' is dropped.
 
 	Args:
 		dConf - A dictionary containing the server configuration
@@ -1118,34 +1208,50 @@ def internal(dConf, sSource, fLog):
 
 		fLog - An object with a .write method.
 
+		sTarget - Has special meaning if given one of the strings
+			'internal' or 'external'.  Pretty much ignore otherwise.
+
 	Returns:
-		A dictionary of command description objects.  Each key in the 
-		dictionary represents one command category.  The know command
-		categories are:
-			read
-			meta
-			psd
-			bin
-			format.*
-		Others can be added.  The order of the commands in the command 
-		pipeline is determined by the "order" property.
+		An source dictionary.  If called as 'external' then this is
+		a legal 'HttpStreamSrc' file that can be transmitted off the
+		server.
+	
+	Throws:
+		QueryError neither a .dsdf and .json file exists for this source
+		RemoteServer if source is pointing to another server
+		ServerError if there is a syntax error or other misconfiguration
 	"""
+	
+	dSrcDsdf = {}
+	dSrcJson = {}
 
-	(sName, sPath) = _findDsdfNoCase(dConf['DSDF_ROOT'], sSource, fLog);
-	if sPath == None:
-		raise errors.QueryError(u"Data source %s doesn't exist on this server"%sSource)
+	(sName, sDsdfPath) = _findSrcNoCase(dConf['DSDF_ROOT'], sSource, '.dsdf', fLog)
+	if sDsdfPath != None:
+		# We have a dsdf
+		dSrcDsdf = _dsdf2Source(dConf, sDsdfPath, fLog, sTarget)
+		sJsonPath = sDsdfPath.replace('.dsdf','.json')
 
-	dProps = _loadDsdf(dConf, sName, sPath, fLog)
-	dUser = _loadOverride(dConf, sPath.replace('.dsdf','.json'), fLog)
+		# See if there are overrides in a json file
+		if os.path.isfile(sJsonPath):
+			dSrcJson = _json2Source(dConf, sJsonPath, fLog, sTarget)
+			return _dsdfOverRide(dSrcDsdf, dSrcJson)
+		else:
+			return dSrcDsdf
 
-	dProto = {}
-	dCmd = {}
-	dOut = {}
+	else:
+		dSrcDsdf = None
+		(sName, sJsonPath) = _findSrcNoCase(dConf['DSDF_ROOT'], sSource, '.json', fLog)
+		if sJsonPath == None:
+			raise errors.QueryError(u"Data source %s doesn't exist on this server"%sSource)
+		
+		return _json2Source(dConf, sJsonPath, fLog, sTarget)
 
-	dCmd = {}
-	dIntern = {'commands': dCmd}
+# ########################################################################## #
 
-	if 'reader' not in
+def internal(dConf, sSource, fLog):
+	"""Short cut for load(dConf, sSource, fLog, 'internal')"""
+	return load(dConf, sSource, fLog, 'internal')
 
-
-	dCommands = _getDict(dOut, '')
+def external(dConf, sSource, fLog):
+	"""Short cut for load(dConf, sSource, fLog, 'external')"""
+	return load(dConf, sSource, fLog, 'external')
