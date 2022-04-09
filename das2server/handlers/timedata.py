@@ -50,7 +50,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	sEnd      = form.getfirst('end_time','')
 	sRes      = form.getfirst('resolution', '')
 	sInterval = form.getfirst('interval', '')
-	sParams   =   form.getfirst('params','')
+	sParams   = form.getfirst('params','')
 	
 	if sRes == '':
 		rRes = 0.0

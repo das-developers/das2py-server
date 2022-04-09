@@ -35,6 +35,9 @@ USER_GROUP  = "%(PREFIX)s/etc/group"
 # the operating systems default pathsep character.
 MODULE_PATH = "%(PREFIX)s/lib:%(PREFIX)s/lib/python%(PYVER)s"
 
+# The file providing default command templates for this server
+CMD_TEMPLATES = "%(PREFIX)s/etc/commands.json"
+
 # The directory for binaries that don't have an explicit path, separate
 # multiple paths with ':'
 BIN_PATH = "%(PREFIX)s/bin"

@@ -1,378 +1,367 @@
 // This is an example of overriding the default user interface generated
 // automatically from a .dsdf file.
 //
+// Sections
+// --------
+// The api.json file for each das2 service defines three interfaces:
+//
+//   interface: The options to supply to the end user or downstream tool
+//   protocol:  How to create server queries form user options
+//   commands:  How to create command pipelines from protocol requests.
+//
+// The first two sections are transmitted to the das2-pyserver client.
+// the last section is used internally.
+// 
 // Syntax:
 //   The syntax is mostly JSON, with the exception that javascript style 
 //   comments are allowed.  C-style comments: /* */ are *not* handled by
 //   the parser.
 //
-// Procedure:
-//   The easiest way to generate an interface file is to download the 
-//   auto generated api.json file from the das2 server, copy sections to
-//   to here, and adjust to taste.  The following dictionaries will be
-//   read from this if present:
 //
-//      commands/*     --> commands/*               (internal)
-//      http_params/*  --> protocol/http_params/*   in api.json
-//      coordinates/*  --> interface/coordinates/*  in api.json
-//      data           --> interface/data           in api.json (whole section)
-//      options/*      --> interface/options        in api.json
+// Data source definition files
+// ----------------------------
+// Previously all das2 data sources were defined in files ending in *.dsdf
+// these files were essentially keyword = value pairs that were written
+// in IDL systax.  You can still use *.dsdf files internally if prefered
+// as the server up-converts these to the new api.json data source descriptions
+// automatically.
 //
-//   If you don't wish to customize a section, just leave it out.
+// Furthermore you can intermix *.dsdf and *.json files if desired for
+// the same source if desired, though this can lead to confusion.  This
+// works because source description loading happens as follows:
 //
-//   The most common customization is to move general options into a data
-//   section, since the automatic *.dsdf -to-> api.json file creator has
-//   no way to know how a general reader options are supposed to affect
-//   data values.
+//   1. Load the default api.json definitions.
+//   1. Read the .dsdf if present, override the default api.json defs.
+//   3. Read the .json file if present, override the default api.json defs.
+//     
+// Since the default definitions do not define a reader, or metadata-reader
+// *at least one* of a *.dsdf or *.json file must exist to define a data
+// source.  If both exist the *.json file defs take precidence.
+//
+//
+// Proceedure
+// ----------
+// The easiest way to generate an interface file is to download the 
+// auto generated api.json file from the das2 server, copy sections to
+// to here, and adjust to taste.  If you don't wish to customize a section,
+// just leave it out.
+//
+// The most common customization is to move general options into a data
+// section, since the automatic *.dsdf -to-> api.json file creator has
+// no way to know how a general reader options are supposed to affect
+// data values.
 
 
-{ // BEGIN
+{ // JSON Begin
 
-"version":"0.1",  // This is a version 0.1 DSIF (Data Source Interface File)
+// We're defining these items from the command line level outwards towards
+// the end user interface.
+
+// Define the data reading command. The "template" option below should be
+// read as a single string.  Breaking it into a list is just provided as
+// a convienience.  For more information on the "template" parameter see
+// CmdTemplates.md in the /docs subdirectory.
 
 
-// Commands
-// --------
-// Interally das2-pyserver has to run commands to generate data and to operate
-// on streams.  By default your reader is assumed to support one of the
-// following command line patterns:
-//
-//   reader BEGIN_TIME END_TIME [OPTION 1 | OPTION 2 | ....]
-//
-//   reader INTERVAL BEGIN_TIME END_TIME [OPTION 1 | OPTION 2 | ....]
-//
-// In the commands section you can change how various programs are initiated by
-// the server using command templates.  
-//
-// The commands block typically consists of a "read" and sometimes a "bin"
-// section.  Though the following sections are supported:
-//
-//    read           - the data reader
-//    bin            - a bin reducer
-//    psd            - a power spectral density estimator
-//    format.csv     - a CSV formatter
-//    format.votable - a das2 stream to votable formatter
-//    format.hapi    - a das2 stream to hapi stream formatter
-//    format.png     - An image creator
-//
-// Command line Substitutions
-// --------------------------
-//
-// Command templates have the following basic form:
-//
-//   #[ HTTP_GET_KEY  #  Cmdline text if key given  #  Cmdline text if key absent ]#
-//
-// 
-// Since $ has meaning for posix shells, and %% has meaning for cmd.exe but the
-// '#' character only matters to twitter, # was chosen to indicate repacement
-// text. Plus it's safer in a unix environment as a stray # just erases part of
-// a command line, it dosen't trigger potentially dangerous effects.
-//
-// 
-//
-// A general command value substitution looks like this:
-//
-//   #[KEY_NAME/FLAG_VALUE # value if option received # value if option missing]
-//
-// If the option has no sub-flags then "/FLAG_NAME" is omitted.  This becames
-//   
+"internal": {
 
-//
-//   The symbol @ in the text sections represents the value of the option or
-//   of the flag.  To avoid shell injection attacks, option and flag values
-//   will have un-safe characters stripped.
-//  
-// There are two shorter forms:
-//
-//  1. #[ KEY_NAME/FLAG_VALUE # value if option received ]
-//     Error out if the option is not received.  Having no third section 
-//     makes the option manditory
-//
-//  2. #[ KEY_NAME/FLAG_VALUE ]
-//     This is the same as #[KEY_NAME/FLAG_VALUE # @ ].  So like the version
-//     above, having no third section makes this option manditory.
-//
-// To avoid long lines in the config file.  The template is provided as a list
-// of strings with implicit space separators. 
-//
-// For now the full range of replacement HTTP GET keys is:
-//
-//    read.time.min    (expected data read start time)
-//    read.time.max    (expected data read stop time)
-//    read.time.interval (expected output interval for model based data)
-//    read.options     (exta options for the data reader, may be customized here)
-//
-//    dft.length       (the DFT length for power spectral density calculations)
-//    dft.slide        (DFT step over is given by dft.length/dft.slide)
-//
-//    bin.time.max     (expected max bin size for reduced streams)
-//    bin.merge        (how to merge data values when binning, a flag value)
-//
-//    format.mime      (the expected output format)
-//
-//    format.secfrac   (number of fractional seconds for text ISO-8601 times)
-//    format.sigdigit  (number of significant digits for general text data output)
-//    format.delim     (the delimiter to use for "comma" separated values files)
-//    format.width     (the pixel width for output images)
-//    format.height    (the pixel height for output images)
-//
-// Though the cmd.py script mentioned in Params.dsdf that implements this
-// reader does not need customzed command line template, it is written here
-// anyway as an example.
+	"commands":{
+		"read":{
+			"title":"Themis Data Reader",
+			"template":[
+				"env PYTHONPATH=%(PREFIX)s/lib/python%(PYVER)s",
+				"python%(PYVER)s %(PREFIX)s/examples/cdf.py",
+				"%(PREFIX)s/examples/themis_data",
+				"#read.time.min# #read.time.max# #[read.options | @ | ]#"
+			],
+			"output":"application/vnd.das2.das2stream"
+		}
+	},
 
-"commands":{
-	"read":{
-		"title":"Themis Data Reader",
-		"template":[
-			"env PYTHONPATH=%(PREFIX)s/lib/python%(PYVER)s",
-			"python%(PYVER)s %(PREFIX)s/examples/cdf.py",
-			"%(PREFIX)s/examples/themis_data",
-			"#read.time.min# #read.time.max# #[read.options | @ | ]#"
-		],
-		"output":"application/vnd.das2.das2stream"
+	// A cache is defined as a set of segments in parameter space.
+	//
+	// Each cache block has an extent in parameter space, typically all blocks 
+	// have the same coverage area, only the boundaries change.
+	//
+	// Cache directives state how to tie one or more HTTP params to a block
+	// edge and how much "area" each block should be cover in parameter space.
+	//
+	// The parameter space is rasterized such that there exists integers:
+	// N, M, ... that can define the edges of any cache block via:
+	//
+	//   X_min = N * X_width + X_0,   X_max = (N + 1)*X_width + X_0
+	//
+	//   Y_min = M * Y_width + Y_0,   Y_max = (M + 1)*Y_width + Y_0
+	//
+	//   etc. for blocks defined in a higher parameter space.
+	//
+	// Where X_0 & Y_0 default to 0, and N, M are integer that gets B_min to
+	// within one width of the given start point in each dimension.
+	//
+	// The block definition scheme below assumes that for any given data source
+	// there is an HTTP parameter (or sub-flag) in each dimension that defines
+	// a data read start point, and a separate parameter that read end point
+	//
+	// Cache read selection:
+	// The whole point of a cache is to provide a client with the minimum
+	// size data stream to get a job done.  This handled by maximizing the
+	// resolution parameter (aka getting the coarsest resolution) without
+	// going over some limit.
+	//
+	// Even for the same resolution different cache block sets are needed
+	// if other parameters change.  For example a cache of "Bx" antenna
+	// values is different from a cache of "By" antenna values, even at the
+	// same resolution from the same reader.
+
+	"cache":{
+		"coord_map":{
+			"min_coord_params":["read.time.min"],
+			"max_coord_params":["read.time.max"],
+			"resolution_params":["bin.time.max"],
+		},
+
+		"block_sets":{
+			 "0":{"resolution":["250 ms"], "block_size":["1 hour"] },
+			"10":{"resolution":["1 s"],    "block_size":["1 day"]  }
+		}
 	}
 },
 
 // HTTP GET Parameters
 // -------------------
 // This section defines what values are acceptable for extra reader options.
-// In the future other parameters may be customized here, but for now only
-// 
-//    http_params/read.options
-//
-// may be changed.
 //
 // Input from the web for the given GET parameters will be checked against
 // the definitions below.  If it matches, the value will be passed down to
-// the data reader program as extra command line arguments.  By default
-// space separated values are passed to the reader as multiple command line
-// options.
+// the data reader program above  By default space separated values are passed
+// to the reader as multiple command line options.
 
-"http_params":{
+"protocol": {
 
-   "read.options": {
-		"title": "Optional reader arguments",  // user documentation
-		"required": false,                     // this param is not required
+	"http_params":{
+
+		// Note the "#[read.options ]" replacement text in the commands.template
+		// section above.  The stuff defined here, plugs in there.
+
+	   "read.options": {
+			"title": "Optional reader arguments",  // user documentation
+			"required": false,                     // this param is not required
+			
+			// The value will be a set of strings, each one is a boolean flag
+			"type": "flag_set",                    
 		
-		// The value will be a set of strings, each one is a boolean flag
-		"type": "flag_set",                    
+			// The flag strings are separated by spaces and will thus expand
+			// to multiple command line arguments when given to the reader
+			"flag_sep": " ",
+
+      	// Define an ID and string value for each flag.  The ID is used
+			// to connect user settings in the "coordinates", "data" and 
+			// "options" sections below with these flag strings
+      	"flags": {
+				"00": {"value": "complex"},
+	 
+				"01": {"value": "no-BxBx" },
+				"02": {"value": "no-ByBy" },
+				"03": {"value": "no-BzBz" },
+	 
+				"04": {"value": "BxBy" },
+				"05": {"value": "BxBz" },
+				"06": {"value": "ByBz" },
+	 
+				"11": {"value": "no-ExEx" },
+				"12": {"value": "no-EyEy" },
+				"13": {"value": "no-EzEz" },
+	 
+				"14": {"value": "ExEy" },
+				"15": {"value": "ExEz" },
+				"16": {"value": "EyEz" },
+ 
+				"21": {"value": "BxEx" },
+				"22": {"value": "BxEy" },
+				"23": {"value": "BxEz" },
+ 
+				"24": {"value": "ByEx" },
+				"25": {"value": "ByEy" },
+				"26": {"value": "ByEz" },
+ 
+				"27": {"value": "BzEx" },
+				"28": {"value": "BzEy" },
+				"29": {"value": "BzEz" }
+			}
+		}
+
+		// The HTTP parameters read.time.max, read.time.min and bin.time.res
+		// are automatically defined from the *.dsdf parser, so we won't
+		// override them here.
+	}
+},
+
+
+// User (or downstream) Interface
+// ------------------------------
+// This section converts the http parameters above into end-user interface
+// definitions.  The end user interface sections are:
+//
+//  coordinates - Interface option that affect sub-setting data by coordinates values
+//  data        - Interface options that affect the data to be transmitted
+//  options     - Any other interface options such as file formats.
+
+"interface" : {
+
+	"data":{
+		// Block 1
+		"bxbx": { "title": "BxBx* Autocorrelations",
+			"enabled":{
+				"value": true, // default enabled, set flag 01 to disable
+				"set": {"value":false, "param": "read.options", "flag":"01"}
+			}
+		},
+		"byby": {"title": "ByBy* Autocorrelations",
+		   "enabled":{
+				"value": true, // default enabled, set flag 02 to disable
+				"set": {"value":false, "param": "read.options", "flag": "02"}
+			}
+		},
+		"bzbz": {"title": "BzBz* Autocorrelations",
+		   "enabled":{
+				"value": true, // default enabled, set flag 03 to disable
+				"set": {"value":false, "param": "read.options", "flag": "03"}
+			}
+		},	
 		
-		// The flag strings are separated by spaces and will thus expand
-		// to multiple command line arguments when given to the reader
-		"flag_sep": " ",
+		// Block 2
+		"bxby": { "title": "BxBy* Cross-correlations",
+			"enabled":{
+				"value": false, // default disabled, set flag 04 to enable
+				"set": {"value": true, "param": "read.options", "flag": "04"}
+			}
+	   },
+		"bxbz": { "title": "BxBz* Cross-correlations",
+		   "enabled":{
+			   "value": false, // default disabled, set flag 05 to enable
+				"set": {"value": true, "param": "read.options", "flag": "05"}
+			}
+		},
+		"bybz": { "title": "ByBz* Cross-correlations",
+		   "enabled":{
+			   "value": false, // default disabled, set flag 06 to enable
+				"set": {"value": true, "param": "read.options", "flag": "06"}
+			}
+		},
 
-      // Define an ID and string value for each flag.  The ID is used
-		// to connect user settings in the "coordinates", "data" and 
-		// "options" sections below with these flag strings
-      "flags": {
-			"00": {"value": "complex"},
- 
-			"01": {"value": "no-BxBx" },
-			"02": {"value": "no-ByBy" },
-			"03": {"value": "no-BzBz" },
- 
-			"04": {"value": "BxBy" },
-			"05": {"value": "BxBz" },
-			"06": {"value": "ByBz" },
- 
-			"11": {"value": "no-ExEx" },
-			"12": {"value": "no-EyEy" },
-			"13": {"value": "no-EzEz" },
- 
-			"14": {"value": "ExEy" },
-			"15": {"value": "ExEz" },
-			"16": {"value": "EyEz" },
- 
-			"21": {"value": "BxEx" },
-			"22": {"value": "BxEy" },
-			"23": {"value": "BxEz" },
- 
-			"24": {"value": "ByEx" },
-			"25": {"value": "ByEy" },
-			"26": {"value": "ByEz" },
- 
-			"27": {"value": "BzEx" },
-			"28": {"value": "BzEy" },
-			"29": {"value": "BzEz" }
+		// Block 3
+	   "exex": { "title": "ExEx* Autocorrelations",
+			"enabled":{
+		  		"value": true, // default enabled set flag 11 to disable
+		  		"set": {"value": false, "param": "read.options", "flag": "11"}
+			}
+		},
+		"eyey": { "title": "EyEy* Autocorrelations",
+			"enabled":{
+		  		"value": true, // default enabled set flag 12 to disable
+				"set": {"value": false, "param": "read.options", "flag": "12"}
+			}
+		},
+		"ezez": { "title": "EzEz* Autocorrelations",
+			"enabled":{
+				"value": true, // default enabled, set flag 13 to disable
+				"set": {"value": true, "param": "read.options", "flag": "13"}
+			}
+		},
+		
+		// Block 4
+		"exey": { "title": "ExEy* Cross-correlations",
+			"enabled":{
+				"value": false, // default disabled, set flag 14 to enable	  
+				"set": {"value": true, "param": "read.options", "flag": "14"}
+			 }
+		},
+		"exez": { "title": "ExEz* Cross-correlations",
+			"enabled":{
+				"value": false, // default disabled, set flag 15 to enable	
+				"set": {"value": true, "param": "read.options", "flag": "15"}
+			}
+		},
+		"eyez": {
+			"enabled":{"title": "EyEz* Cross-correlations",
+				"value": false, // default disabled, set flag 16 to enable		
+				"set": {"value": true, "param": "read.options", "flag": "16"}
+			}
+		},
+
+		// Block 5
+		"bxex": { "title": "BxEx* Cross-correlations",
+		   "enabled":{
+			   "value": false, // default disabled, set flag 21 to enable
+				"set": {"value": true, "param": "read.options", "flag": "21"}
+			}
+		},
+		"bxey": { "title": "BxEy* Cross-correlations",
+		   "enabled":{
+			   "value": false, // default disabled, set flag 22 to enable
+				"set": {"value": true, "param": "read.options", "flag": "22"}
+			}
+		},
+		"bxez": { "title": "BxEz* Cross-correlations",
+		   "enabled":{
+			   "value": false, // default disabled, set flag 23 to enable
+				"set": {"value": true, "param": "read.options", "flag": "23"}
+			}
+		},
+		
+		// Block 6
+		"byex": { "title": "ByEx* Cross-correlations",
+		   "enabled":{
+			   "value": false, // default disabled, set flag 24 to enable
+				"set": {"value": true, "param": "read.options", "flag": "24"}
+			}
+		},
+		"byey": { "title": "ByEy* Cross-correlations",
+		   "enabled":{
+			   "value": false, // default disabled, set flag 25 to enable
+				"set": {"value": true, "param": "read.options", "flag": "25"}
+			}
+		},
+		"byez": { "title": "ByEz* Cross-correlations",
+		   "enabled":{
+			   "value": false, // default disabled, set flag 26 to enable
+				"set": {"value": true, "param": "read.options", "flag": "26"}
+			}
+		},
+		
+		// Block 7
+		"bzex": { "title": "BzEx* Cross-correlations",
+		   "enabled":{
+			   "value": false, // default disabled, set flag 27 to enable
+				"set": {"value": true, "param": "read.options", "flag": "27"}
+			}
+		},
+		"bzey": { "title": "BzEy* Cross-correlations",
+		   "enabled":{
+			   "value": false, // default disabled, set flag 28 to enable
+				"set": {"value": true, "param": "read.options", "flag": "28"}
+			}
+		},
+		"bzez": { "title": "BzEz* Cross-correlations",
+		   "enabled":{
+			   "value": false, // default disabled, set flag 29 to enable
+				"set": {"value": true, "param": "read.options", "flag": "29"}
+			}
 		}
+	},
+
+	// General Options
+	// ---------------
+	// Define general options here that that don't seem to fit in anywhere else
+
+	"options": {
+
+	   "complex": {
+			"title": "For cross-correlations output real and imaginary parts instead of magnitude and phase angle",
+			"value": false,  // Defaults to false, set flag 00 to enable
+	      "set": {"value": true, "param": "read.options", "flag": "00"}
+	   }
 	}
-},
-
-// Coordinates
-// -----------
-// By default (for now) all das2 sources are assumed to emit data with a
-// time coordinate for the X-axis.  Define extra coordinates here and any
-// options that effect them.  
-//
-// These data are also output in frequency coordinates, though there
-// are no options to control this aspect of the stream.
-
-"coordinates" : {
-	"frequency":{
-		"name":"Frequency"
-	}
-},
-
-
-// Data Values
-// -----------
-// Most of the options affect data output.  Here we define for the
-// end user how these option affect the data stream they will receive.
-
-"data":{
-	// Block 1
-	"bxbx": { "title": "BxBx* Autocorrelations",
-		"enabled":{
-			"value": true, // default enabled, set flag 01 to disable
-			"set": {"value":false, "param": "read.options", "flag":"01"}
-		}
-	},
-	"byby": {"title": "ByBy* Autocorrelations",
-	   "enabled":{
-			"value": true, // default enabled, set flag 02 to disable
-			"set": {"value":false, "param": "read.options", "flag": "02"}
-		}
-	},
-	"bzbz": {"title": "BzBz* Autocorrelations",
-	   "enabled":{
-			"value": true, // default enabled, set flag 03 to disable
-			"set": {"value":false, "param": "read.options", "flag": "03"}
-		}
-	},	
-	
-	// Block 2
-	"bxby": { "title": "BxBy* Cross-correlations",
-		"enabled":{
-			"value": false, // default disabled, set flag 04 to enable
-			"set": {"value": true, "param": "read.options", "flag": "04"}
-		}
-   },
-	"bxbz": { "title": "BxBz* Cross-correlations",
-	   "enabled":{
-		   "value": false, // default disabled, set flag 05 to enable
-			"set": {"value": true, "param": "read.options", "flag": "05"}
-		}
-	},
-	"bybz": { "title": "ByBz* Cross-correlations",
-	   "enabled":{
-		   "value": false, // default disabled, set flag 06 to enable
-			"set": {"value": true, "param": "read.options", "flag": "06"}
-		}
-	},
-
-	// Block 3
-   "exex": { "title": "ExEx* Autocorrelations",
-		"enabled":{
-	  		"value": true, // default enabled set flag 11 to disable
-	  		"set": {"value": false, "param": "read.options", "flag": "11"}
-		}
-	},
-	"eyey": { "title": "EyEy* Autocorrelations",
-		"enabled":{
-	  		"value": true, // default enabled set flag 12 to disable
-			"set": {"value": false, "param": "read.options", "flag": "12"}
-		}
-	},
-	"ezez": { "title": "EzEz* Autocorrelations",
-		"enabled":{
-			"value": true, // default enabled, set flag 13 to disable
-			"set": {"value": true, "param": "read.options", "flag": "13"}
-		}
-	},
-	
-	// Block 4
-	"exey": { "title": "ExEy* Cross-correlations",
-		"enabled":{
-			"value": false, // default disabled, set flag 14 to enable	  
-			"set": {"value": true, "param": "read.options", "flag": "14"}
-		 }
-	},
-	"exez": { "title": "ExEz* Cross-correlations",
-		"enabled":{
-			"value": false, // default disabled, set flag 15 to enable	
-			"set": {"value": true, "param": "read.options", "flag": "15"}
-		}
-	},
-	"eyez": {
-		"enabled":{"title": "EyEz* Cross-correlations",
-			"value": false, // default disabled, set flag 16 to enable		
-			"set": {"value": true, "param": "read.options", "flag": "16"}
-		}
-	},
-
-	// Block 5
-	"bxex": { "title": "BxEx* Cross-correlations",
-	   "enabled":{
-		   "value": false, // default disabled, set flag 21 to enable
-			"set": {"value": true, "param": "read.options", "flag": "21"}
-		}
-	},
-	"bxey": { "title": "BxEy* Cross-correlations",
-	   "enabled":{
-		   "value": false, // default disabled, set flag 22 to enable
-			"set": {"value": true, "param": "read.options", "flag": "22"}
-		}
-	},
-	"bxez": { "title": "BxEz* Cross-correlations",
-	   "enabled":{
-		   "value": false, // default disabled, set flag 23 to enable
-			"set": {"value": true, "param": "read.options", "flag": "23"}
-		}
-	},
-	
-	// Block 6
-	"byex": { "title": "ByEx* Cross-correlations",
-	   "enabled":{
-		   "value": false, // default disabled, set flag 24 to enable
-			"set": {"value": true, "param": "read.options", "flag": "24"}
-		}
-	},
-	"byey": { "title": "ByEy* Cross-correlations",
-	   "enabled":{
-		   "value": false, // default disabled, set flag 25 to enable
-			"set": {"value": true, "param": "read.options", "flag": "25"}
-		}
-	},
-	"byez": { "title": "ByEz* Cross-correlations",
-	   "enabled":{
-		   "value": false, // default disabled, set flag 26 to enable
-			"set": {"value": true, "param": "read.options", "flag": "26"}
-		}
-	},
-	
-	// Block 7
-	"bzex": { "title": "BzEx* Cross-correlations",
-	   "enabled":{
-		   "value": false, // default disabled, set flag 27 to enable
-			"set": {"value": true, "param": "read.options", "flag": "27"}
-		}
-	},
-	"bzey": { "title": "BzEy* Cross-correlations",
-	   "enabled":{
-		   "value": false, // default disabled, set flag 28 to enable
-			"set": {"value": true, "param": "read.options", "flag": "28"}
-		}
-	},
-	"bzez": { "title": "BzEz* Cross-correlations",
-	   "enabled":{
-		   "value": false, // default disabled, set flag 29 to enable
-			"set": {"value": true, "param": "read.options", "flag": "29"}
-		}
-	}
-},
-
-// General Options
-// ---------------
-//
-// Define general options here that that don't seem to fit in anywhere else
-
-"options": {
-
-   "complex": {
-		"title": "For cross-correlations output real and imaginary parts instead of magnitude and phase angle",
-		"value": false,  // Defaults to false, set flag 00 to enable
-      "set": {"value": true, "param": "read.options", "flag": "00"}
-   }
 }
 
 } // END

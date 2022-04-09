@@ -173,6 +173,8 @@ def prnErrorContext(curPkt, nLine):
 			sLine = lLines[i][:76] + " ..."
 		else:
 			sLine = lLines[i]
+
+		sLine = sLine.replace('>','&gt;').replace('<','&lt;')
 			
 		# If we have a valid line number only print within 6 lines each 
 		# way of the header
@@ -252,9 +254,14 @@ def validateFile(U, dConf, fLog, form):
 		ValueError, etree.XMLSyntaxError, etree.DocumentInvalid, 
 		xml.parsers.expat.ExpatError
 	) as e:
+		pout("<li>")
 		if curPkt:
 			if sCurType:
-				pout("|%s| ID %s %s header [ERROR] (context follows)"%(curPkt.tag, curPkt.id, sCurType))
+				pout(
+					"<li>Packet type <b>%s</b>, %s ID %s"
+					"|%s| ID %s %s header <span id=error>ERROR</span> (context follows)"%(
+						curPkt.tag, sCurType, curPkt.id)
+				)
 			else:
 				pout("|%s| ID %s data [ERROR]"%(pkt.tag, pkt.id))
 			
@@ -288,10 +295,12 @@ def validateFile(U, dConf, fLog, form):
 		#pout(type(e), "\n   dir:", dir(e.error_log[-1]), '\n   msg:', e.error_log[-1].message)
 		#pout("Error in %s:\n%s"%(sFile, str(e)))
 		return (5, sStreamVer)
-				
+
 	for nId in dDataPktCount:
-		pout("|Dx| ID %d %d data packets [OKAY]"%(nId, dDataPktCount[nId]))
+		pout("<li>|Dx| ID %d %d data packets [OKAY]</li>"%(nId, dDataPktCount[nId]))
 	
+	pout("</ul>")
+
 	if bStrict:
 		pout('Stream validates as a strict %s version %s stream without extensions\n'%(
 			sStreamContent, sStreamVer))

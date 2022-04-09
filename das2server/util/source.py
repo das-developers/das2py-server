@@ -178,17 +178,17 @@ def stdFormKeys(sConvention):
 
 ##############################################################################
 
-def _findDsdfNoCase(sRoot, sDsdf, fLog):
+def _findDsdfNoCase(sRoot, sSource, fLog):
 	"""Look up dsdf files using a case sensitive root and a case insensitive
-	remaning path.  If sDsdf doesn't end in .dsdf, that string is appended 
+	remaning path.  If sSource doesn't end in .dsdf, that string is appended 
 	"""
 
-	if not sDsdf.endswith('.dsdf'):
-		sDsdf = "%s.dsdf"%sDsdf
+	if not sSource.endswith('.dsdf'):
+		sSource = "%s.dsdf"%sSource
 
 	if not os.path.isdir(sRoot): return (None,None)
 
-	lIn = sDsdf.split('/')
+	lIn = sSource.split('/')
 	sPath = sRoot
 	
 	lName = []
@@ -611,7 +611,7 @@ def _mergeSrcCoordInfo(dOut, dProps, dUser, fLog):
 		dTime['resolution']['set'] = {'param':sResKey, 'required':False}
 
 
-	# If I have a *.dsif file, take extra coordinates from there
+	# If I have a *.json file, take extra coordinates from there
 	if ('coordinates' in dUser) and (len(dUser['coordinates']) > 0):
 		for key in dUser['coordinates']:
 			dCoords[key] = dUser['coordinates'][key]
@@ -632,11 +632,11 @@ def _mergeSrcCoordInfo(dOut, dProps, dUser, fLog):
 
 def _mergeSrcDataInfo(dOut, dProps, dUser, fLog):
 	"""In general the das2 server has no understanding of output data 
-	values.  This information can be given explicitly in a .dsif file
+	values.  This information can be given explicitly in a .json file
 	or as a fallback, the .dsdf file can be scraped for hints.
 	"""
 
-	# If I have a *.dsif file, take data value information from there
+	# If I have a *.json file, take data value information from there
 	if ('data' in dUser) and (len(dUser['data']) > 0) :
 		dIface  = _getDict(dOut, 'interface')
 		dData = _getDict(dIface, 'data')
@@ -951,80 +951,9 @@ def _mergeFormat(dConf, dOut, dProps, fLog):
 		output.addFormatHttpParams(dConf, dOut['protocol']['http_params'])
 
 
-def _mergeInternal(dConf, dOut, dProps, fLog):
-	"""Add in the internal "commands" block and the internal "cache" 
-	The commands block typically consists of a "read" section and a
-	"bin" section.  Though the following are supported:
-
-		read - the reader
-		bin  - a bin reducer
-		dft  - a Fourier transformer
-		format.csv - a formatter
-		format.votable
-		format.hapi
-		format.png - An image creator
-
-	Since $ has meaning for posix shells, and % has meaning for cmd.exe
-	but # only matters to twitter, # was chosen to indicate repacement
-	text. Plus it's safer in a unix environment as a stray # just 
-	erases part of a command line, it dosen't add to it.
-
-	The command templates look like this:
-
-	   waves_pds_srvrdr #[ -r #PARAM ]  #[ #PARAM | default ]
-      ^                ^     ^                   ^
-      |                |     |                   |
-      |                |     +-- HTTP GET value  +-- indicate optional param
-      |                |
-      +- General text  +- Start replace
-
-	General Forms:
-	   #PARAM  <-- Generic required parameter replacement
-
-      #[ stuff #PARAM more stuff ]  <-- required parameter with extra text
-
-      #[ #PARAM | ]  <-- an optional parameter with no replacement text
-
-	   #[ #PARAM | default ] <-- an optional parameter with default value.
-                                the default value can't contain a '#' 
-
-	Here's a few examples for clarity:
-
-	GET:
-	   read.time.min=2021-01-04&bin.time.max=0.30&read.time.max=2021-01-05
-
-	Command Templates:
-	   1. myreader #read.time.min #read.time.max #[ #read.options | ]
-
-	   2. mybinner #[-b #read.time.min] #["#bin.time.max"]
-
-	Command lines:
-	   1. myreader time.gt.2021-01-04 time.lt.2021-01-05
-
-      2. mybinner -b 2021-01-04 "0.30"
-
-	To make it easier to read the config.  The template can be provided
-	as a string, or as a list.  If you use a list, all list elements are
-   merged using space separators.
-
-   "commands":{
-		"read":{
-			"command":[
-				"/project/juno/etc/invoke.sh myreader",
-				"time.gt.#read.time.min",
-				"time.lt.#read.time.max"
-			]	"#[#read.options| ]"
-		}
-	"""
-
-	dCmds = _getDict(dOut, "commands")
-
-	
-
-
 # ########################################################################## #
 
-def external(dConf, sDsdf, fLog):
+def external(dConf, sSource, fLog):
 	"""Create an HttpStreamSrc object from a DSDF file and the given server
 	configuration information.
 
@@ -1037,19 +966,18 @@ def external(dConf, sDsdf, fLog):
 		ServerError if there is a syntax error or other misconfiguration
 	"""
 	
-	(sName, sPath) = _findDsdfNoCase(dConf['DSDF_ROOT'], sDsdf, fLog);
+	(sName, sPath) = _findDsdfNoCase(dConf['DSDF_ROOT'], sSource, fLog);
 	if sPath == None:
-		raise errors.QueryError(u"Data source %s doesn't exist on this server"%sDsdf)
+		raise errors.QueryError(u"Data source %s doesn't exist on this server"%sSource)
 
-	dProps = _loadDsdf(dConf, sName, sPath, fLog)
+	dDsdf = _loadDsdf(dConf, sName, sPath, fLog)
 
 	dUser = _loadOverride(dConf, sPath.replace('.dsdf','.json'), fLog)
 	
-	# TODO: Could merge in json data from disk here, but skip it for now...
 	dOut = {}
 
-	#sCustom = sDsdf.replace('.dsdf','.json')
-	#if sDsdf.endswith('.dsdf') and os.path.isfile(sCustom) :
+	#sCustom = sSource.replace('.dsdf','.json')
+	#if sSource.endswith('.dsdf') and os.path.isfile(sCustom) :
 	#	fIn = open(dNode['filename'])
 	#	dOut = json.load(fIn)
 	#	fIn.close()
@@ -1058,14 +986,14 @@ def external(dConf, sDsdf, fLog):
 
 	# The disk entries may have been hand edited.  Don't override the name and
 	# description, go ahead and smash the type and path
-	if 'name' not in dOut: dOut['name'] = dProps['__name__']
-	if 'title' not in dOut and 'description' in dProps: 
-		dOut["title"] = dProps['description']['00']
+	if 'name' not in dOut: dOut['name'] = dDsdf['__name__']
+	if 'title' not in dOut and 'description' in dDsdf: 
+		dOut["title"] = dDsdf['description']['00']
 	dOut['type'] = 'HttpStreamSrc'
 	dOut['version'] = "0.6"
 
 	# potentially override the base url and set the protocol convention
-	sBaseUrl = _mergeProto(dOut, dProps, fLog)
+	sBaseUrl = _mergeProto(dOut, dDsdf, fLog)
 	
 	# make an ID for the datasource if requested
 	#if sIdRoot:
@@ -1079,17 +1007,17 @@ def external(dConf, sDsdf, fLog):
 	#if 'uris' in dNode:
 	#	dOut['uris'] = dNode['uris']
 		
-	_mergeContacts(dOut, dProps, fLog)
+	_mergeContacts(dOut, dDsdf, fLog)
 	
-	_mergeSrcCoordInfo(dOut, dProps, dUser, fLog)
+	_mergeSrcCoordInfo(dOut, dDsdf, dUser, fLog)
 	
-	_mergeSrcDataInfo(dOut, dProps, dUser, fLog)
+	_mergeSrcDataInfo(dOut, dDsdf, dUser, fLog)
 	
 	# Set the authentication information
 	dProto = dOut['protocol']	
-	if 'securityRealm' in dProps:
+	if 'securityRealm' in dDsdf:
 		dProto['authentication'] = {
-			'required':True, 'realm':dProps['securityRealm']['00']
+			'required':True, 'realm':dDsdf['securityRealm']['00']
 		}
 	else:
 		dProto['authentication'] = {'required':False}
@@ -1115,7 +1043,7 @@ def external(dConf, sDsdf, fLog):
 	}
 	
 	# See if requires interval is set, if not
-	if _isPropTrue(dProps, 'requiresInterval'):
+	if _isPropTrue(dDsdf, 'requiresInterval'):
 		dGet[sIntKey] = {
 			'required':True, 'type':'real', 'units':'s',
 			'name':'Interval', 
@@ -1135,7 +1063,7 @@ def external(dConf, sDsdf, fLog):
 			   'at intrinsic resolution without server side averages',
 		}
 
-	# Take extra reader parameters from the new *.dsif files, or try to get
+	# Take extra reader parameters from the new *.json files, or try to get
 	# them from the old *.dsdf files
 	if ('http_params' in dUser) and (sOptKey in dUser['http_params']):
 		dGet[sOptKey] = dUser['http_params'][sOptKey]
@@ -1149,16 +1077,75 @@ def external(dConf, sDsdf, fLog):
 				
 	else:
 		# Fall back to auto-generating these from dsdf hints.
-		_mergeDas2Params(dOut, dProps, fLog)
+		_mergeDas2Params(dOut, dDsdf, fLog)
 		
 	# Could ask server if text output is supported, old servers don't 
 	# have a way to do this.
-	_mergeExamples(dOut, dProps, sBaseUrl, fLog)
+	_mergeExamples(dOut, dDsdf, sBaseUrl, fLog)
 
 	# Set our data output options
-	_mergeFormat(dConf, dOut, dProps, fLog)
-
-	if bInternal:
-		_mergeInternal(dConf, dOut, dProps, fLog)
+	_mergeFormat(dConf, dOut, dDsdf, fLog)
 
 	return dOut
+
+# ########################################################################## #
+
+def _mergeInternal(dConf, dOut, dProps, fLog):
+	"""Add in the internal 
+	"""
+
+	dCmds = _getDict(dOut, "commands")
+
+
+# ########################################################################## #
+
+def internal(dConf, sSource, fLog):
+	"""Get a JSON description of the interfaces for a given data source.
+	These are the:
+
+	   protocol
+	   internal
+
+	sections.  Protocol is useful for internally generating get parameters
+	in order to drive cache block creation using the front door.
+
+	Args:
+		dConf - A dictionary containing the server configuration
+
+		sSource - The on-disk location of the dataset source description.
+		   This may be a file that ends in .dsdf or a new one that ends
+		   in *.json
+
+		fLog - An object with a .write method.
+
+	Returns:
+		A dictionary of command description objects.  Each key in the 
+		dictionary represents one command category.  The know command
+		categories are:
+			read
+			meta
+			psd
+			bin
+			format.*
+		Others can be added.  The order of the commands in the command 
+		pipeline is determined by the "order" property.
+	"""
+
+	(sName, sPath) = _findDsdfNoCase(dConf['DSDF_ROOT'], sSource, fLog);
+	if sPath == None:
+		raise errors.QueryError(u"Data source %s doesn't exist on this server"%sSource)
+
+	dProps = _loadDsdf(dConf, sName, sPath, fLog)
+	dUser = _loadOverride(dConf, sPath.replace('.dsdf','.json'), fLog)
+
+	dProto = {}
+	dCmd = {}
+	dOut = {}
+
+	dCmd = {}
+	dIntern = {'commands': dCmd}
+
+	if 'reader' not in
+
+
+	dCommands = _getDict(dOut, '')

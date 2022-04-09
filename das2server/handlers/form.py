@@ -1018,7 +1018,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		U.webio.notFoundError(fLog, u"PATH_INFO did not end with /form.html")
 
 	try:
-		dNode = U.source.load(dConf, sSource, fLog)
+		dNode = U.source.external(dConf, sSource, fLog)
 	except U.errors.QueryError:
 		U.webio.queryError(fLog, "Data source does not exist")
 		return 17

@@ -32,6 +32,16 @@
 		"input":"application/vnd.das2.das2stream",
 		"output":"application/vnd.das2.das2stream"
 	},
+
+	// Example of adding a binner for QStreams:
+	//
+	//"bin":{
+	//	"trigger":{"key":"bin.time.max","value":0,"compare":"gt"},
+	//	"order":30,
+	//	"template":["QReduce #[bin.time.max] " ],
+	//	"input":"application/vnd.das2.qstream",
+	//	"output":"application/vnd.das2.qstream"
+	//}
 		
 	"format.csv":{
 		"trigger":{"key":"format.mime","value":"text/csv"},
@@ -51,12 +61,12 @@
 		"order":40,
 		"template":[
 			"autoplot_url2png.py",
-			"server=#SERVER#",
-			"dataset=#DATASET#",
-			"start_time=#read.time.min#",
-			"end_time=#read.time.max#",
-			"image=#FILE#",
-			"param=#[#read.options#|]#"
+			"#[_server # server=@ ]",
+			"#[_datasource # dataset=@ ]",
+			"#[read.time.min # start_time=@ ]",
+			"#[read.time.max # end_time=@ ]",
+			"#[_file # image=@ ]",
+			"#[read.options # param=@ # ]"
 		],
 		"input":"application/vnd.das2.das2stream",
 		"output":"image/png"

@@ -9,12 +9,9 @@ import os
 from . import webio
 
 # ########################################################################## #
-# Default Command templates, could make this external #
-
-g_dDefCmds = {
+# Given the 
 
 
-}
 
 
 ##############################################################################

@@ -49,7 +49,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	# the server itself.
 	
 	try:
-		dDef = U.source.load(dConf, sSource,fLog)
+		dDef = U.source.external(dConf, sSource,fLog)
 	except U.errors.QueryError:
 		U.webio.queryError(fLog, "Data source does not exist")
 		return 17
