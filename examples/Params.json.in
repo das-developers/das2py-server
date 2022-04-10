@@ -65,7 +65,7 @@
 
 "internal": {
 
-	"commands":{
+	"command":{
 		"read":{
 			"title":"Themis Data Reader",
 			"template":[
@@ -114,15 +114,20 @@
 	// same resolution from the same reader.
 
 	"cache":{
-		"coord_map":{
-			"min_coord_params":["read.time.min"],
-			"max_coord_params":["read.time.max"],
-			"resolution_params":["bin.time.max"],
-		},
+		"min_coord_params":["read.time.min"],
+		"max_coord_params":["read.time.max"],
+		
+		"mime":"application/vnd.das2.das2stream",
 
 		"block_sets":{
-			 "0":{"resolution":["250 ms"], "block_size":["1 hour"] },
-			"10":{"resolution":["1 s"],    "block_size":["1 day"]  }
+			"250ms_Bx":{
+				"resolution_params":["bin.time.max"],
+				"resolution":["250 ms"], "block_size":["1 hour"],
+				"fixed_params" : {"read.options":"Bx"},
+			},
+			"1s":{
+				"resolution":["1 s"],    "block_size":["1 day"]  
+			}
 		}
 	}
 },

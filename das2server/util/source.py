@@ -17,6 +17,10 @@ from . import output
 
 import das2
 
+g_d1s_mime = "application/octet-stream"
+g_d2s_mime = "application/vnd.das2.das2stream"
+g_qs_mime  = "application/vnd.das2.qstream"
+
 #########################################################################
 
 def stdFormKeys(sConvention):
@@ -290,6 +294,11 @@ def _dropKey(dDict, sKey):
 	
 	return dDict
 
+def _confItem(dConf, sKey, sDefault):
+	if (sKey in dConf) and (dConf[sKey] != None) and len(dConf[sKey]) > 0:
+		return dConf[sKey]
+	else:
+		return sDefault
 
 ##############################################################################
 def _mergeContacts(dOut, dProps, fLog):
@@ -761,8 +770,8 @@ def _mergeFormat(dConf, dOut, dProps, fLog):
 	if _isPropTrue(dProps, 'qstream'):
 		dDefFmt = {
 			"name":"QStream",
-			"title":"QStream, application/vnd.das2.qstream (*.qds)",
-			"mime": "application/vnd.das2.qstream", 
+			"title":"QStream, %s (*.qds)"%g_qs_mime,
+			"mime": g_qs_mime, 
 			"extension": ".qds",
 			"enabled": {"value":True },
 		}
@@ -770,8 +779,8 @@ def _mergeFormat(dConf, dOut, dProps, fLog):
 	elif _isPropTrue(dProps, 'das2Stream'):
 		dDefFmt =  {
 			"name":"das2 binary",
-			"title":"das2 binary stream, application/vnd.das2.das2stream (*.d2s)",
-			"mime":"application/vnd.das2.das2stream",
+			"title":"das2 binary stream, %s (*.d2s)"%g_d2s_mime,
+			"mime": g_d2s_mime,
 			"extension":".d2s",
 			"enabled":{"value":True},
 		}
@@ -779,8 +788,8 @@ def _mergeFormat(dConf, dOut, dProps, fLog):
 	else:
 		dDefFmt =  {
 			"name":"das1 binary",
-			"mime":"application/octet-stream",
-			"title":"das1 binary stream, application/octet-stream (*.bin)",
+			"mime":g_d1s_mime,
+			"title":"das1 binary stream, %s (*.bin)"%g_d1s_mime,
 			"extension":".bin",
 			"enabled":{"value":True},
 		}
@@ -818,113 +827,174 @@ def _mergeFormat(dConf, dOut, dProps, fLog):
 
 
 # ########################################################################## #
-def _mergeInternal(dOut, dDsdf, fLog):
+# Merge 
+
+def _mergeInternal(dOut, dConf, dProps, fLog):
 	"""Get all the items needed for the internal server interface that are
-	not to be sent out to the clients.
+	not to be sent out to the clients.  This includes:
 
+	internal
+		.command
+			.read   (from reader=, das2Stream=, qstream=)
+			.bin    (from reducer=, das2Stream=, qstream=)
+			.cache  (from cacheReader=)
+
+		.cache (from cacheLevel_XX=)  <-- Disk read/write info
+		
+		.authorization (from readAccess=)
+
+		.authentication (from securityRealm=)
 	"""
-	dImpl = {}
-
-
-	if 'OPTIONS' not in dSrc['QUERY_PARAMS']:
-		raise errors.ServerError("OPTIONS section missing from QUERY_PARAMS")
-	dOpts = dSrc['QUERY_PARAMS']['OPTIONS']
-
-
-	if 'readerCmd' in self.d:
-		dImpl['_reader'] = {'_cmd':self.d['readerCmd']}
+	
+	# Save the mime-type for the command inputs and outputs
+	bSkipReduce = False
+	if isPropTrue(dProps, 'qstream'):
+		sMime = g_qs_mime
+	elif isPropTrue(dProps, 'das2Stream'):
+		sMime = g_d2s_mime
 	else:
-		if 'requiresInterval' in self.d:
-			dImpl['_reader'] = {
-				'_cmd':"%s %%{time.int} %%{time.min} %%{time.max}"%self.d['reader']
-			}
-		else:
-			dImpl['_reader'] = {'_cmd':
-				"%s %%{time.min} %%{time.max}"%self.d['reader']
-			}
-			if len(dOpts) == 0:
-				dImpl['_reader']['_cmd'] += " %{params}"
+		sMime = g_d1s_mime
+		bSkipReduce = True
 
-		# now add in all options...
-		for sKey in dOpts:
-			dImpl['_reader']['_cmd'] += " %%{%s}"%sKey
+	(sBegKey, sEndKey, sResKey, sIntKey, sOptKey) = stdFormKeys(
+		dOut['protocol']['convention']
+	)
 
-	if 'reducerCmd' in self.d:
-		dImpl['_reducer'] = {'_cmd':self.d['reducerCmd']}
-	else:
-		if 'reducer' in self.d and \
-			(self.d['reducer'] not in ('not_reducable','not_reducible')):
+	dIntr = _getDict(dOut, 'internal')
+	dCmd = _getDict(dIntr, 'command')
 
-			dImpl['_reducer'] = {'_cmd':"%s %%{time.res}"%self.d['reducer']}
+	# Reader Section #################################
+	if 'reader' in dProps in '00' in dProps['reader']:
+		sRdr = dProps['reader']['00']
 
-		elif 'reducer' not in self.d:
-			# Get default reducer based on the stream type
-			if 'qstream' in self.d:
-				if 'QDS_REDUCER' in dConf:
-					dImpl['_reducer'] = {'_cmd':"%s %%{time.res}"%dConf['QDS_REDUCER']}
+		# Look for $(PARAMS) substitutions in the file to make a read.options
+		# subsitution in the command line
+		iBeg = sRdr.find('$(PARAMS')
+		if iBeg != -1:
+			iEnd = sRdr[iBeg:].find(')')
+			if iEnd == -1:
+				fLog.write("Invalid DSDF: %s"%dProps['__path__'])
+				return
 			else:
-				if 'D2S_REDUCER' in dConf:
-					dImpl['_reducer'] = {'_cmd':"%s -b %%{time.min} %%{time.res}"%dConf['D2S_REDUCER']}
+				iEnd += iBeg + 1
+			
+			sSub = sRdr[iBeg+2:iEnd-1]
+			lSub = sSub.split(',')
+			
+			if len(lSub) > 1:
+				sOptTplt = '#[%s # @ # %s]'%(sOptKey, lSub[1])
+			else:
+				sOptTplt = '#[%s # @ #]'%sOptKey
 
-	if 'cacheReader' not in self.d:
-		sCacheDir =  pjoin(dConf['CACHE_ROOT'], 'data', self.sName)
-		sCacheRdrArgs = "%s %s ${NORM_OPTIONS} %%{time.beg} %%{time.end} %%{time.res}"%(
-			self.sPath, sCacheDir)
-
-		if 'qstream' in self.d:
-			if 'QDS_CACHE_RDR' in dConf:
-				dImpl['_cache_reader'] = {'_cmd':"%s %s"%(dConf['QDS_CACHE_RDR'], sCacheRdrArgs)}
+			sCmd = "%s%s%s"%(sRdr[:iBeg], sOptTplt, sRdr[iEnd+1:])
 		else:
-			if 'D2S_CACHE_RDR' in dConf:
-				dImpl['_cache_reader'] = {'_cmd':"%s %s"%(dConf['D2S_CACHE_RDR'], sCacheRdrArgs)}
+			sCmd = sRdr
 
-	else:
-		dImpl['_cache_reader'] = {'_cmd':self.d['cacheReader']}
+		# Two variations, one for requires interval
+		sInterval = ''
+		if isPropTrue(dProps, 'requiresInterval'):  # Ephemeris readers
+			 sInternal = '#[%s] '%sIntKey
+			
+		if _isPropTrue(dProps, 'dropParams'):
+			dCmd['read'] = {'template':'%s %s#[%s] #[%s]'%(
+				sCmd, sInterval, sBegKey, sEndKey
+			)}
+		else
+			dCmd['read'] = {'template':
+				'%s %s#[%s] #[%s] #[%s#@#]'%(sCmd, sInterval, sBegKey, sEndKey, sOptKey
+			)}
 
-	# Reader command line translations
-	dTrans = self._getArgTrans(fLog, 'reader', dSrc)
-	if len(dTrans) > 0:
-		dImpl['_reader']['_translate'] = dTrans
+		dCmd['read']['order'] = 10
+		dCmd['read']['trigger'] = [
+			{'key':sBegKey}, {'key':sEndKey}, {'key':sIntKey}, {'key':sOptKey}
+		]
+		dCmd['read']['output'] = sMime
+	
 
-
-	# Cache control information (internal)
-
-	# This is hard locked for now to just be time
-	# in the future support looking this up, say for example
-	# ['lat','long']
-	# ['time','freq']
-	lCacheCoords = ['time']
-	dRawLvls = self.getCacheLevels()
-	if len(dRawLvls) > 0:
-		if 'time' not in dSrc['COORDINATES']:
-			raise errors.ServerError(
-				"Time based cache blocks defined for non-time datasource"
-			)
-
-		dCachInCoords = {'_block_by':lCacheCoords}
-		dLvls = {}
-		for sKey in dRawLvls:
-			dLvls[sKey] = {
-				'_resolution':dRawLvls[sKey][0],
-				'_units':dRawLvls[sKey][1],
-				'_scheme':dRawLvls[sKey][2]
+	# Custom reducer ####################################
+	if ('reducer' in dProps) and '00' in dProps['reducer']:
+		sReducer = dProps['reducer']['00']
+	
+		if bSkipReduce or (sReducer in ('not_reducable','not_reducible')):
+			dCmd['bin'] = {} # Just an empty template
+		else:
+			dCmd['bin'] = {
+				'template':'%s #[%s]'%(sReducer, sResKey)
+				'trigger':[{"key":sResKey,"value":0,"compare":"gt"}],
+				'order': 30,
+				'input': sMime,
+				'output': sMime
 			}
-			if dRawLvls[sKey][3]:
-				dLvls[sKey]['_reader_args'] = dRawLvls[sKey][3]
+	
+	# no reducer mentioned, so just let the default get assigned by command.py
+	
+	# Cache Section #####################################
+	if 'cacheLevel' in dProps:
+		
+		# If there is a custom cache reader in the dsdf we'll need to emit a 
+		# cache template in the command section as well.
+		if ('cacheReader' in dProps) and ('00' in dProps['cacheReader']):
+			sCacheBin = dProps['cacheReader']['00']
+	
+			dCmd['cache'] = {"template":[
+				"%s #[_DSDF_FILE] #[_CACHE_DIR] #[_NORM_READ_OPTS] "%sCacheBin,
+				"#[%s] #[%s] #[%s]"%(sBegKey, sEndKey, sResKey)
+			]}
+			dCmd['cache']['input'] = sMime
+			dCmd['cache']['output'] = sMime
+		
+		dCache = _getDict(dOut['internal'], 'cache')
+		
+		# The coordinate map for this cache is just the conventional items
+		dCache['min_coord_params'] = [sBegKey],
+		dCache['max_coord_params'] = [sEndKey],
+		
+		dCache['mime'] = sMime
+		
+		dSchemeToSize = {
+			"yearly":"1 year", "monthly":"1 month", "daily":"1 day", 
+			"hourly":"1 hour", "perminute":"1 minute", "persecond":"1 s"
+		}
 
-		dCachInCoords['_lines'] = dLvls
-		dImpl['_cache'] = dCachInCoords
+		dSets = _getDict(dCache, 'block_sets')
+		for sLevel in dProps['cacheLevel']:
+			l = [s.strip() for s in dProps['cacheLevel'][sLevel].split()]
+			if len(l) < 2:
+				fLog.write("ERROR: Misconfigured cache level in %s"dProps['__path__'])
+				continue
+			sRes = l[0]
+			
+			if l[1] not in dConvert:
+				fLog.write("ERROR: Misconfigured cache block size %s"dProps['__path__'])
+				continue
+			sBlkSz = dConvert[l[1]]
+			dBlk = {"block_size":[sBlkSz]}
 
-	# Security authorization
+			if sRes != 'intrinsic':
+				dBlk['resolution'] = sRes
+				dBlk['resolution_params'] = [sResKey]
+		
+			if len(l) > 2: # Has read.options
+				dBlk['fixed_params'] = {sOptKey:l[2]}
+			
+			try:
+				n = int(sLevel, 10)
+				sLevel = "%d"%n
+			except:
+				pass
+			dSets[sLevel] = dBlk
 
-	if 'readAccess' in self.d:
-		dAuth = {'_dsdf_compat':self.d['readAccess']}
-		if 'securityRealm' in self.d:
-			dAuth['_realm'] = self.d['securityRealm']
+	# Authorization
+	if 'readAccess' in dProps and '00' in dProps['readAccess']:
+		
+		dIntr = _getDict(dOut, 'internal');
+		dAuth = _getDict(dIntr, 'authorization')
 
 		lMethods = [s.strip() for s in self.d['readAccess'].split('|')]
 		if len(lMethods) > 0:
 			lMethOut = []
+			lGroups = []
+			lUsers = []
 			for i in range(0, len(lMethods)):
 
 				lMeth = [s.strip() for s in lMethods[i].split(':')]
@@ -934,19 +1004,29 @@ def _mergeInternal(dOut, dDsdf, fLog):
 						"Syntax error in readAccess key value"
 					)
 
-				sCheckType = lMeth[0].upper().strip()
+				sCheckType = lMeth[0].lower().strip()
+				
+				if sCheckType == 'age':
+					dAuth['params'] = [{
+						"key":sEndKey, "reference":"now", "delta":"-%s"%lMeth[1],
+						"compare":"lt"
+					}]
+				elif sCheckType == 'group':
+					lGroups.append(lMeth[1])
+				elif sCheckType == 'user':
+					lUsers.append(lMeth[1])
 
-				lMethOut.append({'_check':sCheckType, '_values': lMeth[1:]})
+			if len(lGroups) > 0:
+				dAuth['user_in_group'] = lGroups
+			if len(lGroups) > 0:
+				dAuth['user_is'] = lUsers
 
-			dAuth['_methods'] = lMethOut
-			dImpl['_authorization'] = dAuth
-
-
-	dImpl['_local_id'] = self.sName
-	dImpl['_local_path'] = self.sPath
-
-	return dImpl
-
+	# Authentication
+	if 'securityRealm' in dProps and '00' in dProps['securityRealm']:
+		dIntr = _getDict(dOut, 'internal');
+		dAuth = _getDict(dIntr, 'authentication')
+		
+		dAuth['http_basic'] = {'security_realm':dProps['securityRealm']['00']}
 
 # ########################################################################## #
 
@@ -993,7 +1073,7 @@ def _dsdf2Source(dConf, sPath, fLog, sTarget="any"):
 
 	# If this is an internal call load the command and cache info
 	if sTarget in ('internal','any'):
-		_mergeInternal(dOut, dDsdf, fLog)
+		_mergeInternal(dOut, dConf, dDsdf, fLog)
 
 	# potentially override the base url and set the protocol convention
 	sBaseUrl = _mergeProto(dOut, dDsdf, fLog)

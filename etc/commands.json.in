@@ -14,16 +14,28 @@
 // param interfare for a data source.
 {
 
-	"psd":{
-		"trigger":{"key":"dft.length"},
+	// The default cache reader, for now this only handles caches defined in a DSDF
+	// the new json syntax is not implemented.  Cache readers are not triggered in 
+	// by prameter values, but by settings in the source configuration
+	"cache":[{
+		"template":[
+			"das2_cache_rdr #[_DSDF_FILE] #[_CACHE_DIR] #[_NORM_READ_OPTS] ",
+			"#[read.time.min] #[read.time.max] #[bin.time.max]"
+		],
+		"input":"application/vnd.das2.das2stream",
+		"output":"application/vnd.das2.das2stream"
+	}],
+
+	"psd":[{
+		"trigger":[{"key":"dft.length"}],
 		"order":20,
 		"template":["das2_psd -d -j 0.05 #[dft.length] #[dft.slide] "],
 		"input":"application/vnd.das2.das2stream",
 		"output":"application/vnd.das2.das2stream"
-	},
+	}],
 	
-	"bin":{
-		"trigger":{"key":"bin.time.max","value":0,"compare":"gt"},
+	"bin":[{
+		"trigger":[{"key":"bin.time.max","value":0,"compare":"gt"}],
 		"order":30,
 		"template":[ 
 			"das2_bin_avgsec #[bin.time.max] ",
@@ -31,7 +43,7 @@
 		],
 		"input":"application/vnd.das2.das2stream",
 		"output":"application/vnd.das2.das2stream"
-	},
+	}],
 
 	// Example of adding a binner for QStreams:
 	//
@@ -43,8 +55,8 @@
 	//	"output":"application/vnd.das2.qstream"
 	//}
 		
-	"format.csv":{
-		"trigger":{"key":"format.mime","value":"text/csv"},
+	"format.csv":[{
+		"trigger":[{"key":"format.mime","value":"text/csv"}],
 		"order":40,
 		"template":[
 			"das2_csv -s",
@@ -54,10 +66,10 @@
 		],
 		"input":"application/vnd.das2.das2stream",
 		"output":"text/csv"
-	},
+	}],
 	
-	"format.png":{
-		"trigger":{"key":"format.mime","value":"image/png"},
+	"format.png":[{
+		"trigger":[{"key":"format.mime","value":"image/png"}],
 		"order":40,
 		"template":[
 			"autoplot_url2png.py",
@@ -70,5 +82,5 @@
 		],
 		"input":"application/vnd.das2.das2stream",
 		"output":"image/png"
-	}
+	}]
 }
