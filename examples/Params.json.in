@@ -65,18 +65,21 @@
 
 "internal": {
 
-	"command":{
-		"read":{
-			"title":"Themis Data Reader",
-			"template":[
-				"env PYTHONPATH=%(PREFIX)s/lib/python%(PYVER)s",
-				"python%(PYVER)s %(PREFIX)s/examples/cdf.py",
-				"%(PREFIX)s/examples/themis_data",
-				"#read.time.min# #read.time.max# #[read.options | @ | ]#"
-			],
-			"output":"application/vnd.das2.das2stream"
-		}
-	},
+	"commands":[{	
+		"description":"Themis Data Reader",
+		"role":"read.source",
+		"output":"application/vnd.das2.das2stream",
+
+		// By default commands are triggered if any replacement parameter in
+		// their template is provided, but the default trigger can be overridden
+		// using a "trigger" property.
+		"template":[
+			"env PYTHONPATH=%(PREFIX)s/lib/python%(PYVER)s",
+			"python%(PYVER)s %(PREFIX)s/examples/cdf.py",
+			"%(PREFIX)s/examples/themis_data",
+			"#read.time.min# #read.time.max# #[read.options | @ | ]#"
+		],
+	}],
 
 	// A cache is defined as a set of segments in parameter space.
 	//

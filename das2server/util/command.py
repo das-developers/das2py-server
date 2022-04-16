@@ -7,11 +7,125 @@ import fcntl
 import os
 
 from . import webio
+from . import errors as E
 
 # ########################################################################## #
-# Given the 
+# Helpers #
+def _list2Str(thing):
+	if isinstance(thing, list):
+		return " ".join(thing)
+	else:
+		return thing
+
+# ########################################################################## #
+def _collapseByMime(dInOrder):
+	"""Solve the g'zin, g'zout problem in one of two ways.
+	1. If the first command is unique, forward propogate.
+	2. If the last command is unique, back propogate
+
+	Args:
+		dInOrder, a dictionary where each key is the ordering value for the
+			commands to run, and each value is a list of command objects 
+			(dictionary).  Each command object must have the following keys:
+			input: The input mime type
+			output: The output mime type
+			template: The command template to run
+
+	Returns:
+		An orderd list of command templates.
+	"""
+
+	lOrders = list(dInOrder.keys())
+	lOrders.sort()
+	bUnique = False
+	lTplts = []
+
+	if len(dInOrder[ lOrders[0] ]) == 1:
+
+		dCmd = dInOrder[ lOrders[0] ][0]
+		lTplts.append( _list2Str(dCmd['template'])  )
+
+		sGzin = dCmd['output']   # Input for next stage
+
+		for i in range(1, len(lOrders)):  # Loop over all remaining stages
+
+			lCmds = dInOrder[ lOrders[i] ]
+			iFound = -1
+			for j in range(len(lCmds)):
+				if lCmds[j]['input'] == sGzin:
+					if iFound == -1: iFound = j
+					else: iFound == -1
+
+			if iFound == -1:
+				raise E.ServerError("No unique input choice for mime %s and stage %s"%(
+					sGzin, lCmds[j]['stage']
+				))
+			
+			dCmd = lCmds[iFound]
+			lTplts.append( _list2Str(dCmd['template']))
+			sGzin = dCmd['output']
+
+	if (not bUnique) and (len( dInOrder[ lInOrder[-1] ]) == 1):
 
 
+	if not bUnique
+		raise E.QueryError("Ambiguous request, could not resolve query to an unique command set.")
+
+
+# ########################################################################## #
+# Upstream Solver #
+
+def upstreamCmdSolver(dConf, dDefault, dSrc, dParams):
+	"""Given a default set of command templates, a source definition and
+	a set of HTTP params, produce a command line "solution" for stream 
+	generation.  
+
+	This version does not consider the cache system at all.  For a version
+	that attemps to generate a cache command read, see the cache.py module.
+
+	Returns (string): 
+		The command line to run to generate the data, or None if no suitable
+		command line could be generated that satisfies all the given 
+		parameters.
+	"""
+
+	# Make a complete set of commands
+	if ('internal' not in dSrc) or ('command' not in dSrc['internal']):
+		raise E.ServerError("No commands in source from '%s'"%dSrc['__path__'])
+		
+
+	lCmds = deepcopy(dDefault)
+	for dCmd in dSrc['internal']['commands']:
+		_overrideCmd(lCmds, dCmd)
+
+	if 'disable' in dSrc['internal']:
+		_filterCmds(lCmds, dSrc['internal']['disable'])
+
+	# Throw away all 'read.cache' commands.
+	if 'read.cache' in lCmds: dCmds.pop('read.cache')
+
+	# See which commands have been triggered, gather a list of command
+	# orders.  (Lowest order is first, higher orders are next, etc.)
+	dInOrder = []
+	for sType in dCmds:
+		dCmd = dCmds[sType]
+
+		if triggered(dCmd, dParams): 
+				
+			dCmd['stage'] = sType
+			if dCmd['order'] not in dInOrder:
+				dInOrder[ dCmd['order'] ] = [ dCmd ]
+			else:
+				dInOrder[ dCmd['order'] ].append(dCmd)
+
+	# If no commands are left, pop a query error
+	if len(dInOrder) == 0:
+		raise E.QueryError("No internal data production commands associated with the given HTTP query.")
+
+
+	lTplts = _collapseByMime(dInOrder)
+
+	return makeCmdLine(lTplts, dParams)
 
 
 ##############################################################################

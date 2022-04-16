@@ -423,3 +423,12 @@ def reqCacheBuild(fLog, dConf, sDsdf, lToBuild, bCoverage=False):
 	
 	return None
 
+# ########################################################################## #
+# Cache Solver #
+
+def cacheCmdSolver(fLog, dConf, dDefault, dSrc, dParams):
+	"""
+	"""
+
+	pass
+

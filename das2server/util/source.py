@@ -861,7 +861,7 @@ def _mergeInternal(dOut, dConf, dProps, fLog):
 	)
 
 	dIntr = _getDict(dOut, 'internal')
-	dCmd = _getDict(dIntr, 'command')
+	lCmd = _getList(dIntr, 'commands')
 
 	# Reader Section #################################
 	if 'reader' in dProps in '00' in dProps['reader']:
@@ -896,19 +896,22 @@ def _mergeInternal(dOut, dConf, dProps, fLog):
 			 sInternal = '#[%s] '%sIntKey
 			
 		if _isPropTrue(dProps, 'dropParams'):
-			dCmd['read'] = {'template':'%s %s#[%s] #[%s]'%(
+			dCmd = {'template':'%s %s#[%s] #[%s]'%(
 				sCmd, sInterval, sBegKey, sEndKey
 			)}
 		else
-			dCmd['read'] = {'template':
+			dCmd = {'template':
 				'%s %s#[%s] #[%s] #[%s#@#]'%(sCmd, sInterval, sBegKey, sEndKey, sOptKey
 			)}
 
-		dCmd['read']['order'] = 10
-		dCmd['read']['trigger'] = [
+		dCmd['role'] = 'read.source'
+		dCmd['order'] = 1
+		dCmd['trigger'] = [
 			{'key':sBegKey}, {'key':sEndKey}, {'key':sIntKey}, {'key':sOptKey}
 		]
-		dCmd['read']['output'] = sMime
+		dCmd['output'] = sMime
+
+		lCmd.append(dCmd)
 	
 
 	# Custom reducer ####################################
@@ -916,15 +919,16 @@ def _mergeInternal(dOut, dConf, dProps, fLog):
 		sReducer = dProps['reducer']['00']
 	
 		if bSkipReduce or (sReducer in ('not_reducable','not_reducible')):
-			dCmd['bin'] = {} # Just an empty template
+			dIntr['disable'] = [{"role":"reduce"}]
 		else:
-			dCmd['bin'] = {
+			lCmd.append({
+				'role':'reduce',
 				'template':'%s #[%s]'%(sReducer, sResKey)
 				'trigger':[{"key":sResKey,"value":0,"compare":"gt"}],
 				'order': 30,
 				'input': sMime,
 				'output': sMime
-			}
+			})
 	
 	# no reducer mentioned, so just let the default get assigned by command.py
 	
@@ -936,12 +940,12 @@ def _mergeInternal(dOut, dConf, dProps, fLog):
 		if ('cacheReader' in dProps) and ('00' in dProps['cacheReader']):
 			sCacheBin = dProps['cacheReader']['00']
 	
-			dCmd['cache'] = {"template":[
+			dCmd['read.cache'] = {"template":[
 				"%s #[_DSDF_FILE] #[_CACHE_DIR] #[_NORM_READ_OPTS] "%sCacheBin,
 				"#[%s] #[%s] #[%s]"%(sBegKey, sEndKey, sResKey)
 			]}
-			dCmd['cache']['input'] = sMime
-			dCmd['cache']['output'] = sMime
+			dCmd['read.cache']['input'] = sMime
+			dCmd['read.cache']['output'] = sMime
 		
 		dCache = _getDict(dOut['internal'], 'cache')
 		
@@ -1205,6 +1209,9 @@ def _json2Source(dConf, sPath, fLog, sTarget='external'):
 	# If the source had no name, give it one based on the filename
 	if 'name' not in dOut:
 		dOut['name'] = basename(sPath).replace('.json','')
+
+	# And save the path to the file
+	dOut['__path__'] = sPath
 
 	return dOut
 

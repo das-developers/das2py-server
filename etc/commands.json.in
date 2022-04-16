@@ -1,86 +1,116 @@
-// Default command templates for all processing stages except data reads.
+// These are the default commands for this das2 server.  Each command is 
+// uniquely identified by:
 //
-// Each command template is matched by the processing stages it supports, 
-// and a mime-type that it accepts.  The built in processing stages are
-// 
-//   "read", "dft", "bin", "format"
+//  role, input, output
 //
-// Others can be added.  HTTP Get parameters passed to a das2 server have
-// the format:
+// To override a command define a new one that has the same role, the
+// same input and the same output.  The roles defined here are:
+//
+//  Role            Input         Output
+//  ----------    -----------   -----------
+//  read.cache    files         das2 stream
+//  psd           das2 stream   das2 stream
+//  bin           das2 stream   das2 stream
+//  format.csv    das2 stream   CSV stream
+//  format.png    das2 stream   PNG file 
+//  format.cdf    das2 stream   CDF file
+//     
+// Roles are just strings and so others can be added.  If you server has other
+// stream types you can 
 //
 //  STAGE.[stage specific sub-sections]
 //
 // Thus your custom stage can be triggered just by mentioning it in the http
-// param interfare for a data source.
+// param interface for a data source.
+[
+
+// The default cache reader, for now this only handles caches defined in a DSDF
+// the new json syntax is not implemented.  Cache readers are not triggered in 
+// by prameter values, but by settings in the source configuration
 {
-
-	// The default cache reader, for now this only handles caches defined in a DSDF
-	// the new json syntax is not implemented.  Cache readers are not triggered in 
-	// by prameter values, but by settings in the source configuration
-	"cache":[{
-		"template":[
-			"das2_cache_rdr #[_DSDF_FILE] #[_CACHE_DIR] #[_NORM_READ_OPTS] ",
-			"#[read.time.min] #[read.time.max] #[bin.time.max]"
-		],
-		"input":"application/vnd.das2.das2stream",
-		"output":"application/vnd.das2.das2stream"
-	}],
-
-	"psd":[{
-		"trigger":[{"key":"dft.length"}],
-		"order":20,
-		"template":["das2_psd -d -j 0.05 #[dft.length] #[dft.slide] "],
-		"input":"application/vnd.das2.das2stream",
-		"output":"application/vnd.das2.das2stream"
-	}],
+	"description":"das2 cache reader",
+	"role":"read.cache",
+	"order":1,
+	"output":"application/vnd.das2.das2stream",
 	
-	"bin":[{
-		"trigger":[{"key":"bin.time.max","value":0,"compare":"gt"}],
-		"order":30,
-		"template":[ 
-			"das2_bin_avgsec #[bin.time.max] ",
-			"#[read.time.min # -b @ # ]  #[bin.stats[min] # -r # ] #[bin.stats[max] # -r # ]",
-		],
-		"input":"application/vnd.das2.das2stream",
-		"output":"application/vnd.das2.das2stream"
-	}],
+	"template":[
+		"das2_cache_rdr #[_DSDF_FILE] #[_CACHE_DIR] #[_NORM_READ_OPTS] ",
+		"#[read.time.min] #[read.time.max] #[bin.time.max]"
+	],
+},
 
-	// Example of adding a binner for QStreams:
-	//
-	//"bin":{
-	//	"trigger":{"key":"bin.time.max","value":0,"compare":"gt"},
-	//	"order":30,
-	//	"template":["QReduce #[bin.time.max] " ],
-	//	"input":"application/vnd.das2.qstream",
-	//	"output":"application/vnd.das2.qstream"
-	//}
+{
+	"description":"power spectral density stream transformer",
+	"role":"psd",
+	"order":10,
+	"input":"application/vnd.das2.das2stream",
+	"output":"application/vnd.das2.das2stream",
+
+	"trigger":[{"key":"dft.length"}],	
+	"template":["das2_psd -d -j 0.05 #[dft.length] #[dft.slide] "]
+},
+	
+{
+	"description":"Bin average reducer with optional min/max output",
+	"role":"reduce",
+	"order":20,
+	"input":"application/vnd.das2.das2stream",
+	"output":"application/vnd.das2.das2stream",
+
+	"trigger":[{"key":"bin.time.max","value":0,"compare":"gt"}],
+	"template":[ 
+		"das2_bin_avgsec #[bin.time.max] #[read.time.min # -b @ # ]",
+		"#[bin.stats[min] # -r # ] #[bin.stats[max] # -r # ]",
+	]
+},
+
+// Example of adding a binner for QStreams, set it to the same pipeline
+// order as das2bin, and the solver will use it automatically if the 
+// reader produces the mime-type expected by the binner.
+//{
+//	"description":"QStream bin average reducer",
+// "role":"reducer",
+// "order":30,
+//
+//	"trigger":{"key":"bin.time.max","value":0,"compare":"gt"},
+//	"input":"application/vnd.das2.qstream",
+//	"output":"application/vnd.das2.qstream"
+//	
+//	"template":["QReduce #[bin.time.max] " ],
+//}
 		
-	"format.csv":[{
-		"trigger":[{"key":"format.mime","value":"text/csv"}],
-		"order":40,
-		"template":[
-			"das2_csv -s",
-			"#[format.delim # -d @ # ]",
-			"#[format.secfrac # -s @ # ]",
-			"#[format.sigdigit # -r @ # ]"
-		],
-		"input":"application/vnd.das2.das2stream",
-		"output":"text/csv"
-	}],
+{
+	"description":"das2 stream to CSV converter with optional delimiter",
+	"role":"format.csv",
+	"order":30,
+	"input":"application/vnd.das2.das2stream",
+	"output":"text/csv",
+
+	"trigger":[{"key":"format.mime","value":"text/csv"}],	
+	"template":[
+		"das2_csv",
+		"#[format.delim # -d @ # ]",
+		"#[format.secfrac # -s @ # ]",
+		"#[format.sigdigit # -r @ # ]"
+	]
+},
 	
-	"format.png":[{
-		"trigger":[{"key":"format.mime","value":"image/png"}],
-		"order":40,
-		"template":[
-			"autoplot_url2png.py",
-			"#[_server # server=@ ]",
-			"#[_datasource # dataset=@ ]",
-			"#[read.time.min # start_time=@ ]",
-			"#[read.time.max # end_time=@ ]",
-			"#[_file # image=@ ]",
-			"#[read.options # param=@ # ]"
-		],
-		"input":"application/vnd.das2.das2stream",
-		"output":"image/png"
-	}]
+{
+	"description":"das2 stream to PNG plot creator",
+	"role":"das2png",
+	"order":40,
+	"input":"application/vnd.das2.das2stream",
+	"output":"image/png",
+
+	"trigger":[{"key":"format.mime","value":"image/png"}],
+	"template":[
+		"autoplot_url2png.py",
+		"#[_server # server=@ ]",
+		"#[_datasource # dataset=@ ]",
+		"#[read.time.min # start_time=@ ]",
+		"#[read.time.max # end_time=@ ]",
+		"#[_file # image=@ ]",
+		"#[read.options # param=@ # ]"
+	]
 }
+]
