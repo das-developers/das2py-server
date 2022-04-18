@@ -13,7 +13,6 @@ from copy import deepcopy
 
 from . import errors
 from . import webio
-from . import output
 
 import das2
 
@@ -36,8 +35,8 @@ def stdFormKeys(sConvention):
 			"read.time.min",
 			"read.time.max",
 			"bin.time.max",
-			"read.time.interval",
-			"read.options"
+			"read.time.int",
+			"read.opts"
 			# Other possible keys
 			# bin.freq.max
          # bin.merge.avg
@@ -1273,7 +1272,7 @@ def _dsdfOverRide(dSrcDsdf, dSrcJson):
 
 # ########################################################################## #
 
-def load(dConf, sSource, fLog, sTarget="external"):
+def load(fLog, dConf, sSource, sTarget="external"):
 	"""Create an HttpStreamSrc object from server configuration files
 
 	The three main section of the HttpStreamSrc definition are:
@@ -1335,10 +1334,10 @@ def load(dConf, sSource, fLog, sTarget="external"):
 
 # ########################################################################## #
 
-def internal(dConf, sSource, fLog):
+def internal(fLog, dConf, sSource):
 	"""Short cut for load(dConf, sSource, fLog, 'internal')"""
-	return load(dConf, sSource, fLog, 'internal')
+	return load(fLog, dConf, sSource, 'internal')
 
-def external(dConf, sSource, fLog):
+def external(fLog, dConf, sSource):
 	"""Short cut for load(dConf, sSource, fLog, 'external')"""
-	return load(dConf, sSource, fLog, 'external')
+	return load(fLog, dConf, sSource, 'external')

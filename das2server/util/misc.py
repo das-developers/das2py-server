@@ -33,9 +33,15 @@ def normalizeOpts(sParams):
 ##############################################################################
 def checkParams(fLog, form):
 	"""Check the parameter values for obvious shell injection stuff such as
-	pipes, redirects, ../ directories, etc"""
+	pipes, redirects, ../ directories, etc
+
+	If a form item represents an entire uploaded file, it's content is NOT 
+	checked!
+	"""
 
 	for sKey in form.keys():
+		if form[sKey].file:
+			continue
 		sValue = form.getfirst(sKey, '')	
 		for sTest in [';', '|','../','..\\', ':\\', '>', '&', '$']:
 			if sValue.find(sTest) != -1:

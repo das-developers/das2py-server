@@ -21,7 +21,7 @@ from . import errors as E
 
 ##############################################################################
 
-def isCacheable(dsdf, sNormParam, rReqRes):
+def isCacheable(fLog, dsdf, sNormParam, rReqRes):
 	"""Inspect the cacheLevel parameter in the dsdf object and see if it
 	is possible for a dataset to exist that meets the given parameter set
 	and resolution level.
@@ -30,6 +30,9 @@ def isCacheable(dsdf, sNormParam, rReqRes):
 	sNormParam - A normalized parameter string for the reader
 	rRes - The requested resolution
 	"""
+
+	fLog.write("   Cache check: Need resolution '%s' or better with paramset '%s'"%(
+		           rRes, sNormParams))
 	
 	if len(dsdf['cacheLevel']) == 0:
 		return False
@@ -426,9 +429,25 @@ def reqCacheBuild(fLog, dConf, sDsdf, lToBuild, bCoverage=False):
 # ########################################################################## #
 # Cache Solver #
 
-def cacheCmdSolver(fLog, dConf, dDefault, dSrc, dParams):
+def solveCacheCmd(fLog, dConf, dSrc, dParams):
+	"""Given a default set of command templates, a source definition and a
+	set of HTTP params, produce a command line "solution" for stream generation
+	that skips the "read" command 
 	"""
-	"""
+
+
+	# Cache readers are expected to take the following arguments:
+	# 0. The program name (of course)
+	# 1. The DSDF file path
+	# 2. The dataset cache root (= Cache_ROOT + dsdf_rel_path)
+	# 3. The normalized parameter string
+	# 4. The begin index point
+	# 5. The end index point (exclusive upper bound)
+	# 6. The requested resolution		
+	uCmd = u"%s %s %s %s '%s' '%s' %.5e"%(
+		dsdf[u'cacheReader'], dsdf.sPath, sCacheDir, sNormParams,
+		sBeg, sEnd, rRes
+	)
 
 	pass
 

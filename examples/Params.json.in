@@ -81,6 +81,10 @@
 		],
 	}],
 
+	// Sometimes you don't want to allow certian operations to be preformed
+	// on the data.
+	"disable":[{"role":"reducer"}],
+
 	// A cache is defined as a set of segments in parameter space.
 	//
 	// Each cache block has an extent in parameter space, typically all blocks 

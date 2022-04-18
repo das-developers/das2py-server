@@ -75,7 +75,7 @@ def _collapseByMime(dInOrder):
 # ########################################################################## #
 # Upstream Solver #
 
-def upstreamCmdSolver(dConf, dDefault, dSrc, dParams):
+def solveUpstreamCmd(dConf, dDefault, dSrc, dParams):
 	"""Given a default set of command templates, a source definition and
 	a set of HTTP params, produce a command line "solution" for stream 
 	generation.  
@@ -83,7 +83,7 @@ def upstreamCmdSolver(dConf, dDefault, dSrc, dParams):
 	This version does not consider the cache system at all.  For a version
 	that attemps to generate a cache command read, see the cache.py module.
 
-	Returns (string): 
+	Returns (str or None): 
 		The command line to run to generate the data, or None if no suitable
 		command line could be generated that satisfies all the given 
 		parameters.

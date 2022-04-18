@@ -126,9 +126,6 @@ g_dDefHandlers = {
 	# /source/juno/wav/survey.html
 	'HANDLE_FORM':     'das2server.handlers.form',
 
-	# Old das2.2: ?server=dataset&dataset=/Juno/WAV/Survey
-	'HANDLE_TIME_DATA':  'das2server.handlers.timedata',
-	
 	# List of services offered by this server
 	#'HANDLE_SERVICES': 'das2server.handlers.services',
 	
@@ -369,6 +366,15 @@ def main(form):
 			preLoadError("Wierd Error, %s is not set in the script environment\r\n"%sEnv)
 			return 21
 	
+	# Way up high, before anything Check the query parameters for obvious problems
+	if not U.misc.checkParams(fLog, form):  # check for obvious problems, 
+		U.webio.queryError(fLog, 
+			"One or more of the query parameters looks like a shell injection "+\
+			"attack, data output halted."
+		)
+		return 13
+
+
 	sPathInfo = ''
 	if os.getenv("PATH_INFO"):
 		sPathInfo = os.getenv("PATH_INFO")
@@ -426,7 +432,7 @@ def main(form):
 			sReqType = 'HANDLE_ID'
 
 		elif sServer in ['dataset', 'compactdataset']:
-			sReqType = 'HANDLE_TIME_DATA'  # A restricted set
+			sReqType = 'HANDLE_DATA'
 	
 		#elif sServer == 'image':
 		#	sReqType = 'HANDLE_DSDF_IMAGE'

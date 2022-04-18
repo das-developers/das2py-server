@@ -17,8 +17,28 @@ tDrop = (
 	,'paramValInfo'
 ) 
 
-def _dsdfToStreamHdr(dsdf):
+def _das22Iface(U, dSrc):
 	"""Write a utf-8 string that contains the stream"""
+
+	(sBeg, sEnd, sRes, sInt, Opts) = U.source.stdFormKeys('v2.3')
+
+	if ('protocol' not in dSrc) or ('http_params' not in dSrc['protocol']):
+		raise U.errors.ServerError("'http_params' missing from source definition")
+
+	dParams = dSrc['protocol']['http_params']
+	
+	# Have to have at least a begin time and end time to support a das2.2 query
+	if (sBeg not in dParams) or (sEnd not in dParams):
+		raise U.errors.notFoundError("Data source does not support the das2/v2.2 query interface.")
+
+	dDsdf = {}
+	if 'title' in dSrc:  dDsdf['description'] = dSrc['title']
+	if 'contacts' in dSrc:
+		for dContact in dSrc['contacts']:
+			if dContact['type'] == 'scientific':
+				
+
+
 	fOut = StringIO()
 	
 	fOut.write(u"<stream version=\"2.2\">\r\n")
@@ -70,15 +90,18 @@ def _dsdfToStreamHdr(dsdf):
 ##############################################################################
 def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	"""See das2server.handlers.intro.py for a decription of this function
-	interface
+	interface.
+
+	Check the source interface to see if it can be adapted to the old DSDF
+	format.  If so send a reply
 	"""
 
-	sDsdf = form.getfirst('dataset', '')
-	if sDsdf == '':
+	sSrc = form.getfirst('dataset', '')
+	if sSrc == '':
 		if os.getenv("PATH_INFO"):
-			sDsdf = os.getenv("PATH_INFO")
-			sDsdf = sDsdf.replace('/source/', '')  # Knock off leading '/source/'
-			sDsdf = sDsdf.replace('/dsdf.d2t', '') # knock off trailing filename
+			sSrc = os.getenv("PATH_INFO")
+			sSrc = sSrc.replace('/source/', '')  # Knock off leading '/source/'
+			sSrc = sSrc.replace('/dsdf.d2t', '') # knock off trailing filename
 		else:
 			U.webio.queryError(
 				fLog, u"No dataset specified, use the 'dataset=' query parameter "+\
@@ -88,27 +111,20 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	fLog.write("\nDas 2.2 Description Handler")
 	
-	if 'DSDF_ROOT' not in dConf:
-		U.webio.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
-		return 17
-	
 	try:
-		dsdf = U.dsdf.Dsdf(sDsdf, dConf, form, fLog)
+		dSrc = U.source.external(fLog, dConf, sSrc)
 	except U.errors.QueryError as e:
 		U.webio.notFoundError(fLog, str(e))
 		return 17
-
-	if u'rename' in dsdf:
-		return U.dsdf.handleRedirect(fLog, sDsdf, dsdf)
-
 	# Add in our own stuff
 	sScriptURL = U.webio.getScriptUrl()
-	dsdf.d['action'] = 'das2.2 | %s?server=dataset&dataset=%s'%(sScriptURL, sDsdf)
-	#dsdf.d['action_01'] = 'das2.3 | %s/%s/data'%(sScriptURL, sDsdf.lower())
-	#dsdf.d['interface_00'] = 'das2.3  | %s/%s/das2.json'%(sScriptURL, sDsdf.lower())
-	#dsdf.d['interface_01'] = 'vods1.1 | %s/%s/voresource.xml'%(sScriptURL, sDsdf.lower())
+	dsdf.d['action'] = 'das2.2 | %s?server=dataset&dataset=%s'%(sScriptURL, sSrc)
 	
-	sOut = _dsdfToStreamHdr(dsdf)
+	try:
+		sOut = _das22Iface(dSrc)
+	except U.errors.DasError as e:
+		U.webio.dasErr2HttpMsg(fLgo, e)
+		return 17
 	
 	U.webio.pout('Access-Control-Allow-Origin: *\r\n')
 	U.webio.pout('Access-Control-Allow-Methods: GET\r\n')
