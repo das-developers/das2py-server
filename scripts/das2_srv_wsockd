@@ -1,27 +1,186 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
-A websocket server for das2 streams.  Written in python so we can ride off the dsdf
-and dsif parsing to determine what command to run.
+A websocket server for das streams.  Written in python so we can ride off the 
+source definition parsing to determine what command to run.
+
+The trio websocket library handles ping/pong automatically for us (yay!)
 """
+g_sConfPath = None
+
 import sys
-import asyncio
-import websockets
+import argparse
+import logging
+import pathlib
+import ssl
+import subprocess # For defintions only
+from functools import partial as delegate
 
-g_sConfPath = REPLACED_ON_BUILD
+import trio
+from trio_websocket import serve_websocket, ConnectionClosed
+import contextvars
+
+# ########################################################################## #
+g_log = None
+
+InternalServerError = "InternalServerError"
+NoSuchDataSource    = "NoSuchDataSource"
+QueryError          = "QueryError"
+BadRequest          = "BadRequest"
+
+c_dClient = contextvars.ContextVar("c_dClient")
 
 
 # ########################################################################## #
-async def echo(websocket):
-	async for message in websocket:
-		await websocket.send(message + "(hi from das2)")
-		await websocket.send("my config file is: %s"%g_sConfPath)
+
+def _xmlEscape(sMsg):
+	sMsg = sMsg.replace(u'\n', u'&#13;&#10;').replace(u'"', u"'")
+	sMsg = sMsg.replace(u'<', u'&lt;').replace(u'>',u'&gt;')
+	return sMsg
+
+class RequestError(Exception):
+	def __init__(self, sType, sMsg):
+		self.status = None
+		self.headers = [('Content-Type','text/vnd.das2.das2stream')]
+		self.body = None
+		if sType == NoSuchDataSource:
+			self.status = 404
+		elif sType == QueryError:  
+			self.status = 422            # Unprocessable entity
+		else:
+			self.status = 400
+
+		l = [('Sx', "\n<stream version=\"3.0\" type=\"das-basic-stream\"/>\n")]
+		l.append( ('Ex', "\n<exception type=\"%s\">\n\t%s\n</exception>\n"%(
+			_xmlEscape(sType), _xmlEscape(sMsg)
+		)))
+
+		ll = [ "%s||%d|%s"%(t[0], len(t[1].encode('utf-8')), t[1]) for t in l]
+		self.body = b''.join( [s.encode('utf-8') for s in ll ])
 
 # ########################################################################## #
-async def main():
-	async with websockets.serve(echo, "localhost", 52242):
-		await asyncio.Future()  # run forever
+
+def getReaderCmd(request):
+	"""Return the reader command line, or throw a connection exception"""
+	sDir = '/home/cwp/git/socops/l1tracers/test/'
+	lCmd = ["cat", "%s/tra-preflight_L0_msc-em1_x242_20220309_v1.0.0.d3s"%sDir]
+
+	#lCmd = ['cat','/home/cwp/git/das2py/test/ex05_waveform_extra.d3t']
+
+	sSrc = request.path
+	i = sSrc.find('?')
+	if i > 2: sSrc = sSrc[:i]
+	if len(sSrc) > 64: sSrc = sSrc[:64]
+
+	# Just raise this for fun...
+	#raise RequestError(NoSuchDataSource, "Data source %s does not exist on this server"%sSrc);
+
+	return (" ".join(lCmd), False)  # Standard read-to-end sources for now
+
+# ########################################################################## #
+
+async def DelClientMsg(ws):
+	while True:
+		await ws.get_message();
+
+async def LogStdErr(source):
+	async for chunk in source:
+		g_log.info(chunk)
+
+async def SendStdOut(source, dest, bKeepAlive, done):
+
+	if not bKeepAlive:
+		nBytes = 0
+		async for chunk in source:
+			#log("Type: %s Len %s"%(type(chunk), len(chunk)))
+			nBytes += len(chunk)
+			await dest.send_message(chunk)
+
+		g_log.info("read %d bytes from command"%nBytes)
+		done.set()
+
+	else:
+		raise ValueError("Keep-alive not yet implemented")
 
 
-if __name__ == "__main__":
-	asyncio.run(main())
+# ########################################################################## #
 
+async def HandleAny(request):
+	'''Assume for now that all requests are data requests.  Others may be
+	supported in the future, though most of the informational items are ment
+	to be advertised using standard web requests not web sockets
+	'''
+
+	g_log.info('Handler starting on path "%s"', request.path)
+
+	try:
+		(sCmd, bKeepAlive) = getReaderCmd(request)
+	except RequestError as e:
+		await request.reject(e.status, extra_headers=e.headers, body=e.body)
+		return
+
+	ws = await request.accept()
+	c_dClient.set({'ip':ws.remote.address,'port': ws.remote.port,'url':ws.remote.url})
+
+	async with trio.open_nursery() as nursery:
+		g_log.info("Running %s"%sCmd)
+	
+		# start a subprocessing task
+		proc = await nursery.start(delegate(trio.run_process, 
+			sCmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
+		))
+
+		done = trio.Event()
+
+		nursery.start_soon(delegate(SendStdOut, proc.stdout, ws, bKeepAlive, done))
+		nursery.start_soon(delegate(LogStdErr, proc.stderr))
+		nursery.start_soon(delegate(DelClientMsg, ws))
+
+		await done.wait() # Pause here
+		nursery.cancel_scope.cancel()
+		
+
+	g_log.info('Handler exiting')
+
+# ########################################################################## #
+def main(argv):
+	global g_log
+
+	psr = argparse.ArgumentParser(description='Das2 Websocket Server')
+
+	psr.add_argument('--ssl', action='store_true', help='Use SSL')
+
+	psr.add_argument(
+		'host', help='Host interface to bind. If omitted, then bind all interfaces.', 
+		nargs='?'
+	)
+	psr.add_argument('port', type=int, help='Port to bind.')
+	
+	opts = psr.parse_args()
+
+	logging.basicConfig(level=logging.DEBUG)
+	g_log = logging.getLogger()
+
+	here = pathlib.Path(__file__).parent
+
+	if opts.ssl:
+		ctxSsl = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+		try:
+			ctxSsl.load_cert_chain(here / 'fake.server.pem')
+		except FileNotFoundError:
+			logging.error(
+				'Did not find file "fake.server.pem". You need to run generate-cert.py'
+			)
+	else:
+		ctxSsl = None
+	sHost = None if opts.host == '*' else opts.host
+	
+	logging.info('das3 websocket server...')
+	try:
+		trio.run(delegate(serve_websocket, HandleAny, sHost, opts.port, ctxSsl))
+
+	except KeyboardInterrupt:
+		sys.stderr.write('CTRL-C recieved, shutting down\n')
+
+# ########################################################################## #
+if __name__ == '__main__':
+	sys.exit(main(sys.argv))
