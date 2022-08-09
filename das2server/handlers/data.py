@@ -42,8 +42,8 @@ def _getDas23Src(U, fLog):
 
 # ########################################################################## #
 
-def _map22ParamTo23(U, dParam):
-	(sBeg, sEnd, sRes, sInt, sOpts) = U.source.stdFormKeys("v2.3")
+def _map22ParamTo30(U, dParam):
+	(sBeg, sEnd, sRes, sInt, sOpts) = U.source.stdFormKeys("v3.0")
 	if 'start_time' in dParam: dParam[sBeg] = dParam.pop('start_time')
 	if 'stop_time'  in dParam: dParam[sEnd] = dParam.pop('stop_time')
 	if 'resolution' in dParam: dParam[sRes] = dParam.pop('resolution')
@@ -59,7 +59,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		interface
 	"""
 
-	fLog.write("\ndas2/v2.3 data request handler")
+	fLog.write("\ndas3 data request handler")
 
 	if 'DSDF_ROOT' not in dConf:
 		U.webio.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
@@ -125,12 +125,13 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	#
 	# Can a cache read command even be constructed from this parameter set?
 	#  |
-	#  +-yes-> Are there sufficent cache blocks to handle the command?
-	#  |        |
-	#  |        +-yes-> run the cache cmd
-	#	|        +--no-> submit cache job & run a normal cmd
+	#  +-yes->  Are there sufficent cache blocks to handle the command?
+	#  |         |
+	#  |         +-yes->  Run the cache cmd
+	#  |         |
+	#	|         +--no->  Submit cache job & run a normal cmd
 	#  |
-	#  +--no-> run a normal command
+	#  +--no->  Run a normal command
 
 	try:
 		sCmd = U.cache.solveCacheCmd(fLog, dConf, dSrc, dParams)

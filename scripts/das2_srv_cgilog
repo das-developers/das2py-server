@@ -227,7 +227,7 @@ def main():
 		<img src="%(main-script)s/static/logo.png" alt="%(server-id)s" width="70" height="70" >
 	</div> 
 	<div class="hdr_center">
-	%(server-id)s, a Das 2.3 Server
+	%(server-id)s, a Das 3 Server
 	<h1>%(site-id)s</h1>
 	</div>
 	<div class="hdr_right">

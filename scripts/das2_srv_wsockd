@@ -67,12 +67,26 @@ def getReaderCmd(request):
 	#lCmd = ['cat','/home/cwp/git/das2py/test/ex05_waveform_extra.d3t']
 
 	sSrc = request.path
+	sQuery = None
 	i = sSrc.find('?')
 	if i > 2: sSrc = sSrc[:i]
 	if len(sSrc) > 64: sSrc = sSrc[:64]
 
-	# Just raise this for fun...
-	#raise RequestError(NoSuchDataSource, "Data source %s does not exist on this server"%sSrc);
+	if sSrc == '/tracers/l0/msc/em1/sci/data':
+		sFile = 'tra-preflight_L0_msc-em1_x242_20220309_v1.0.0.d3s'
+		return ("cat %s/%s"%(sDir, sFile), False)
+
+	elif sSrc == '/tracers/l0/msc/em1/sci-psd/data':
+		sFile = 'tra-preflight_L0_msc-em1_x242-psd_20220309_v1.0.0.d3s'
+		return ("cat %s/%s"%(sDir, sFile), False)
+		
+	else:
+		raise RequestError(NoSuchDataSource, 
+"""Data source %s does not exist on this server. 
+Hint: the following paths are defined:
+	/tracers/l0/msc/em1/sci/data
+   /tracers/l0/msc/em1/sci-psd/data
+"""%sSrc);
 
 	return (" ".join(lCmd), False)  # Standard read-to-end sources for now
 

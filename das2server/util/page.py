@@ -137,7 +137,7 @@ def header(dConf, fLog, sTitle=None):
 		sServerId = "{Set SERVER_ID in %s}"%dConf['__file__']
 	dReplace['SERVER_ID'] = sServerId
 
-	dReplace['SERVER_VER'] = "Das2.3 (prototype)"
+	dReplace['SERVER_VER'] = "Das2/3"
 	
 	pout('''	
 <div class="header">
@@ -206,7 +206,7 @@ def sidenav(dConf, fLog):
 
 	pout('  </ul><hr>')
 	pout('<a href="%s/sources.csv">Catalog (csv)</a><br><br>'%sScriptUrl)
-	pout('<a href="%s/sources.json">Catalog (das2)</a><br><br>'%sScriptUrl)
+	pout('<a href="%s/sources.json">Catalog (json)</a><br><br>'%sScriptUrl)
 	pout('''%s<br><br>
   %s<br><br>
   <a href="%s/peers.xml">Peer Servers</a>

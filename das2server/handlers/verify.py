@@ -122,16 +122,17 @@ def _postArticle(U, dConf, fLog):
 
 def printForm(U, dConf, fLog):
 
-	_preArticle(U, dConf, fLog, "<i>das2</i> Validation Service")
+	_preArticle(U, dConf, fLog, "<i>das2 / das3</i> Validation Service")
 
 	sScriptURL = U.webio.getScriptUrl()
 
 	pout('''
 	<p>
-	Check the format of a das2/v2.2 or das2/v2.3-basic stream.  This validator
+	Check the format of a das/v2.2 or das/v3.0 basic-stream.  This validator
 	can parse the following mime types:</br></br>
-	<i>das2</i> text stream: <code><b>text/vnd.das2.das2stream; charset=utf-8</b></code> (*.d2t)<br>
-   <i>das2</i> binary stream: <code><b>application/vnd.das2.das2stream</b></code> (*.d2s)<br>
+	<i>das2</i> Binary Stream: <code><b>application/vnd.das2.das2stream</b></code> (*.d2s)<br>
+	<i>das2</i> Text Stream: <code><b>text/vnd.das2.das2stream; charset=utf-8</b></code> (*.d2t)<br>
+   <i>das2</i> XML Document: <code><b>application/vnd.das2.das2doc+xml</b></code> (*.d2x)<br>
    </p>
 
 	<h2>Select a file to Upload</h2>

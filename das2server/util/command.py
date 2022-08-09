@@ -66,9 +66,9 @@ def _collapseByMime(dInOrder):
 			sGzin = dCmd['output']
 
 	if (not bUnique) and (len( dInOrder[ lInOrder[-1] ]) == 1):
+		raise E.ServerError("TODO: Continue code here")
 
-
-	if not bUnique
+	if not bUnique:
 		raise E.QueryError("Ambiguous request, could not resolve query to an unique command set.")
 
 

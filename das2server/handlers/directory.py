@@ -1,4 +1,4 @@
-"""Default handler for 2.3 style catalog level lists"""
+"""Default handler for das3 style catalog level lists"""
 
 import sys
 import codecs

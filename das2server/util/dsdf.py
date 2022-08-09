@@ -219,7 +219,7 @@ class Dsdf(object):
 
 		ptrn = re.compile('\$\(.*\)')
 
-		# New for v2.3, allow dataset IDs to be case insensitive
+		# New for v3.0, allow dataset IDs to be case insensitive
 		(self.sName, self.sPath) = _findDsdfNoCase(dConf['DSDF_ROOT'], sDsdf, fLog);
 		if self.sPath == None:
 			raise errors.QueryError(u"Data source %s doesn't exist on this server"%sDsdf)

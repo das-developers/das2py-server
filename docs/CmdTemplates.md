@@ -9,9 +9,9 @@ URL --> |  server  | --> command line --> | Shell | --> data stream
         +----------+                      +-------+
 ```
 
-For the das2/v2.3 protocol, the path component of the URL selects the data
-source.  When data are requested, the URL GET parameters define how the
-source should operate.
+For the das v3.0 API, the path component of the URL selects the data source.
+When data are requested, the URL GET parameters define how the source
+should operate.
 
 In older versions of the server there was a rather fixed translation between
 URL parameters and command lines.  The v2.3 server makes the translation

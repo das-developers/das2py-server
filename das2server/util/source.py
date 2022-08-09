@@ -13,24 +13,26 @@ from copy import deepcopy
 
 from . import errors
 from . import webio
+from . import output
 
 import das2
 
 g_d1s_mime = "application/octet-stream"
 g_d2s_mime = "application/vnd.das2.das2stream"
+g_d2x_mime = "application/vnd.das2.das2doc+xml" #; charset=utf-8 (*.d2x)
 g_qs_mime  = "application/vnd.das2.qstream"
 
 #########################################################################
 
 def stdFormKeys(sConvention):
 	"""Get the standard time parameter keys based on the call convention
-	In das2/v2.3 the key names are picked for coordinate names to help
-	the developer keep different physical dimensions separate.
+	In das3 the key names are picked for coordinate names to help the
+	developer keep different physical dimensions separate.
 
 	Returns 
 		(sTimeBegKey, sTimeEndKey, sTimeMaxBinSzKey, sIntervalKey, sOptKey)
 	"""
-	if sConvention in ("das2.3","das2/v2.3","v2.3"):
+	if sConvention in ("das3","das2/v3","v3.0","v3"):
 		return (
 			"read.time.min",
 			"read.time.max",
@@ -45,7 +47,7 @@ def stdFormKeys(sConvention):
          # bin.merge.max
          # dft.length
          # dft.slide
-         # format.mime
+         # format.type
 		)
 	else:
 		return ('start_time','end_time','resolution','interval','params')
@@ -81,7 +83,7 @@ def _findSrcNoCase(sRoot, sSource, sExt, fLog):
 	if not os.path.isfile(sPath): return (None,None)
 	
 	sName = '/'.join(lName)
-	sName = sName.rstrip('.dsdf');
+	sName = sName.rstrip(sExt);
 	return (sName, sPath)
 
 ##############################################################################
@@ -345,18 +347,18 @@ def _mergeContacts(dOut, dProps, fLog):
 		
 			if dContact not in lOut: lOut.append( dContact )
 
-def _mergeProto(dOut, dProps, fLog):
+def _mergeProto(dOut, dConf, dProps, fLog):
 	# If this is a remote server assume it's das2.2 until proved otherwise
 	# This can be confusing, because this server can be listed in the dsdf
 	# as well as remote servers.
 	#
 	# Also, the server value may have one or two parts
-	
+
 	dProto = _getDict(dOut, 'protocol')
 	dProto['method'] = 'GET'
 	
 	sMe = webio.getScriptUrl().strip('/')
-	sSrvType = 'das2.3'
+	sSrvType = 'das3'
 	
 	if 'server' in dProps and '00' in dProps['server']:
 		sSrv = dProps['server']['00']
@@ -370,26 +372,32 @@ def _mergeProto(dOut, dProps, fLog):
 			sServer = lSrv[0].strip('/')
 
 		if sServer == sMe:  # If the listed server is me, override the type
-			sSrvType = "das2.3"
+			sSrvType = "das3"
 	else:
 		sServer = sMe
 	
-	if sSrvType == "das2.3":
-		dProto['convention']	= 'das2/v2.3'
+	if sSrvType == "das3":
+		dProto['convention']	= 'das3'
 		sBaseUrl = "%s/source/%s/data"%(sServer, dProps["__caseid__"].lower())
 	else:
-		dProto['convention']	= 'das2/v2.2'
+		dProto['convention']	= 'das2'
 		sBaseUrl = "%s?server=dataset&dataset=%s"%(sServer, dProps["__caseid__"])
 
 	dProto['base_urls'] = [sBaseUrl]
+
+	if ('WEBSOCKET_URI' in dConf) and (len(dConf['WEBSOCKET_URI']) > 6):
+		dProto['base_urls'].append(
+			"%s/%s"%(dConf['WEBSOCKET_URI'], dProps["__caseid__"].lower())
+		)
+
 	return sBaseUrl
 
 
-def _mergeSrcCoordInfo(dOut, dProps, dUser, fLog):
+def _mergeSrcCoordInfo(dOut, dProps, fLog):
 	"""Add "coordinates" info to the output dictionary.
 	"""
 	dIface  = _getDict(dOut, 'interface')
-	dCoords = _getDict(dIface, 'coord')
+	dCoords = _getDict(dIface, 'coordinates')
 	
 	# By default das2/2.2 servers only know that there is a time coordinate
 	# so set that one up.  
@@ -522,7 +530,7 @@ def _mergeDas2Params(dOut, dProps, fLog):
 	entry as a courtesy.
 	"""
 
-	(sBegKey, sEndKey, sResKey, sIntKey, sOptKey) = stdFormKeys("das2/v2.3")
+	(sBegKey, sEndKey, sResKey, sIntKey, sOptKey) = stdFormKeys("das3")
 
 	dProto = _getDict(dOut, 'protocol')
 	dGet = dProto['http_params']
@@ -759,56 +767,22 @@ def _mergeExamples(dOut, dProps, sBaseUrl, fLog):
 		
 	if len(dExamples) > 0:
 		dProto = _getDict(dOut, 'interface')
-		dProto['example'] = dExamples
-	
+		dProto['examples'] = dExamples
+
+# ########################################################################## #
 
 def _mergeFormat(dConf, dOut, dProps, fLog):
 
-	# Set base reader output format, downstream processors may add other
-	# avaialble formats.
-	if _isPropTrue(dProps, 'qstream'):
-		dDefFmt = {
-			"name":"QStream",
-			"title":"QStream, %s (*.qds)"%g_qs_mime,
-			"mime": g_qs_mime, 
-			"extension": ".qds",
-			"enabled": {"value":True },
-		}
-		sDefKey = 'qstream'
-	elif _isPropTrue(dProps, 'das2Stream'):
-		dDefFmt =  {
-			"name":"das2 binary",
-			"title":"das2 binary stream, %s (*.d2s)"%g_d2s_mime,
-			"mime": g_d2s_mime,
-			"extension":".d2s",
-			"enabled":{"value":True},
-		}
-		sDefKey = 'das2binary'
-	else:
-		dDefFmt =  {
-			"name":"das1 binary",
-			"mime":g_d1s_mime,
-			"title":"das1 binary stream, %s (*.bin)"%g_d1s_mime,
-			"extension":".bin",
-			"enabled":{"value":True},
-		}
-		sDefKey = 'das1binary'
-
-	dOut['interface']['format'] = {sDefKey:dDefFmt}
-	dOut['interface']['default'] = sDefKey
-
-	
-	# Different das2/v2.3 servers can have different capabilities so 
-	# we *really* shouldn't make api.json files for others.  I have here
-	# but they aren't in the catalog at least and they are hidden from
-	# wget.
+	# Different das3 servers can have different capabilities so we *really*
+	# shouldn't make api.json files for others.  I have done so here, but
+	# they aren't in the catalog at least and they are hidden from wget.
 	
 	# If this really is one of my data sources, add in the extra formatting
 	# options provided by this server
 
 	sMe = webio.getScriptUrl().strip('/')
 	bIsMe = True
-	
+
 	if 'server' in dProps and '00' in dProps['server']:
 		sSrv = dProps['server']['00']
 		lSrv = [ s.strip() for s in sSrv.split('|')]
@@ -818,12 +792,26 @@ def _mergeFormat(dConf, dOut, dProps, fLog):
 			sServer = lSrv[0].strip('/')
 
 		bIsMe = (sServer == sMe)
-	
-	if bIsMe and not _isPropTrue(dProps, 'qstream'):
-		# Add our supported output conversion interface controls and parameters
-		output.addFormatSelection(dConf, dOut['interface']['format'])
-		output.addFormatHttpParams(dConf, dOut['protocol']['http_params'])
+		if sServer != sMe:
+			dOut['interface']['formats'] = {}
+			return
 
+	
+	lRdrOut = ['das', '1.0', 'binary']  # The default
+	if _isPropTrue(dProps, 'qstream'):
+		lRdrOut = ['qstream', None, 'binary']
+
+	elif _isPropTrue(dProps, 'das2Stream'):
+		lRdrOut = ['das', '2.2', 'binary']
+		
+	elif _isPropTrue(dProps, 'das3Stream'):
+		lRdrOut = ['das', '3.0', 'binary']
+
+	# Add our supported output conversion interface controls and parameters
+	dOut['interface']['formats'] = output.getFormatSelection(dConf, lRdrOut)
+	
+	output.addFormatHttpParams(dConf, dOut['protocol']['http_params'])
+	
 
 # ########################################################################## #
 # Merge 
@@ -898,7 +886,7 @@ def _mergeInternal(dOut, dConf, dProps, fLog):
 			dCmd = {'template':'%s %s#[%s] #[%s]'%(
 				sCmd, sInterval, sBegKey, sEndKey
 			)}
-		else
+		else:
 			dCmd = {'template':
 				'%s %s#[%s] #[%s] #[%s#@#]'%(sCmd, sInterval, sBegKey, sEndKey, sOptKey
 			)}
@@ -922,7 +910,7 @@ def _mergeInternal(dOut, dConf, dProps, fLog):
 		else:
 			lCmd.append({
 				'role':'reduce',
-				'template':'%s #[%s]'%(sReducer, sResKey)
+				'template':'%s #[%s]'%(sReducer, sResKey),
 				'trigger':[{"key":sResKey,"value":0,"compare":"gt"}],
 				'order': 30,
 				'input': sMime,
@@ -963,12 +951,12 @@ def _mergeInternal(dOut, dConf, dProps, fLog):
 		for sLevel in dProps['cacheLevel']:
 			l = [s.strip() for s in dProps['cacheLevel'][sLevel].split()]
 			if len(l) < 2:
-				fLog.write("ERROR: Misconfigured cache level in %s"dProps['__path__'])
+				fLog.write("ERROR: Misconfigured cache level in %s"%dProps['__path__'])
 				continue
 			sRes = l[0]
 			
 			if l[1] not in dConvert:
-				fLog.write("ERROR: Misconfigured cache block size %s"dProps['__path__'])
+				fLog.write("ERROR: Misconfigured cache block size %s"%dProps['__path__'])
 				continue
 			sBlkSz = dConvert[l[1]]
 			dBlk = {"block_size":[sBlkSz]}
@@ -1053,6 +1041,9 @@ def _dsdf2Source(dConf, sPath, fLog, sTarget="any"):
 		RemoteServer if dsdf is for someone else
 		ServerError if there is a syntax error or other misconfiguration
 	"""
+
+	sName = sPath.replace(dConf['DSDF_ROOT']+'/', '')
+	sName.replace(".dsdf","").replace(".json",'')
 	dDsdf = _loadDsdf(dConf, sName, sPath, fLog)
 
 	dOut = {}
@@ -1079,7 +1070,7 @@ def _dsdf2Source(dConf, sPath, fLog, sTarget="any"):
 		_mergeInternal(dOut, dConf, dDsdf, fLog)
 
 	# potentially override the base url and set the protocol convention
-	sBaseUrl = _mergeProto(dOut, dDsdf, fLog)
+	sBaseUrl = _mergeProto(dOut, dConf, dDsdf, fLog)
 	
 	# make an ID for the datasource if requested
 	#if sIdRoot:
@@ -1207,7 +1198,7 @@ def _json2Source(dConf, sPath, fLog, sTarget='external'):
 
 	# If the source had no name, give it one based on the filename
 	if 'name' not in dOut:
-		dOut['name'] = basename(sPath).replace('.json','')
+		dOut['name'] = bname(sPath).replace('.json','')
 
 	# And save the path to the file
 	dOut['__path__'] = sPath
@@ -1217,13 +1208,13 @@ def _json2Source(dConf, sPath, fLog, sTarget='external'):
 
 # ########################################################################## #
 
-def _dsdfOverRide(dSrcDsdf, dSrcJson):
+def _dsdfOverRide(dSrcDsdf, dJsonSrc):
 	"""Given two partial HttpStreamSrc dictionaries, override the up-converted
 	dsdf dictionary with setting sfrom the new json dictionary.  Sections are
 	overridden as follows:
 	
-	interface.name = Set to 'das2/v2.3 Source'
-	protocol.convention = 'das2/v2.3'
+	interface.name = Set to 'das3 Source'
+	protocol.convention = 'das3'
 
 	Override, .* means sub items overridden
 	------------------
@@ -1244,24 +1235,26 @@ def _dsdfOverRide(dSrcDsdf, dSrcJson):
 	dOut = dSrcDsdf
 
 	for s in ('name','title','description'):
-		if s in dSrcJson:
-			dOut[s] = dSrcJson[s]
+		if s in dJsonSrc:
+			dOut[s] = dJsonSrc[s]
 	
 	if 'interface' in dJsonSrc:
 
-		for sSection in ('example','coord','data'):
+		for sSection in ('examples','coordinates','data','options','formats'):
 			if sSection in dJsonSrc['interface']:
 				for sKey in dJsonSrc['interface'][sSection]:
 					dSection = _getDict(dOut['interface'], sSection)
 					dSection[sKey] = dJsonSrc['interface'][sSection][sKey]
 			
 	if 'protocol' in dJsonSrc:
-		for sKey in dJsonSrc['protocol']
+		for sKey in dJsonSrc['protocol']:
 			dOut['protocol'][sKey] = dJsonSrc['protocol'][sKey]
 
-	dOut['protocol']['converntion'] = 'das2/v2.3'
+	dOut['protocol']['convention'] = 'das3'
 
 	if 'internal' in dJsonSrc:
+		if 'internal' not in dOut: dOut['internal'] = {}
+
 		if 'cache' in dJsonSrc['internal']:
 			dOut['internal']['cache'] = dJsonSrc['internal']['cache']
 		if 'command' in dJsonSrc['internal']:
@@ -1273,17 +1266,29 @@ def _dsdfOverRide(dSrcDsdf, dSrcJson):
 # ########################################################################## #
 
 def load(fLog, dConf, sSource, sTarget="external"):
-	"""Create an HttpStreamSrc object from server configuration files
+	"""Create an HttpStreamSrc object from server configuration files.
 
-	The three main section of the HttpStreamSrc definition are:
+	Source conflict resolution:
+	   * If there exists a *.json file for the source and a .dsdf, then the
+	     .json file is read and the *.dsdf file is ignored.
+
+	The three main section of the HttpStreamSrc definition are from the
+	outside in:
 	
 		interface - What clients present to users, or downstream tools
- 	   protocol - What clinets use to talk to this server
-	   internal - How protocol requests are turned into command lines
+			Sections: example, coord, data, option, format
 
-	If the main focus of the load is an external API request then then
-	'internal' section is dropped.  If the main focus is internal 
-	server operations then 'interface' is dropped.
+ 	   protocol  - What clients use to talk to this server
+      	Sections: method, base_urls, authentication, http_params
+
+	   internal  - How protocol requests are turned into command lines
+			Sections: cache, 
+
+	* If the main focus of the load is an external API request then then
+	  'internal' section is dropped.
+
+	* If the main focus is internal server operations then 'interface'
+	  is dropped.
 
 	Args:
 		dConf - A dictionary containing the server configuration
@@ -1308,29 +1313,19 @@ def load(fLog, dConf, sSource, sTarget="external"):
 		ServerError if there is a syntax error or other misconfiguration
 	"""
 	
-	dSrcDsdf = {}
-	dSrcJson = {}
+	(sName, sPath) = _findSrcNoCase(dConf['DSDF_ROOT'], sSource, '.json', fLog)
+	if sPath != None:
+		dSource = _json2Source(dConf, sPath, fLog, sTarget)
+		return dSource
 
-	(sName, sDsdfPath) = _findSrcNoCase(dConf['DSDF_ROOT'], sSource, '.dsdf', fLog)
-	if sDsdfPath != None:
-		# We have a dsdf
-		dSrcDsdf = _dsdf2Source(dConf, sDsdfPath, fLog, sTarget)
-		sJsonPath = sDsdfPath.replace('.dsdf','.json')
 
-		# See if there are overrides in a json file
-		if os.path.isfile(sJsonPath):
-			dSrcJson = _json2Source(dConf, sJsonPath, fLog, sTarget)
-			return _dsdfOverRide(dSrcDsdf, dSrcJson)
-		else:
-			return dSrcDsdf
+	# Fall back to older DSDF if that is avaialable
+	(sName, sPath) = _findSrcNoCase(dConf['DSDF_ROOT'], sSource, '.dsdf', fLog)
+	if sPath != None:
+		dSource = _dsdf2Source(dConf, sPath, fLog, sTarget)
+		return dSource
 
-	else:
-		dSrcDsdf = None
-		(sName, sJsonPath) = _findSrcNoCase(dConf['DSDF_ROOT'], sSource, '.json', fLog)
-		if sJsonPath == None:
-			raise errors.QueryError(u"Data source %s doesn't exist on this server"%sSource)
-		
-		return _json2Source(dConf, sJsonPath, fLog, sTarget)
+	raise errors.QueryError(u"Data source %s doesn't exist on this server"%sSource)
 
 # ########################################################################## #
 

@@ -45,7 +45,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		bInternal = True
 	
 	# See if this dsdf is for this server, if not send file not found
-	# in das2.3 it's the catalogs job to advertise other servers, not
+	# in das3 it's the catalogs job to advertise other servers, not
 	# the server itself.
 	
 	try:

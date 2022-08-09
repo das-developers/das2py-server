@@ -20,7 +20,7 @@ tDrop = (
 def _das22Iface(U, dSrc):
 	"""Write a utf-8 string that contains the stream"""
 
-	(sBeg, sEnd, sRes, sInt, Opts) = U.source.stdFormKeys('v2.3')
+	(sBeg, sEnd, sRes, sInt, Opts) = U.source.stdFormKeys('v3')
 
 	if ('protocol' not in dSrc) or ('http_params' not in dSrc['protocol']):
 		raise U.errors.ServerError("'http_params' missing from source definition")

@@ -1,4 +1,4 @@
-"""Default handler for 2.3 style catalog level lists"""
+"""Default handler for 3.0 style catalog level lists"""
 
 import sys
 import codecs
@@ -93,7 +93,7 @@ def _fileOut(sFileName, tData):
 			lLine = sLine.split(u'=')
 			if len(lLine) > 1:
 				sServer = lLine[1].strip(u"\"' \r\n\t")
-				# If other server is denoted as das2.3, mark as such
+				# If other server is denoted as das3, mark as such
 				lSrv = [s.strip() for s in sServer.split('|')]
 				if len(lSrv) > 1:
 					sSrvType = lSrv[0] 
@@ -123,7 +123,7 @@ def _addEntries(sScriptUrl, lOut, lIgnore, dCat, fLog):
 	#	fLog.write(">>initial>>%s,%s,%s,%s"%tuple(lOut[i]))
 	#fLog.write("----")
 
-	# Prune 1: Rm all sources that are not from a das2.3 server
+	# Prune 1: Rm all sources that are not from a das3 server
 	i = 0;
 	while i < len(lOut):
 		if lIgnore[i] or lOut[i][0].endswith('/'):  # A Dir, prune later
@@ -133,8 +133,8 @@ def _addEntries(sScriptUrl, lOut, lIgnore, dCat, fLog):
 		if lOut[i][2] == None or lOut[i][2].startswith(sScriptUrl):
 			i += 1  # source is one of mine, keep it 
 		else:
-			if lOut[i][3] == "das2.3":
-				i += 1  # Some other das2.3 server, keep it
+			if lOut[i][3] == "das3":
+				i += 1  # Some other das3 server, keep it
 			else: 
 				lTmp = lOut.pop(i)  # Some das2.2 source, drop it
 
@@ -263,8 +263,8 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 
 	# Output one of three versions:
    # (no path) - old das2.1 list
-	# /sources.csv - New das2.3 list
-	# /sources.json - New das2.3 catalog
+	# /sources.csv - New das3 list
+	# /sources.json - New das3 catalog
 	if sPath == "/sources.csv":
 		U.webio.pout("Content-Type: text/csv; charset=utf-8\r\n")
 		U.webio.pout("Status: 200 OK\r\n")
@@ -288,7 +288,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 					sDef = '"%s/source/%s/dsdf.d2t"'%(sScriptURL, lOut[i][0].lower())
 				else:
 					# Somebody else's
-					if lOut[i][3] == "das2.3":
+					if lOut[i][3] == "das3":
 						sDef = '"%s/source/%s/dsdf.d2t"'%(lOut[i][2], lOut[i][0].lower())
 					else:
 						sDef = '"%s/?server=dsdf&dataset=%s"'%(lOut[i][2], lOut[i][0])

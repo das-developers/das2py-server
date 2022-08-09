@@ -94,7 +94,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	pout('<div class="article">')
 			
 	pout("""<p>
-This is a <b>das2/v2.3 (prototype) server</b>.  It provides data streams
+This is a <b>das2/3 (prototype) server</b>.  It provides data streams
 via an HTTP GET query protocol.</p>
 
 <div class="flowdiagram_parent">

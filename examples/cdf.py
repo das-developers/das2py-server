@@ -165,8 +165,8 @@ def cdfToDas22Hdr(cdf, lIgnore=[], dExtra={}):
 	Don't include changable parameter ranges since we'll probably build a cache
 	and these won't be valid anyway.
 	
-	Das2.2 has some restrictions that the upcomming das2.3 protocol won't have
-	but as of 2019-07-01 no clients understand that protocol yet.	
+	v2.2 has some restrictions that the v3.0 format doesn't have, but as of
+	2019-07-01 no clients understand that protocol yet.	
 	"""
 	
 	lOut = [u'<stream version="2.2">',u'  <properties']

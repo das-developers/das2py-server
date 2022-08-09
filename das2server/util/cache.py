@@ -289,7 +289,7 @@ def missList(fLog, dConf, dsdf, sNormParam, rRes, sBeg, sEnd, bCoverage=True):
 	
 	     (sBegIdx, sEndIdx, nCacheLevel)
 		  
-	Here sBegIdx and sEndIdx are times, but when we move to Das 2.3 they
+	Here sBegIdx and sEndIdx are times, but when we move to Das3 they
 	will need to be a general index.
 	"""
 		

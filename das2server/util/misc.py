@@ -50,7 +50,7 @@ def checkParams(fLog, form):
 				)
 				return False
 
-		return True
+	return True
 
 
 ##############################################################################

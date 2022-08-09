@@ -78,7 +78,7 @@
 			"python%(PYVER)s %(PREFIX)s/examples/cdf.py",
 			"%(PREFIX)s/examples/themis_data",
 			"#read.time.min# #read.time.max# #[read.options | @ | ]#"
-		],
+		]
 	}],
 
 	// Sometimes you don't want to allow certian operations to be preformed
@@ -130,7 +130,7 @@
 			"250ms_Bx":{
 				"resolution_params":["bin.time.max"],
 				"resolution":["250 ms"], "block_size":["1 hour"],
-				"fixed_params" : {"read.options":"Bx"},
+				"fixed_params" : {"read.options":"Bx"}
 			},
 			"1s":{
 				"resolution":["1 s"],    "block_size":["1 day"]  
@@ -155,7 +155,7 @@
 		// Note the "#[read.options ]" replacement text in the commands.template
 		// section above.  The stuff defined here, plugs in there.
 
-	   "read.options": {
+	   "read.opts": {
 			"title": "Optional reader arguments",  // user documentation
 			"required": false,                     // this param is not required
 			

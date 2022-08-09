@@ -43,6 +43,6 @@ class NotFoundError(DasError):
 	pass
 
 class RemoteServer(DasError):
-	"""In das2.3 catalogs are supposed to advertise other servers stuff
+	"""In das3 catalogs aren't supposed to advertise other servers stuff
 	it's not this servers job to worry about it"""
 
