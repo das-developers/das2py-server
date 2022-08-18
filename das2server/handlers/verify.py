@@ -57,7 +57,7 @@ def errorExit(sOut):
 def sendDisabled(fLog, dConf):
 	pout('Content-Type: text/html; charset=utf-8\r\n')
 
-	pout('''
+	pout('''<!DOCTYPE html>
 <html>
 <head></head>
 <body>
@@ -90,7 +90,8 @@ def _preArticle(U, dConf, fLog, sTitle):
 	else:
 		sSiteId = "Set SITE_TITLE in %s"%dConf['__file__']
 
-	pout('''<html>
+	pout('''<!DOCTYPE html>
+<html>
 <head>
    <title>%s</title>
    <link rel="stylesheet" type="text/css" media="screen" href="%s" />

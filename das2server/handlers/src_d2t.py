@@ -33,10 +33,10 @@ def _das22Iface(U, dSrc):
 
 	dDsdf = {}
 	if 'title' in dSrc:  dDsdf['description'] = dSrc['title']
-	if 'contacts' in dSrc:
-		for dContact in dSrc['contacts']:
-			if dContact['type'] == 'scientific':
-				
+	#if 'contacts' in dSrc:
+	#	for dContact in dSrc['contacts']:
+	#		if dContact['type'] == 'scientific':
+							
 
 
 	fOut = StringIO()

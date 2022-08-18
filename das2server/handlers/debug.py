@@ -51,7 +51,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	print("Content-Type: text/html; charset=utf-8")
 	print("")
 
-	print("""
+	print("""<!DOCTYPE html>
 <html>
 <title>Das2 PyServer Enviroment</title>
 <body>

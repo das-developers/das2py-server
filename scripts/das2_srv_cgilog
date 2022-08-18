@@ -216,7 +216,8 @@ def main():
 	pout("Content-Type: text/html; charset=utf-8\r\n")
 	pout("Cache-Control: no-cache\r\n\r\n")
 	
-	pout("""<html>
+	pout("""<!DOCTYPE html>
+<html>
 <head>
    <title>%(site-id)s</title>
    <link rel="stylesheet" type="text/css" media="screen" href="%(css-link)s" />

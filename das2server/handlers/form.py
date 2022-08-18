@@ -318,7 +318,7 @@ def _prnVarForm(fOut, sCtrlPre, dParams, sVarId, dVar):
 	else: sName = sVarId[0].upper() + sVarId[1:]
 	
 	# If this variable has text aspects, label them up front
-	lAspects = ('minimum', 'maximum', 'resolution', 'interval')
+	lAspects = ('min', 'max', 'res', 'int')
 	bLabelRow = False
 	for sAspect in lAspects:
 		if (sAspect in dVar) and ('set' in dVar[sAspect]):
@@ -779,33 +779,33 @@ def prnHttpSource(fLog, dSrc, fOut):
 			sout(fOut, "</div>")
 			sout(fOut, "</fieldset>")
 		
-		#for sData in dData:
-		#	for sAspect in ('units','enabled'):
-		#		if sAspect in dData[sData]:
-		#			for sKey in dData[sData][sAspect]:
-		#				if sKey.startswith('set'):
-		#					if sAspect == 'enabled':	bEnable = True
-		#					else: bUnits = True
-		#					if sData not in lMod: lMod.append(sData)
-		#			
-		#if bEnable or bUnits:
-		#
-		#	if bEnable:
-		#		sout(fOut, '<fieldset><legend><b>Toggle Data Output:</b></legend>')
-		#	else:
-		#		sout(fOut, '<fieldset><legend><b>Set Data Units:</b></legend>')
-		#	
-		#	sStyle = ''
-		#	if len(lMod) > 12: sStyle = 'class="srcopts_scroll_div"'
-		#	sout(fOut, '<div %s>'%sStyle)
-		#
-		#	# Probably need to return id's to use in javascript here
-		#	lMod.sort()
-		#	for sData in lMod:
-		#		nSettables += _prnVarForm(fOut, sBaseUri, dParams, sData, dData[sData])
-		#		
-		#	sout(fOut, "</div>")
-		#	sout(fOut, "</fieldset>")
+		for sData in dData:
+			for sAspect in ('units','enabled'):
+				if sAspect in dData[sData]:
+					for sKey in dData[sData][sAspect]:
+						if sKey.startswith('set'):
+							if sAspect == 'enabled':	bEnable = True
+							else: bUnits = True
+							if sData not in lMod: lMod.append(sData)
+					
+		if bEnable or bUnits:
+		
+			if bEnable:
+				sout(fOut, '<fieldset><legend><b>Toggle Data Output:</b></legend>')
+			else:
+				sout(fOut, '<fieldset><legend><b>Set Data Units:</b></legend>')
+			
+			sStyle = ''
+			if len(lMod) > 12: sStyle = 'class="srcopts_scroll_div"'
+			sout(fOut, '<div %s>'%sStyle)
+		
+			# Probably need to return id's to use in javascript here
+			lMod.sort()
+			for sData in lMod:
+				nSettables += _prnVarForm(fOut, sBaseUri, dParams, sData, dData[sData])
+				
+			sout(fOut, "</div>")
+			sout(fOut, "</fieldset>")
 	
 	# Handle setting general options
 	if dParams and ('options' in dIface):
@@ -1064,8 +1064,8 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 
 	try:
 		dNode = U.source.external(fLog, dConf, sSource)
-	except U.errors.QueryError:
-		U.webio.queryError(fLog, "Data source does not exist")
+	except U.errors.QueryError as e:
+		U.webio.queryError(fLog, str(e))
 		return 17
 	except U.errors.ServerError as e:
 		U.webio.serverError(fLog, str(e));
@@ -1095,7 +1095,8 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	else:
 		sSiteId = "Set SITE_TITLE in %s"%dConf['__file__']
 
-	pout('''<html>
+	pout('''<!DOCTYPE html>
+<html>
 <head>
    <title>%s</title>
    <link rel="stylesheet" type="text/css" media="screen" href="%s" />

@@ -74,7 +74,8 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	else:
 		sSiteId = "Set SITE_TITLE in %s"%dConf['__file__']
 
-	pout('''<html>
+	pout('''<!DOCTYPE html>
+<html>
 <head>
    <title>%s</title>
    <link rel="stylesheet" type="text/css" media="screen" href="%s" />

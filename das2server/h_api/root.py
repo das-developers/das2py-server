@@ -20,7 +20,8 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		"data": "%s/hapi/data"%sScript
 	}
 	
-	pout('''<html>
+	pout('''<!DOCTYPE html>
+<html>
 <head><title>Das 2.2 HAPI Subsystem</title></head>
 <body>
 <h2>Das2 HAPI Subsystem</h2>

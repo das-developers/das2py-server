@@ -46,12 +46,12 @@ def getMime(sType, sVersion, sSerial):
 	if sType == 'das':
 		if sVersion.startswith('3'):
 			if sSerial == 'text':
-				sExt = 'tdas'
+				sExt = 'dast'
 				sTitle = 'das text packet stream'
 				sMime = 'text/vnd.das.stream; charset=utf-8'
 
 			elif sSerial == 'xml':
-				sExt = 'xdas'
+				sExt = 'dasx'
 				sTitle = 'das XML stream'
 				sMime = 'application/vnd.das.doc+xml'
 
