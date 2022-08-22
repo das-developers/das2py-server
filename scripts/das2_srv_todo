@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys
 import os
@@ -436,7 +436,7 @@ class StderrLog(object):
 		
 
 ##############################################################################
-# The program need way better help than the default OptionParser can provide
+# The program needs way better help than the default OptionParser can provide
 
 class MyOptParse(optparse.OptionParser):
 	def print_help(self, file=None):
@@ -466,8 +466,6 @@ DESCRIPTION:
 
 		file.write("""
 OPTIONS:
-   --version   Show the program's version information and exit
-               	
    -h, --help  Print this general help message and exit
 	
    -c FILE, --config=FILE
@@ -526,8 +524,8 @@ FILES:
       %s
 		
 SEE ALSO:
-   das2_srv_workd, das2_cache_rdr, qstream_cache_rdr, and the 'Das2 PyServer
-   Reference Guide' at http://das2.org/PyServer-RG.pdf .
+   das2_srv_workd, das2_cache_rdr, and the 'Das2 PyServer Reference Guide at:
+      http://das2.org/PyServer-RG.pdf
 """%g_sConfPath)
 	
 		#End print_help
@@ -542,8 +540,7 @@ def main(argv):
 
 	# Would use argparse here, but it's only avaliable in python 2.7 and up
 	psr = MyOptParse(
-		prog=sProg, usage=sUsage, 
-		version=" \n".join( [g_sRev, g_sWho, g_sWhen, g_sURL] )
+		prog=sProg, usage=sUsage
 	)
 	
 	psr.add_option('-c', '--config', dest="sConfig", default=g_sConfPath)

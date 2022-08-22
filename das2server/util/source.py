@@ -410,15 +410,15 @@ def _mergeSrcCoordInfo(dOut, dProps, fLog):
 	if 'name' not in dTime: dTime['name']  = 'Time'
 
 	# Use the lowest numbered example for the default range, interval
-	dTime['min'] = {sV:None}
-	dTime['max'] = {sV:None}
+	dTime['minimum'] = {'name':'Min', sV:None}
+	dTime['maximum'] = {'name':'Max', sV:None}
 	
 	dTime['units'] = {'value':'UTC'}
 		
 	if 'requiresInterval' in dProps:
 		dTime['interval'] = {sV:None}
 	else:
-		dTime['res'] = {sV:None, "units":"s"}
+		dTime['resolution'] = {sV:None, "units":"s"}
 	
 	sNum = None
 	if 'exampleRange' in dProps:
@@ -428,9 +428,9 @@ def _mergeSrcCoordInfo(dOut, dProps, fLog):
 	
 		lTmp = [s.strip() for s in dProps['exampleRange'][sNum].split('|')]
 		lTmp = [s.strip() for s in lTmp[0].split('to')]
-		dTime['min'][sV] = lTmp[0]		
+		dTime['minimum'][sV] = lTmp[0]		
 		if len(lTmp) > 1:
-			dTime['max'][sV] = lTmp[1].replace('UTC','').strip()
+			dTime['maximum'][sV] = lTmp[1].replace('UTC','').strip()
 	
 	if 'exampleInterval' in dProps:
 		lNums = list(dProps['exampleRange'].keys())
@@ -444,25 +444,25 @@ def _mergeSrcCoordInfo(dOut, dProps, fLog):
 	else:	
 		# Default to 1/2000th of the range, here's where we need the
 		# das2 module.
-		if dTime['min'][sV] and dTime['max'][sV]:
-			dtBeg = das2.DasTime(dTime['min'][sV])
-			dtEnd = das2.DasTime(dTime['max'][sV])
-			dTime['res'][sV] = (dtEnd - dtBeg) / 2000.0
+		if dTime['minimum'][sV] and dTime['maximum'][sV]:
+			dtBeg = das2.DasTime(dTime['minimum'][sV])
+			dtEnd = das2.DasTime(dTime['maximum'][sV])
+			dTime['resolution'][sV] = (dtEnd - dtBeg) / 2000.0
 				
 	# Set up the alteration rules
-	dTime['min']['set'] = {'param':sBegKey, 'required':True}
-	dTime['max']['set'] = {'param':sEndKey, 'required':True}
+	dTime['minimum']['set'] = {'param':sBegKey, 'required':True}
+	dTime['maximum']['set'] = {'param':sEndKey, 'required':True}
 	
 	if 'validRange' in dProps:
 		lTimeRng = [ s.strip() for s in dProps['validRange']['00'].split('to') ]
 		if len(lTimeRng) > 1:
-			dTime['min']['set']['range'] = lTimeRng
-			dTime['max']['set']['range'] = lTimeRng
+			dTime['minimum']['set']['range'] = lTimeRng
+			dTime['maximum']['set']['range'] = lTimeRng
 	
 	if 'interval' in dTime:
 		dTime['interval']['set'] = {'param':sIntKey, 'required':True}
 	else:
-		dTime['res']['set'] = {'param':sResKey, 'required':False}
+		dTime['resolution']['set'] = {'param':sResKey, 'required':False}
 
 
 	if 'coord' in dProps:
@@ -1021,7 +1021,7 @@ def _mergeInternal(dOut, dConf, dProps, fLog):
 
 # ########################################################################## #
 
-def _dsdf2Source(dConf, sPath, fLog, sTarget="any"):
+def dsdf2Source(dConf, sPath, fLog, sTarget="any"):
 	"""Create an HttpStreamSrc object from a DSDF file and the given server
 	configuration information.
 
@@ -1152,7 +1152,7 @@ def _dsdf2Source(dConf, sPath, fLog, sTarget="any"):
 
 # ########################################################################## #
 
-def _json2Source(dConf, sPath, fLog, sTarget='external'):
+def json2Source(dConf, sPath, fLog, sTarget='external'):
 	"""
 	Since the files on disk are pretty much the expected data source,
 	Function is pretty simple it just loads the file from disk stripping
@@ -1284,11 +1284,11 @@ def load(fLog, dConf, sSource, sTarget="external"):
 	   internal  - How protocol requests are turned into command lines
 			Sections: cache, 
 
-	* If the main focus of the load is an external API request then then
-	  'internal' section is dropped.
+	* If the main focus of the load is an external API request then only
+	  the external catalog item is returned.
 
-	* If the main focus is internal server operations then 'interface'
-	  is dropped.
+	* If the main focus is internal server operations then everything is
+	  returned
 
 	Args:
 		dConf - A dictionary containing the server configuration
@@ -1315,14 +1315,14 @@ def load(fLog, dConf, sSource, sTarget="external"):
 	
 	(sName, sPath) = _findSrcNoCase(dConf['DSDF_ROOT'], sSource, '.json', fLog)
 	if sPath != None:
-		dSource = _json2Source(dConf, sPath, fLog, sTarget)
+		dSource = json2Source(dConf, sPath, fLog, sTarget)
 		return dSource
 
 
 	# Fall back to older DSDF if that is avaialable
 	(sName, sPath) = _findSrcNoCase(dConf['DSDF_ROOT'], sSource, '.dsdf', fLog)
 	if sPath != None:
-		dSource = _dsdf2Source(dConf, sPath, fLog, sTarget)
+		dSource = dsdf2Source(dConf, sPath, fLog, sTarget)
 		return dSource
 
 	raise errors.QueryError(u"Data source %s doesn't exist on this server"%sSource)

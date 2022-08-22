@@ -48,6 +48,8 @@ def _hostSimpleName(sBase):
 	sLow = sBase.lower()
 	if sLow.startswith('https'):  sLow = sLow[8:]
 	elif sLow.startswith('http'): sLow = sLow[7:]
+	elif sLow.startswith('wss'): sLow = sLow[6:]
+	elif sLow.startswith('ws'): sLow = sLow[5:]
 
 	sLow = sLow[0].upper() + sLow[1:]
 
@@ -318,7 +320,7 @@ def _prnVarForm(fOut, sCtrlPre, dParams, sVarId, dVar):
 	else: sName = sVarId[0].upper() + sVarId[1:]
 	
 	# If this variable has text aspects, label them up front
-	lAspects = ('min', 'max', 'res', 'int')
+	lAspects = ('minimum', 'maximum', 'resolution', 'interval')
 	bLabelRow = False
 	for sAspect in lAspects:
 		if (sAspect in dVar) and ('set' in dVar[sAspect]):
@@ -1024,6 +1026,9 @@ function %s(sActionUrl) {
 		
 		# Make one submit function per base url that starts with https				
 		for sBase in dProto['base_urls']:
+
+			if sBase.startswith('ws'): continue  # Ignore websocket sources for regular browsers
+
 			sout(fOut, '<input type="submit" value="Get from %s"'%_hostSimpleName(sBase) +\
 		     	' onclick=\'%s("%s");\'>'%(sFuncName, _getAction(sBase) ))
 
@@ -1058,7 +1063,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		U.webio.serverError(fLog, u"PATH_INFO did not start with /source/")
 
 	if sSource.endswith('/form.html'):
-		sSource = sSource.replace("/form.html", '.dsdf')
+		sSource = sSource.replace("/form.html", '')
 	else:
 		U.webio.notFoundError(fLog, u"PATH_INFO did not end with /form.html")
 

@@ -1,0 +1,29 @@
+// ExtIface_Fmt.json - A source include which defines user interface controls
+// depending on a the current server configuration and output format of the
+// data reader.  
+//
+// Include this in your external.interface section:
+//
+// "external": {
+//   "interface": {
+//     "$include":[THIS_FILE]
+//   }
+// }
+//
+// The output format of the original source data reader is defined in the
+// object:
+//
+//    internal.commands.read.output
+//
+// in your source definition.  If you don't define an output format, this
+// expansion will not work.
+
+{
+	// First of three functions for adding automatic stream formatting:
+   //
+   //   extIface_Fmt       - Auto add end-user tools interface for stream formatting
+   //   extProtoParams_Fmt - Auto add server query parameters for stream formatting
+   //   intCmds_Fmt        - Auto add comand line templates for stream formatting
+
+	"$generate":{"extIface_Fmt":["internal.commands.read.output"]}
+}

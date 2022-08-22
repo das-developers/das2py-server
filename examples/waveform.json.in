@@ -1,0 +1,49 @@
+// waveform.json - Raw voyager PWS 4-bit waveform values
+{
+  "external":{
+    "type":"HttpStreamSrc",
+    "version":"0.7",
+    "label":"Waveform",
+    "title":"Uncalibrated Voyager 1 PWS Wideband waveforms (Sample Dataset)",
+    "summary":[
+      "Raw Voyager PWS 4-bit waveform values.  Without correlating ",
+      "information it is not possible to calibrate these data into ",
+      "physical units as an on board automated gain control system ",
+      "adjusted input attenuation to keep signals within a measurable ",
+      "sensitivity range.  In addition, the PWS instrument had no ",
+      "mechanism for transmitting these gain settings to the spacecraft ",
+      "computer."
+    ],
+    "contacts":[
+      {"type": "scientific", "name": "Bill Kurth", "email": "person@science-place.cz"},
+      {"type": "technical",  "name": "Your Name",  "email": "your.name@yourplace.edu"}
+    ],
+    "interface":{
+      "examples":[
+        {"coords.time.min":"1979-03-01T12:26:11","coords.time.max":"1979-03-01T12:29:24"},
+      ],
+      "coords":{
+        "time":{
+          "validRange":["1979-03-01T12:26:11", "1979-03-01T12:29:24"],
+          "$include":["ExtIfaceCoordsTime_Rng.json"]
+        }
+      },
+      "$include":["ExtIface_Fmt.json"]
+    },
+    "$include":["Ext_ProtoTimeRngFmt.json"] }
+  },
+
+  "internal":{
+    "commands":{
+      "read": {
+        "output":{"type":"das","version":"2.2","variant":"binary"},
+        "template":[
+          "/usr/bin/env PYTHONPATH=%(PREFIX)s/lib/python%(PYVER)s ",
+          "python%(PYVER)s %(PREFIX)s/examples/waveform.py ",
+          "%(PREFIX)s/examples/vgr_data #read.time.min# #read.time.max#"
+        ]
+      },
+      "$include":["IntCmds_Fmt.json"]
+    }
+  }
+}

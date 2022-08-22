@@ -1,0 +1,106 @@
+// random.json - A das-pyserver v3.0 source definition file
+// 
+// Das2py-server has always been an engine for matching protocol requests to
+// server side commands.  Traditionally that protocol was static.  In version
+// 3.X the protocol itself is flexible.  This is a useful change but with extra
+// flexibility comes longer data source definition files.  (In general, a
+// system that can do many things, requires more input to do some thing.) 
+//
+// To mitigate against long sections of boiler-plate while still providing 
+// a top-down interface, two meta-processing commands are provided:
+//
+//   $include -  Expand named static blocks at the indicated location.  These
+//               are in the sources/_include_ directory.  Feel free to create
+//               new ones as needed.
+// 
+//   $generate - Dynamically create object definitions based on the current
+//               server configuration.  This uses hard-coded server logic.
+//
+// When the server processes your source definition, first all $includes are
+// added, then all $generate commands are run.  To see what your source 
+// definition will look like after expansion, use the source definition (sdef)
+// tool:
+//
+//     das2_srv_sdef FILENAME
+//
+// to output the final source definition as it would be used internally.
+//
+// *If* you decide to use the provided $include files, be aware that the 
+// they draw HTTP query key names from the following set:
+//
+//    HTTP Get Param     Purpose
+//    --------------     -------------------------------------------
+//    read.time.min      A minimum time point sent to the read command
+//    read.time.min      A maximum time point sent to the read command
+//    read.time.intr     A time interval sent to the read command
+//    bin.time.max       A time interval sent to a binning command
+//
+// If you are using standard $include files, then you'll need to use these
+// paramaters in your "internal.commands.read.template" section.
+//
+//
+// Finally, this is the top level file defining your data source. *You* are in
+// charge.  There is absolutely *no* requirement to use meta-processing commands.
+// You are free to manually create source definitions without them and thus define
+// and advertise your query API however you like.  
+//
+// Furthermore, if all of this looks intimidating, the old .dsdf files are still
+// supported and are automatically expanded into a new style definition internally.
+//
+// -- C. Piker
+
+
+// A simple data source that just produces 200 random points in a given
+// interval between -10 at +10.  
+{
+
+// A das federated catalog object to be sent to clients
+"external": {
+	"type":"HttpStreamSrc", "version":"0.7",  // Object info
+	"name":"Random",
+	"description":"Produce random values between -10 and +10",
+
+	"contacts":[
+		{"type":"technical", "name":"Your Name", "email":"your.name@yourplace.edu"}
+	],
+
+	// Semantic interface for end-user tools
+	"interface":{
+		"examples": [
+			{"coords.time.min":"2017-01-01",	"coords.time.max":"2017-03-01"}
+		],
+
+		"coords":{
+			"time":{
+				"validRange": ["1970-01-01","2038-01-01"],
+				"$include":["ExtIfaceCoordsTime_Rng.json"] 
+			}
+		},
+
+		"$include":["ExtIface_Fmt.json"]
+	},
+
+	// Query interface for talking to the server
+	"$include":["Ext_ProtoTimeRngFmt.json"] }
+},
+
+// The corresponding internal object for running commands (clients don't see this)
+"internal":{
+	"type":"CmdStreamSrc", "version":"0.1",   // Object info
+	
+	// Command line interface for running programs
+	"commands":{
+		"read":{
+			"template":[
+				"env PYTHONPATH=%(PREFIX)s/lib/python%(PYVER)s ",
+				"python%(PYVER)s %(PREFIX)s/examples/randata.py",
+				"#read.time.min# #read.time.max#"
+			],
+			"output":{"type":"das","version":"2.2","variant":"binary"}
+		},
+		"$include":["IntCmds_Fmt.json"]
+	}
+}
+
+}
+

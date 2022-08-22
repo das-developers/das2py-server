@@ -1,379 +1,371 @@
-// This is an example of overriding the default user interface generated
-// automatically from a .dsdf file.
-//
-// Sections
-// --------
-// The api.json file for each das2 service defines three interfaces:
-//
-//   interface: The options to supply to the end user or downstream tool
-//   protocol:  How to create server queries form user options
-//   commands:  How to create command pipelines from protocol requests.
-//
-// The first two sections are transmitted to the das2-pyserver client.
-// the last section is used internally.
+// params.json - A das-pyserver v3.0 source definition file. 
 // 
-// Syntax:
-//   The syntax is mostly JSON, with the exception that javascript style 
-//   comments are allowed.  C-style comments: /* */ are *not* handled by
-//   the parser.
+// This is an update to the *.dsdf files that that have traditionally defined
+// data sources which allows for a fexible server protocol. For each data
+// source the following top-level objects must be defined:
+//   
+//   external: An das catalog object to send to the client, which has...
+//     |
+//     +-- interface: Semantic interface for end-user tools
+//     +-- protocol:  Query interface for the server
+//   
+//   internal: An companion das-pyserver internal object for running programs
 //
+// The syntax is mostly JSON, with the exception that javascript style comments
+// are allowed.  C-style comments: /* */ are *not* handled by the parser.
 //
-// Data source definition files
-// ----------------------------
-// Previously all das2 data sources were defined in files ending in *.dsdf
-// these files were essentially keyword = value pairs that were written
-// in IDL systax.  You can still use *.dsdf files internally if prefered
-// as the server up-converts these to the new api.json data source descriptions
-// automatically.
-//
-// Furthermore you can intermix *.dsdf and *.json files if desired for
-// the same source if desired, though this can lead to confusion.  This
-// works because source description loading happens as follows:
-//
-//   1. Load the default api.json definitions.
-//   1. Read the .dsdf if present, override the default api.json defs.
-//   3. Read the .json file if present, override the default api.json defs.
-//     
-// Since the default definitions do not define a reader, or metadata-reader
-// *at least one* of a *.dsdf or *.json file must exist to define a data
-// source.  If both exist the *.json file defs take precidence.
-//
-//
-// Proceedure
-// ----------
-// The easiest way to generate an interface file is to download the 
-// auto generated api.json file from the das2 server, copy sections to
-// to here, and adjust to taste.  If you don't wish to customize a section,
-// just leave it out.
-//
-// The most common customization is to move general options into a data
-// section, since the automatic *.dsdf -to-> api.json file creator has
-// no way to know how a general reader options are supposed to affect
-// data values.
+// For more information on the "$include" and "$generate" directives used below,
+// see the "random.json" data source definition.
+{
+
+///////////////////////////////////////////////////////////////////////////////
+// External: A federated das catalog object to be sent to clients.
+"external":{
+
+  // Object info
+  "label": "THEMIS SCT-EFW PSD",
+  "title": "THEMIS SCW-EFW Power Spectral Density (Sample Data Source)",
+
+  "summary":[
+    "The coordinate system for these data are local magnetic ",
+    "field-aligned coordinate system: Z-axis along static magnetic ",
+    "'field B0, Y-axis = R x B0 (R ... radius vector of s/c), ",
+    "X-axis = Y x Z"
+  ],
+
+  "type": "HttpStreamSrc",
+  "version": "0.7",
+ 
+  "contacts": [
+    {"type": "scientific", "name": "David Pisa", "email": "person@science-place.cz"},
+    {"type": "technical",  "name": "Your Name",  "email": "your.name@yourplace.edu"}
+  ],
 
 
-{ // JSON Begin
+  // Semantic Interface /////////////////////////////////////////////////////////
 
-// We're defining these items from the command line level outwards towards
-// the end user interface.
+  // Here we defined the relationship between coordintates, data values, and 
+  // the server protocol.  There are five sections:
+  //
+  //   examples: One-click data loads
+  //   coords:   Subsetting the full dataset in it's coordinates
+  //   data:     Selecting the data values output by this source
+  //   options:  Any other options for this data source
+  //   format:   What output format does the end-user tool desire (stream, image, etc.)
+  
+  "interface": {
 
-// Define the data reading command. The "template" option below should be
-// read as a single string.  Breaking it into a list is just provided as
-// a convienience.  For more information on the "template" parameter see
-// CmdTemplates.md in the /docs subdirectory.
+    // This is the highest level of interaction with the datasource.  Just provide
+    // a named example dataset, no further questions asked.  ALL data sources *must*
+    // provide at least one example.
+    "examples": [
+      {
+        "label": "BxBx Autocorrelation",
+        "set": {
+          "coords.time.max": "2008-06-29T17:11:51",
+          "coords.time.min": "2008-06-29T17:11:53",
+          "coords.time.res": 0.001,
+          "data.bxbx.enabled": true
+        },
+      },
+      {
+        "label": "Electric Autocorrelations",
+        "params": {
+          "coords.time.max":   "2008-06-29T17:11:51",
+          "coords.time.min":   "2008-06-29T17:11:53",
+          "data.exex.enabled":          true,
+          "data.eyey.enabled":          true,
+          "data.ezez.enabled":          true,
+          "coords.time.res": 0.001
+        },
+      },
+     {
+        "label": "BxEx Cross-correlation (Polar)",
+        "params": {
+          "coords.time.max":   "2008-06-29T17:11:51",
+          "coords.time.min":   "2008-06-29T17:11:53",
+          "coords.time.res": 0.001,
+          "option.complex": true
+        },
+      }
+    ],
+  
+    // Each physical coordinate should be listed here, IF data may be subset
+    // in a coordinate then an aspect of the coordinate must have a "set" 
+    // member.
+    "coords": {
+      
+      "time": {           // time is one of the coordinates for these data
+        "validRange": ["2008-06-29T17:11:51", "2008-06-29T17:11:53"],
+        "$include":["ExtIfaceCoordsTime_Rng.json"]
+      },
+      
+  
+      // These data are also provided in frequency but my not be sub-set in
+      // frequency an no further information on the frequency range is provided
+      "frequency": {
+        "label": "Frequency"
+      }
+    },
+  
+  
+    // This is the data section, here we define what the source can output
+    // and link the protocol options that affect the output
+    "data": {
+  
+      // By default bxbx data are not output but they could be.
+      "bxbx": {
+        "label": "BxBx* Autocorrelations",
+        "enabled": {
+          "value":false,
+          "set": {      // To enable BxBx output set flag "BxBx" of parameter read.opts
+            "value": true, "param": "read.opts", "flag": "BxBx" 
+          }
+        }
+      },
+      "byby": {
+        "label": "ByBy* Autocorrelations",
+        "enabled":{"value": false, "set": {"value": true, "param": "read.opts", "flag": "ByBy"}}
+      },
+      "bzbz": {
+        "label": "BzBz* Autocorrelations",
+        "enabled":{"value": false, "set": {"value": true, "param": "read.opts", "flag": "BzBz" }}
+      },
+      "bxby": {
+        "label": "BxBy* Cross-correlations",
+        "enabled":{"value": false, "set": {"value": true, "param": "read.opts", "flag": "BxBy" }}
+      },
+      "bxbz": {
+        "label": "BxBz* Cross-correlations",
+        "enabled":{"value": false, "set": {"value": true, "param": "read.opts", "flag": "BxBz" }}
+      },
+      "bybz": {
+        "label": "ByBz* Cross-correlations",
+        "enabled":{"value": false, "set": {"value": true, "param": "read.opts", "flag": "ByBz" }}
+      },
+      "exex": {
+        "label": "ExEx* Autocorrelations",
+        "enabled":{"value": false, "set": {"value": true, "param": "read.opts", "flag": "ExEx" }}
+      },
+      "eyey": {
+        "label": "EyEy* Autocorrelations",
+        "enabled":{"value": false, "set": {"value": true, "param": "read.opts", "flag": "ExEy" }}
+      },
+      "ezez": {
+        "label": "EzEz* Autocorrelations",
+        "enabled":{"value": false, "set": {"value": true, "param": "read.opts", "flag": "EzEz" }}
+      },
+      "exey": {
+        "label": "ExEy* Cross-correlations",
+        "enabled":{"value": false, "set": {"value": true, "param": "read.opts", "flag": "ExEy" }}
+      },
+      "exez": {
+        "label": "ExEz* Cross-correlations",
+        "enabled":{"value": false, "set": {"value": true, "param": "read.opts", "flag": "ExEz" }}
+      },
+      "eyez": {
+        "label": "EyEz* Cross-correlations",
+        "enabled":{"value": false, "set": {"value": true, "param": "read.opts", "flag": "EyEz" }}
+      },
+      "bxex": {
+        "label": "BxEx* Cross-correlations",
+        "enabled":{"value": false, "set": {"value": true, "param": "read.opts", "flag": "BxEx" }}
+      },
+      "bxey": {
+        "label":  "BxEy* Cross-correlations",
+        "enabled":{"value": false, "set": {"value": true, "param": "read.opts", "flag": "BxEy" }}
+      },
+      "bxez": {
+        "label":  "BxEz* Cross-correlations",
+        "enabled":{"value": false, "set": {"value": true, "param": "read.opts", "flag": "BxEz" }}
+      },
+      "byex": {
+        "label": "ByEx* Cross-correlations",
+        "enabled":{"value": false, "set": {"value": true, "param": "read.opts", "flag": "ByEx" }}
+      },
+      "byey": {
+        "label": "ByEy* Cross-correlations",
+        "enabled":{"value": false, "set": {"value": true, "param": "read.opts", "flag": "ByEy" }}
+      },
+      "byez": {
+        "label": "ByEz* Cross-correlations",
+        "enabled":{"value": false, "set": {"value": true, "param": "read.opts", "flag": "ByEz" }}
+      },
+      "bzex": {
+        "label": "BzEx* Cross-correlations",
+        "enabled":{"value": false, "set": {"value": true, "param": "read.opts", "flag": "BzEx" }}
+      },
+      "bzey": {
+        "label": "BzEy* Cross-correlations",
+        "enabled":{"value": false, "set": {"value": true, "param": "read.opts", "flag": "BzEy" }}
+      },
+      "bzez": {
+        "label":"BzEz* Cross-correlations",
+        "enabled":{"value": false, "set": {"value": true, "param": "read.opts", "flag": "BzEz" }}
+      }
+    },
+  
+    // These are other options that don't fit into neat categories.  In the coordinate and 
+    // data sections above, the "settable things" are aspects of coordinates and variables.
+    "options":{
+      
+      "complex": {
+        "label": "Complex Valued Output",
+        "summary": [
+          "For cross-correlations output real and imaginary parts ",
+          "instead of magnitude and phase angle"
+        ],
+        "enabled":{"value":false, "set": { "value": true, "param": "read.opts", "flag": "complex" }}
+      }
+    },
+  
+    // Let the server define the output format conversion interface for us
+    "$include":["ExtIface_Fmt.json"]
+  },
 
+
+  // Query Interface ///////////////////////////////////////////////////////
+  //
+  // Here we define the protocol for the data source.  For stream sources
+  // these are the query keys that must be specified to download data.
+  // Since we have a special query key (read.opts) we'll need to manually
+  // generate the protocol section.
+
+  "protocol": {
+
+    // Let the server set our base URLs and query method
+    "$generate":{"protoGetStream":[]},
+    
+    "httpParams": {
+
+      // Use the same begin, end parameters that the server would automatically
+      // generate just to blend in.
+      "read.time.min": {"required": true,  "type": "isotime" },
+      "read.time.max": {"required": true,  "type": "isotime" },
+
+      // Add in our special stuff for all the data options.
+      "read.opts":     {
+        "required": false, "type": "flag_set",
+        "flagSep": " ",
+        "flagList": [
+          "complex","BxBx","ByBy","BzBz","BxBy", "BxBz", "ByBz", "ExEx",
+          "EyEy", "EzEz", "ExEy", "ExEz", "EyEz", "BxEx", "BxEy", "BxEz",
+          "ByEx", "ByEy", "ByEz", "BzEx", "BzEy", "BzEz"
+        ]
+      },
+
+      // Let the serer define output format options
+      "$generate":{"extProtoParams_Fmt":["internal.commands.read.output"]}
+    }
+  },
+},
+
+///////////////////////////////////////////////////////////////////////////////
+// Interal: A tell das-pyserver how to run commands
+//
+// The following section is for internal das2py-server use only.  The sections
+// above are generic and may define non-das and non-streaming sources.  This one
+// is particular to how the das2py-server operates.  The server may use 
+// information from this section to affect the semantic and query interfaces
+// above, but this section is never sent directly to a client.
 
 "internal": {
 
-	"commands":[{	
-		"description":"Themis Data Reader",
-		"role":"read.source",
-		"output":"application/vnd.das2.das2stream",
+  // The server has built in programs for almost all functions except for
+  // reading source data, and dating the source data (aka getting last
+  // modified time).  However the server will only enable functions that 
+  // you allow.  At the time of writing the following functions are 
+  // defined:
+  //
+  //   read   - User supplied, produces full resolution data streams 
+  //   date   - User supplied, produces last modified times at given resolution
+  //   bin    - Reduce data to some statistic in coordinate bins [server]
+  //   psd    - Calculate the power spectral density [server]
+  //   format.TYPE - Convert stream from one format to another TYPE [server]
+  //
+  // In all cases, a particular stream function can be over-written.
 
-		// By default commands are triggered if any replacement parameter in
-		// their template is provided, but the default trigger can be overridden
-		// using a "trigger" property.
-		"template":[
-			"env PYTHONPATH=%(PREFIX)s/lib/python%(PYVER)s",
-			"python%(PYVER)s %(PREFIX)s/examples/cdf.py",
-			"%(PREFIX)s/examples/themis_data",
-			"#read.time.min# #read.time.max# #[read.options | @ | ]#"
-		]
-	}],
+  "commands":{
 
-	// Sometimes you don't want to allow certian operations to be preformed
-	// on the data.
-	"disable":[{"role":"reducer"}],
+    "read": {  
+      "description":"Themis Data Reader",
+      "output":{"type":"das","version":"2.2","variant":"binary"},
 
-	// A cache is defined as a set of segments in parameter space.
-	//
-	// Each cache block has an extent in parameter space, typically all blocks 
-	// have the same coverage area, only the boundaries change.
-	//
-	// Cache directives state how to tie one or more HTTP params to a block
-	// edge and how much "area" each block should be cover in parameter space.
-	//
-	// The parameter space is rasterized such that there exists integers:
-	// N, M, ... that can define the edges of any cache block via:
-	//
-	//   X_min = N * X_width + X_0,   X_max = (N + 1)*X_width + X_0
-	//
-	//   Y_min = M * Y_width + Y_0,   Y_max = (M + 1)*Y_width + Y_0
-	//
-	//   etc. for blocks defined in a higher parameter space.
-	//
-	// Where X_0 & Y_0 default to 0, and N, M are integer that gets B_min to
-	// within one width of the given start point in each dimension.
-	//
-	// The block definition scheme below assumes that for any given data source
-	// there is an HTTP parameter (or sub-flag) in each dimension that defines
-	// a data read start point, and a separate parameter that read end point
-	//
-	// Cache read selection:
-	// The whole point of a cache is to provide a client with the minimum
-	// size data stream to get a job done.  This handled by maximizing the
-	// resolution parameter (aka getting the coarsest resolution) without
-	// going over some limit.
-	//
-	// Even for the same resolution different cache block sets are needed
-	// if other parameters change.  For example a cache of "Bx" antenna
-	// values is different from a cache of "By" antenna values, even at the
-	// same resolution from the same reader.
+      // By default commands are triggered if any replacement parameter in
+      // their template is provided, but the default trigger can be overridden
+      // using a "trigger" property.
 
-	"cache":{
-		"min_coord_params":["read.time.min"],
-		"max_coord_params":["read.time.max"],
-		
-		"mime":"application/vnd.das2.das2stream",
+      // This is the heart of the internal interface, a command template it
+      // states how to use the query parameters to generate a command line.
+      // Note that the template after subsitution is just a single string, lists
+      // are allowed here in order to break-up long command lines.
 
-		"block_sets":{
-			"250ms_Bx":{
-				"resolution_params":["bin.time.max"],
-				"resolution":["250 ms"], "block_size":["1 hour"],
-				"fixed_params" : {"read.options":"Bx"}
-			},
-			"1s":{
-				"resolution":["1 s"],    "block_size":["1 day"]  
-			}
-		}
-	}
-},
+      "template":[
+        "env PYTHONPATH=/var/www/das2srv/lib/python3.8",
+        "python3.8 /var/www/das2srv/examples/cdf.py",
+        "/var/www/das2srv/examples/themis_data",
+        "#read.time.min# #read.time.max# #[read.opts | @ | ]#"
+      ]
+    },
 
-// HTTP GET Parameters
-// -------------------
-// This section defines what values are acceptable for extra reader options.
-//
-// Input from the web for the given GET parameters will be checked against
-// the definitions below.  If it matches, the value will be passed down to
-// the data reader program above  By default space separated values are passed
-// to the reader as multiple command line options.
+    // Let the server figure out how reformat data streams
+    "$include":["IntCmds_Fmt.json"]
+  },
 
-"protocol": {
+  
+  // A cache is defined as a set of segments in parameter space.
+  //
+  // Each cache block has an extent in parameter space, typically all blocks 
+  // have the same coverage area, only the boundaries change.
+  //
+  // Cache directives state how to tie one or more HTTP params to a block
+  // edge and how much "area" each block should be cover in parameter space.
+  //
+  // The parameter space is rasterized such that there exists integers:
+  // N, M, ... that can define the edges of any cache block via:
+  //
+  //   X_min = N * X_width + X_0,   X_max = (N + 1)*X_width + X_0
+  //
+  //   Y_min = M * Y_width + Y_0,   Y_max = (M + 1)*Y_width + Y_0
+  //
+  //   etc. for blocks defined in a higher parameter space.
+  //
+  // Where X_0 & Y_0 default to 0, and N, M are integer that gets B_min to
+  // within one width of the given start point in each dimension.
+  //
+  // The block definition scheme below assumes that for any given data source
+  // there is an HTTP parameter (or sub-flag) in each dimension that defines
+  // a data read start point, and a separate parameter that read end point
+  //
+  // Cache read selection:
+  // The whole point of a cache is to provide a client with the minimum
+  // size data stream to get a job done.  This handled by maximizing the
+  // resolution parameter (aka getting the coarsest resolution) without
+  // going over some limit.
+  //
+  // Even for the same resolution different cache block sets are needed
+  // if other parameters change.  For example a cache of "Bx" antenna
+  // values is different from a cache of "By" antenna values, even at the
+  // same resolution from the same reader.
 
-	"http_params":{
+  "cache":{
+    "min_coord_params":["read.time.min"],
+    "max_coord_params":["read.time.max"],
+    
+    "format":{"type":"das", "version":"2.2", "variant":"text"},
 
-		// Note the "#[read.options ]" replacement text in the commands.template
-		// section above.  The stuff defined here, plugs in there.
-
-	   "read.opts": {
-			"title": "Optional reader arguments",  // user documentation
-			"required": false,                     // this param is not required
-			
-			// The value will be a set of strings, each one is a boolean flag
-			"type": "flag_set",                    
-		
-			// The flag strings are separated by spaces and will thus expand
-			// to multiple command line arguments when given to the reader
-			"flag_sep": " ",
-
-      	// Define an ID and string value for each flag.  The ID is used
-			// to connect user settings in the "coordinates", "data" and 
-			// "options" sections below with these flag strings
-      	"flags": {
-				"00": {"value": "complex"},
-	 
-				"01": {"value": "no-BxBx" },
-				"02": {"value": "no-ByBy" },
-				"03": {"value": "no-BzBz" },
-	 
-				"04": {"value": "BxBy" },
-				"05": {"value": "BxBz" },
-				"06": {"value": "ByBz" },
-	 
-				"11": {"value": "no-ExEx" },
-				"12": {"value": "no-EyEy" },
-				"13": {"value": "no-EzEz" },
-	 
-				"14": {"value": "ExEy" },
-				"15": {"value": "ExEz" },
-				"16": {"value": "EyEz" },
- 
-				"21": {"value": "BxEx" },
-				"22": {"value": "BxEy" },
-				"23": {"value": "BxEz" },
- 
-				"24": {"value": "ByEx" },
-				"25": {"value": "ByEy" },
-				"26": {"value": "ByEz" },
- 
-				"27": {"value": "BzEx" },
-				"28": {"value": "BzEy" },
-				"29": {"value": "BzEz" }
-			}
-		}
-
-		// The HTTP parameters read.time.max, read.time.min and bin.time.res
-		// are automatically defined from the *.dsdf parser, so we won't
-		// override them here.
-	}
-},
-
-
-// User (or downstream) Interface
-// ------------------------------
-// This section converts the http parameters above into end-user interface
-// definitions.  The end user interface sections are:
-//
-//  coordinates - Interface option that affect sub-setting data by coordinates values
-//  data        - Interface options that affect the data to be transmitted
-//  options     - Any other interface options such as file formats.
-
-"interface" : {
-
-	"data":{
-		// Block 1
-		"bxbx": { "title": "BxBx* Autocorrelations",
-			"enabled":{
-				"value": true, // default enabled, set flag 01 to disable
-				"set": {"value":false, "param": "read.options", "flag":"01"}
-			}
-		},
-		"byby": {"title": "ByBy* Autocorrelations",
-		   "enabled":{
-				"value": true, // default enabled, set flag 02 to disable
-				"set": {"value":false, "param": "read.options", "flag": "02"}
-			}
-		},
-		"bzbz": {"title": "BzBz* Autocorrelations",
-		   "enabled":{
-				"value": true, // default enabled, set flag 03 to disable
-				"set": {"value":false, "param": "read.options", "flag": "03"}
-			}
-		},	
-		
-		// Block 2
-		"bxby": { "title": "BxBy* Cross-correlations",
-			"enabled":{
-				"value": false, // default disabled, set flag 04 to enable
-				"set": {"value": true, "param": "read.options", "flag": "04"}
-			}
-	   },
-		"bxbz": { "title": "BxBz* Cross-correlations",
-		   "enabled":{
-			   "value": false, // default disabled, set flag 05 to enable
-				"set": {"value": true, "param": "read.options", "flag": "05"}
-			}
-		},
-		"bybz": { "title": "ByBz* Cross-correlations",
-		   "enabled":{
-			   "value": false, // default disabled, set flag 06 to enable
-				"set": {"value": true, "param": "read.options", "flag": "06"}
-			}
-		},
-
-		// Block 3
-	   "exex": { "title": "ExEx* Autocorrelations",
-			"enabled":{
-		  		"value": true, // default enabled set flag 11 to disable
-		  		"set": {"value": false, "param": "read.options", "flag": "11"}
-			}
-		},
-		"eyey": { "title": "EyEy* Autocorrelations",
-			"enabled":{
-		  		"value": true, // default enabled set flag 12 to disable
-				"set": {"value": false, "param": "read.options", "flag": "12"}
-			}
-		},
-		"ezez": { "title": "EzEz* Autocorrelations",
-			"enabled":{
-				"value": true, // default enabled, set flag 13 to disable
-				"set": {"value": true, "param": "read.options", "flag": "13"}
-			}
-		},
-		
-		// Block 4
-		"exey": { "title": "ExEy* Cross-correlations",
-			"enabled":{
-				"value": false, // default disabled, set flag 14 to enable	  
-				"set": {"value": true, "param": "read.options", "flag": "14"}
-			 }
-		},
-		"exez": { "title": "ExEz* Cross-correlations",
-			"enabled":{
-				"value": false, // default disabled, set flag 15 to enable	
-				"set": {"value": true, "param": "read.options", "flag": "15"}
-			}
-		},
-		"eyez": {
-			"enabled":{"title": "EyEz* Cross-correlations",
-				"value": false, // default disabled, set flag 16 to enable		
-				"set": {"value": true, "param": "read.options", "flag": "16"}
-			}
-		},
-
-		// Block 5
-		"bxex": { "title": "BxEx* Cross-correlations",
-		   "enabled":{
-			   "value": false, // default disabled, set flag 21 to enable
-				"set": {"value": true, "param": "read.options", "flag": "21"}
-			}
-		},
-		"bxey": { "title": "BxEy* Cross-correlations",
-		   "enabled":{
-			   "value": false, // default disabled, set flag 22 to enable
-				"set": {"value": true, "param": "read.options", "flag": "22"}
-			}
-		},
-		"bxez": { "title": "BxEz* Cross-correlations",
-		   "enabled":{
-			   "value": false, // default disabled, set flag 23 to enable
-				"set": {"value": true, "param": "read.options", "flag": "23"}
-			}
-		},
-		
-		// Block 6
-		"byex": { "title": "ByEx* Cross-correlations",
-		   "enabled":{
-			   "value": false, // default disabled, set flag 24 to enable
-				"set": {"value": true, "param": "read.options", "flag": "24"}
-			}
-		},
-		"byey": { "title": "ByEy* Cross-correlations",
-		   "enabled":{
-			   "value": false, // default disabled, set flag 25 to enable
-				"set": {"value": true, "param": "read.options", "flag": "25"}
-			}
-		},
-		"byez": { "title": "ByEz* Cross-correlations",
-		   "enabled":{
-			   "value": false, // default disabled, set flag 26 to enable
-				"set": {"value": true, "param": "read.options", "flag": "26"}
-			}
-		},
-		
-		// Block 7
-		"bzex": { "title": "BzEx* Cross-correlations",
-		   "enabled":{
-			   "value": false, // default disabled, set flag 27 to enable
-				"set": {"value": true, "param": "read.options", "flag": "27"}
-			}
-		},
-		"bzey": { "title": "BzEy* Cross-correlations",
-		   "enabled":{
-			   "value": false, // default disabled, set flag 28 to enable
-				"set": {"value": true, "param": "read.options", "flag": "28"}
-			}
-		},
-		"bzez": { "title": "BzEz* Cross-correlations",
-		   "enabled":{
-			   "value": false, // default disabled, set flag 29 to enable
-				"set": {"value": true, "param": "read.options", "flag": "29"}
-			}
-		}
-	},
-
-	// General Options
-	// ---------------
-	// Define general options here that that don't seem to fit in anywhere else
-
-	"options": {
-
-	   "complex": {
-			"title": "For cross-correlations output real and imaginary parts instead of magnitude and phase angle",
-			"value": false,  // Defaults to false, set flag 00 to enable
-	      "set": {"value": true, "param": "read.options", "flag": "00"}
-	   }
-	}
+    "block_sets":{
+      "250ms_Bx":{
+        "res_params":[ "bin.time.max"],
+        "res":[       "250 ms"],
+        "block_size":["1 hour"],
+        "fixed_params" : {"read.opts":"Bx"}
+      },
+      "1s_Bx":{
+        "res":["1 s"],    "block_size":["1 day"]  
+      }
+    }
+  }
 }
 
-} // END
+} // JSON END

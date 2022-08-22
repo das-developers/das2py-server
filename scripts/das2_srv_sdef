@@ -1,0 +1,233 @@
+#!/usr/bin/env python3
+"""Expand source definitions into final form based on the server configuration"""
+
+import sys
+import optparse
+import json
+
+g_sConfPath = REPLACED_ON_BUILD
+
+das2 = None  # Namespace anchor for das2 module, loaded afte sys.path is set
+             # via the config file
+
+# handle output
+try:
+	unicode
+except NameError:
+	unicode = str
+
+def pout(item):
+	"""If input item is bytes, write them, if item is a unicode string encode as
+	utf-8 first"""	
+	if isinstance(item, str):
+		sys.stdout.buffer.write(item.encode('utf-8'))
+	else:
+		sys.stdout.buffer.write(item)
+			
+def perr(item):
+	"""If input item is bytes, write them, if item is a unicode string encode as
+	utf-8 first"""	
+	if isinstance(item, str):
+		sys.stderr.buffer.write(item.encode('utf-8'))
+	else:
+		sys.stderr.buffer.write(item)
+
+# ########################################################################## #
+# Get my config file, boiler plate that has to be re-included in each script
+# since the location of the modules can be configured in the config file
+
+def getConf():
+	
+	if not os.path.isfile(g_sConfPath):
+		if os.path.isfile(g_sConfPath + ".example"):
+			perr(u"Move\n   %s.example\nto\n   %s\nto enable your site\n"%(
+				  g_sConfPath, g_sConfPath))
+		else:
+			perr(u"%s is missing\n"%g_sConfPath)
+			
+		return None
+
+	fIn = open(g_sConfPath, 'r')
+	
+	dConf = {}
+	nLine = 0
+	for sLine in fIn:
+		nLine += 1
+		iComment = sLine.find('#')
+		if iComment > -1:
+			sLine = sLine[:iComment]
+	
+		sLine = sLine.strip()
+		if len(sLine) == 0:
+			continue
+		
+		iEquals = sLine.find('=')
+		if iEquals < 1 or iEquals > len(sLine) - 2:
+			preLoadError(u"Error in %s line %d"%(g_sConfPath, nLine))
+			fIn.close()
+			return None
+		
+		sKey = sLine[:iEquals].strip()
+		sVal = sLine[iEquals + 1:].strip(' \t\v\r\n\'"')
+		dConf[sKey] = sVal
+	
+	fIn.close()
+	
+	# As a final step, inclued a reference to the config file itself
+	dConf['__file__'] = g_sConfPath
+	
+	return dConf
+
+# ########################################################################## #
+# Update sys.path, boiler plate code that has to be re-included in each script
+# since config file can change module path
+
+def setModulePath(dConf):
+	if 'MODULE_PATH' not in dConf:
+		perr(u"Set MODULE_PATH = /dir/containing/das2server_python_module")
+		return False	
+	
+	lDirs = dConf['MODULE_PATH'].split(os.pathsep)
+	for sDir in lDirs:
+		if os.path.isdir(sDir):
+				if sDir not in sys.path:
+					sys.path.insert(0, sDir)
+		
+	return True
+
+# ########################################################################## #
+# The program needs way better help than the default OptionParser can provide
+
+class MyOptParse(optparse.OptionParser):
+	def print_help(self, file=None):
+		if file == None:
+			file = sys.stdout
+	
+		file.write("""
+NAME:
+   das2_srv_sdef - Expand all definitions in a data source definition file
+
+SYNOPSIS:
+   das2_srv_sdef [options] DATA_SOURCE_FILE
+
+DESCRIPTION:
+   das2_srv_sdef may be used to see the final form of a data source definition.
+   Since the server has the ability to up-convert old *.dsdf files to the 
+   current object representation and since newer *.json files often use 
+   $include and $generate directives, the form on disk doesn't not represent
+   information used by the server to make command piplines or by clients to
+   generate end-user tool options.
+
+   The DATA_SOURCE_FILE may end in either *.dsdf or *.json, all output is
+   to standard out unless otherwise redirected via program options below.
+
+OPTIONS:
+   -h, --help  Print this help message and exit
+	
+   -c FILE, --config=FILE
+               Use FILE as the das2 server conifguration instead of the 
+               compiled in default.
+
+   -f, --full  Fully expand all sections including the server side formatting
+               commands.
+
+   -o FILE, --output=FILE
+               Output the expanded definition the specified FILE instead of
+               to standard output.
+
+   -s FILE, --schema=FILE 
+               Use FILE as the default JSON schema file when validating output
+               instead of the compiled in default.
+
+   -v, --verify
+               In addition to basic parsing, validate the external section
+               of the source definition against a das federated catalog 
+               schema for HttpStreamSrc objects.
+
+FILES:
+   Each das pyserver is defined by a single configuration file.  By default
+   the configuration data for this program are taken from:
+	
+      %s
+"""%g_sConfPath)
+
+# ########################################################################## #
+class StderrLog(object):
+	def write(self, sThing):
+		sys.stderr.write("%s\n"%sThing)
+
+# ########################################################################## #
+def main(argv):
+	global das2
+
+	sUsage = "das2_srv_sdef [options] DATA_SOURCE_FILE"
+	psr = OptionParser(prog="das2_srv_sdef", usage="sUsage")
+
+	psr.add_option('-c', '--config', dest="sConfig", default=g_sConfPath)
+	psr.add_option('-s', '--schema', dest="sSchema", default=None)
+	psr.add_option(
+		'-v', '--verify', dest="bVerify", action="store_true", default=False
+	)
+	(opts,lArgs) = psr.parse_args()
+
+	if len(lArgs < 2):
+		sys.stderr.write("No data source file specified, use -h for help.")
+		return 13
+	else:
+		sPath = lArgs[1]
+
+	bUpConvert = False
+	if sPath.lower().endswith('.dsdf'):
+		bUpConvert = True
+	else:
+		bUpConvert = False
+		if not sPath.lower().endswith('.json'):
+			sys.stderr.write(
+				"File %s is not recognized, does not end in one of '.dsdf' or '.json'"%sPath
+			)
+			return 14
+
+
+	perr("Server definition: %s\n"%opts.sConfig)
+	
+	dConf = getConf()
+	if dConf == None:
+		return 17
+		
+	# Set the system path
+	if not setModulePath(dConf):
+		return 18
+		
+	# Load the das2 module
+	try:
+		das2 = __import__('das2', globals(), locals(), [], 0)
+	except ImportError as e:
+		perr("Error importing module 'das2'\r\n: %s\n"%(str(e)))
+		return 19
+	
+	# Load the das2server.util module
+	try:
+		mTmp = __import__('das2server', globals(), locals(), ['util'], 0)
+	except ImportError as e:
+		perr(u"Error importing module 'das2server'\r\n: %s\n"%(str(e)))
+		return 19
+	try:
+		U = mTmp.util
+	except AttributeError:
+		perr(u'No module named das2server.util under %s\n'%dConf['MODULE_PATH'])
+		return 20
+
+	fLog = StderrLog()
+
+	if bUpConvert:
+		dSrc = U.source.dsdf2Source(fLog, dConf, sTarget="any")
+	else:
+		dSrc = U.source.json2Source(fLog, dConf, sTarget="any")
+
+	sOut = json.dumps(dSrc, indent="  ");
+	print(sOut)
+	return 0
+
+# ########################################################################## #
+if __name__ == '__main__':
+	main(sys.argv)
