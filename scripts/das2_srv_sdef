@@ -2,6 +2,7 @@
 """Expand source definitions into final form based on the server configuration"""
 
 import sys
+import os.path
 import optparse
 import json
 
@@ -21,6 +22,7 @@ def pout(item):
 	utf-8 first"""	
 	if isinstance(item, str):
 		sys.stdout.buffer.write(item.encode('utf-8'))
+		sys.stdout.buffer.write('\n'.encode('utf-8'))
 	else:
 		sys.stdout.buffer.write(item)
 			
@@ -29,6 +31,7 @@ def perr(item):
 	utf-8 first"""	
 	if isinstance(item, str):
 		sys.stderr.buffer.write(item.encode('utf-8'))
+		sys.stderr.buffer.write('\n'.encode('utf-8'))
 	else:
 		sys.stderr.buffer.write(item)
 
@@ -149,6 +152,7 @@ FILES:
    the configuration data for this program are taken from:
 	
       %s
+
 """%g_sConfPath)
 
 # ########################################################################## #
@@ -161,7 +165,7 @@ def main(argv):
 	global das2
 
 	sUsage = "das2_srv_sdef [options] DATA_SOURCE_FILE"
-	psr = OptionParser(prog="das2_srv_sdef", usage="sUsage")
+	psr = MyOptParse(prog="das2_srv_sdef", usage="sUsage")
 
 	psr.add_option('-c', '--config', dest="sConfig", default=g_sConfPath)
 	psr.add_option('-s', '--schema', dest="sSchema", default=None)
@@ -170,11 +174,12 @@ def main(argv):
 	)
 	(opts,lArgs) = psr.parse_args()
 
-	if len(lArgs < 2):
-		sys.stderr.write("No data source file specified, use -h for help.")
+	if len(lArgs) < 1:
+		perr("No data source file specified, use -h for help.")
 		return 13
 	else:
-		sPath = lArgs[1]
+		sPath = lArgs[0]
+	print("Reading %s"%sPath)
 
 	bUpConvert = False
 	if sPath.lower().endswith('.dsdf'):
@@ -188,7 +193,7 @@ def main(argv):
 			return 14
 
 
-	perr("Server definition: %s\n"%opts.sConfig)
+	perr("Server definition: %s"%opts.sConfig)
 	
 	dConf = getConf()
 	if dConf == None:
@@ -220,9 +225,9 @@ def main(argv):
 	fLog = StderrLog()
 
 	if bUpConvert:
-		dSrc = U.source.dsdf2Source(fLog, dConf, sTarget="any")
+		dSrc = U.source.dsdf2Source(fLog, dConf, sPath, sTarget="any")
 	else:
-		dSrc = U.source.json2Source(fLog, dConf, sTarget="any")
+		dSrc = U.source.json2Source(fLog, dConf, sPath, sTarget="any")
 
 	sOut = json.dumps(dSrc, indent="  ");
 	print(sOut)

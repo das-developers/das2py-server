@@ -835,9 +835,9 @@ def _mergeInternal(dOut, dConf, dProps, fLog):
 	
 	# Save the mime-type for the command inputs and outputs
 	bSkipReduce = False
-	if isPropTrue(dProps, 'qstream'):
+	if _isPropTrue(dProps, 'qstream'):
 		sMime = g_qs_mime
-	elif isPropTrue(dProps, 'das2Stream'):
+	elif _isPropTrue(dProps, 'das2Stream'):
 		sMime = g_d2s_mime
 	else:
 		sMime = g_d1s_mime
@@ -879,7 +879,7 @@ def _mergeInternal(dOut, dConf, dProps, fLog):
 
 		# Two variations, one for requires interval
 		sInterval = ''
-		if isPropTrue(dProps, 'requiresInterval'):  # Ephemeris readers
+		if _isPropTrue(dProps, 'requiresInterval'):  # Ephemeris readers
 			 sInternal = '#[%s] '%sIntKey
 			
 		if _isPropTrue(dProps, 'dropParams'):
@@ -1021,7 +1021,7 @@ def _mergeInternal(dOut, dConf, dProps, fLog):
 
 # ########################################################################## #
 
-def dsdf2Source(dConf, sPath, fLog, sTarget="any"):
+def dsdf2Source(fLog, dConf, sPath, sTarget="any"):
 	"""Create an HttpStreamSrc object from a DSDF file and the given server
 	configuration information.
 
@@ -1152,7 +1152,7 @@ def dsdf2Source(dConf, sPath, fLog, sTarget="any"):
 
 # ########################################################################## #
 
-def json2Source(dConf, sPath, fLog, sTarget='external'):
+def json2Source(fLog, dConf, sPath, sTarget='external'):
 	"""
 	Since the files on disk are pretty much the expected data source,
 	Function is pretty simple it just loads the file from disk stripping
@@ -1315,14 +1315,14 @@ def load(fLog, dConf, sSource, sTarget="external"):
 	
 	(sName, sPath) = _findSrcNoCase(dConf['DSDF_ROOT'], sSource, '.json', fLog)
 	if sPath != None:
-		dSource = json2Source(dConf, sPath, fLog, sTarget)
+		dSource = json2Source(fLog, dConf, sPath, sTarget)
 		return dSource
 
 
 	# Fall back to older DSDF if that is avaialable
 	(sName, sPath) = _findSrcNoCase(dConf['DSDF_ROOT'], sSource, '.dsdf', fLog)
 	if sPath != None:
-		dSource = dsdf2Source(dConf, sPath, fLog, sTarget)
+		dSource = dsdf2Source(fLog, dConf, sPath, sTarget)
 		return dSource
 
 	raise errors.QueryError(u"Data source %s doesn't exist on this server"%sSource)
