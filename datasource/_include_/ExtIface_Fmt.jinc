@@ -18,12 +18,11 @@
 // in your source definition.  If you don't define an output format, this
 // expansion will not work.
 
-{
-	// First of three functions for adding automatic stream formatting:
-   //
-   //   extIface_Fmt       - Auto add end-user tools interface for stream formatting
-   //   extProtoParams_Fmt - Auto add server query parameters for stream formatting
-   //   intCmds_Fmt        - Auto add comand line templates for stream formatting
 
-	"$generate":{"extIface_Fmt":["internal.commands.read.output"]}
-}
+// First of three functions for adding automatic stream formatting:
+//
+//   extIface_Fmt       - Auto add end-user tools interface for stream formatting
+//   extProtoParams_Fmt - Auto add server query parameters for stream formatting
+//   intCmds_Fmt        - Auto add comand line templates for stream formatting
+
+"$generate":{"extIface_Fmt":["internal.commands.read.output"]}

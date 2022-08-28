@@ -1,0 +1,20 @@
+// IntCmds_Fmt.json - A data source include which provides standard
+// commands for re-formatting streams. 
+//
+// To use this file include it in your internal.commands section:
+//
+// "internal":{
+//   "commands":{
+//     "$include":[THIS_FILE]
+//   }
+// }
+
+// auto-gen command templates for changing formats based on reader output
+// 
+// Part of the three function set for adding automatic stream formatting:
+//
+//   extIface_Fmt       - Auto add end-user tools interface for stream formatting
+//   extProtoParams_Fmt - Auto add server query parameters for stream formatting
+//   intCmds_Fmt        - Auto add comand line templates for stream formatting
+
+"$generate":{"intCmds_Fmt":["internal.commands.read.output"]}

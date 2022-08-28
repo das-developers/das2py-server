@@ -9,6 +9,9 @@ SERVER_NAME = "%(SERVER_ID)s"
 # Identify this server seperatly in combined logs, will be reduced to lower case
 SERVER_ID = "%(SERVER_ID)s"
 
+# Provide the server URL, this is for self referential items when NOT
+# invoked by apache.
+SERVER_URL = "http://localhost/das/server"
 
 # Contact email.  You can use replacement characters to obscure the address
 # a bit, for example:
@@ -23,10 +26,14 @@ CONTACT_EMAIL = "update&#45;das2server&#46;conf&#64;nowhere&#45;ed&#117;"
 # A contact page for the person responsible for the server
 CONTACT_URL  = "https://update-das2server.conf.nowhere.edu/~someone/"
 
-# The top location of any dsdf files
-DSDF_ROOT = "%(PREFIX)s/datasets"
+# The top location of the data source definitions
+DATASRC_ROOT = "%(PREFIX)s/datasource"
 
-# if using authentication, the name of the group and users files
+# The top location of data source include files
+DATASRC_INC  = "%(PREFIX)s/datasource/_include_"
+
+# If using simple local authentication, the name of the group and users files
+# Version 3.1 of the server should add better authentication methods
 USER_PASSWD = "%(PREFIX)s/etc/passwd"
 USER_GROUP  = "%(PREFIX)s/etc/group"
 
@@ -90,28 +97,38 @@ DAS1_TO_DAS2 = "das2_from_das1"
 # location
 CACHE_ROOT = "%(PREFIX)s/cache"
 
-# Set the default stream reducer. DSDFs can override this setting for individal
-# datasets using the 'reducer=' directive.
+# Set a default stream reducer. Data source definitions can override this
+# setting by defining the following object in thier *.json files.
+#
+#   internal : commands : bin 
+#
 D2S_REDUCER = "das2_bin_avgsec"
 
-# Set the default cache reader.  DSDFs can override this setting for individual
-# datasets using the 'cacheReader=' directive.
+# Set a default cache reader.  Data source definitions can override this
+# setting by defining the following object in their *.json files:
+#
+#  internal : commands : readCache
+#
 D2S_CACHE_RDR = "das2_cache_rdr"
 
-# Sent the default delimited text values converter.  DSDFs can override
-# this setting for individual data sources using the 'csvConverter='
-# directive.
+# Set a default delimited text values converter.  Data sources can
+# override this by defining the following object in their *.json files:
+#
+#   internal : commands : formatCsv
+#
 D2S_CSV_CONVERTER = "das2_csv"
 
-# Set default das2 binary to das2 text stream converter, datasources can
-# override this usin the 'textConverter=' directive.
+# Set default das v2 binary to das v2 text stream converter.  Data sources
+# can override by defining the following object in their *.json files:
+#
+#  internal : commands : convD2sD2t
+#
 D2S_TO_UTF8 = "das2_ascii"
 
-# If you are serving QStreams as well as Das2 streams, put the name of your
-# default QStream reducer here.
+# Default QStream reducers and cache readers can be defined similar to
+# the convertions followed for D2S streams above.
 #QDS_REDUCER = qds_bin_avgsec
 #QDS_CACHE_RDR = qds_cache_rdr
-
 #QDS_TO_UTF8 = qds_ascii
 
 # Auto-authentication, this is used to setup test servers that can download

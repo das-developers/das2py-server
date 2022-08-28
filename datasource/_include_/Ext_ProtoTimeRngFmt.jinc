@@ -1,0 +1,43 @@
+// Ext_ProtoTimeRngFmt.json - A source definition include which defines
+// a full HTTP Get Query protocol definition for:
+//
+//   * A single min-max time range
+//     (used when server side reduction is not supported)
+//
+//   * Server supplied output formatting.
+// 
+// These object is intended for the 'external' section of a source definition:
+//
+//  {
+//    "external":{
+//      "$include":[THIS_FILE]
+//    }
+//  }
+//
+// Note that the companion file: 
+//
+//    ExtIfaceCoords_TimeRng.json, 
+//
+// defines a variable resolution time coordinate that is updated using the
+// query parameters defined below.
+
+"protocol":{
+
+  // auto-generate the protocol method (http-get, ws-get) and the base URLs
+  "$generate":{"extProtoGetStream":[]},
+
+  "httpParams":{
+    "read.time.min": {"required": true,  "type": "isotime" },
+    "read.time.max": {"required": true,  "type": "isotime" },
+
+    // auto-gen params for final output control based on reader output format
+    //
+    // Part of the three function set for adding automatic stream formatting:
+    //
+    //   extIface_Fmt       - Auto add end-user tools interface for stream formatting
+    //   extProtoParams_Fmt - Auto add server query parameters for stream formatting
+    //   intCmds_Fmt        - Auto add comand line templates for stream formatting
+
+    "$generate":{"extProtoParams_Fmt":["internal.commands.read.output"]}
+  }
+}

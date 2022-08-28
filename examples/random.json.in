@@ -57,7 +57,7 @@
 // A das federated catalog object to be sent to clients
 "external": {
 	"type":"HttpStreamSrc", "version":"0.7",  // Object info
-	"name":"Random",
+	"label":"Random",
 	"description":"Produce random values between -10 and +10",
 
 	"contacts":[
@@ -73,15 +73,15 @@
 		"coords":{
 			"time":{
 				"validRange": ["1970-01-01","2038-01-01"],
-				"$include":["ExtIfaceCoordsTime_Rng.json"] 
+				"$include":["ExtIfaceCoordsTime_Rng.j"] 
 			}
 		},
 
-		"$include":["ExtIface_Fmt.json"]
+		"$include":["ExtIface_Fmt.jinc"]
 	},
 
 	// Query interface for talking to the server
-	"$include":["Ext_ProtoTimeRngFmt.json"] }
+	"$include":["Ext_ProtoTimeRngFmt.jinc"] 
 },
 
 // The corresponding internal object for running commands (clients don't see this)
@@ -98,7 +98,7 @@
 			],
 			"output":{"type":"das","version":"2.2","variant":"binary"}
 		},
-		"$include":["IntCmds_Fmt.json"]
+		"$include":["IntCmds_Fmt.j"]
 	}
 }
 

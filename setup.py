@@ -343,11 +343,26 @@ if '--no-examples' in sys.argv:
 	sys.argv.remove('--no-examples')
 else:
 	lDataFiles.append( 
-		('datasets/Examples', [
-			'examples/Random.dsdf.in', 'examples/Spectra.dsdf.in',
-			'examples/Waveform.dsdf.in', 'examples/Params.dsdf.in',
-			'examples/Params.json.in', # <-- interface override
-			'examples/Auth.dsdf.in', 'examples/_dirinfo_.dsdf'
+		('datasource/Examples', [ 
+			# 'examples/Random.dsdf.in' switch to .json
+			# 'examples/Params.dsdf.in', switched to .json
+			'examples/random.json.in', 
+			'examples/params.json.in', 
+			'examples/Spectra.dsdf.in',  # Some older .dsdf files,
+			'examples/Waveform.dsdf.in', # people are going to want these
+			'examples/Auth.dsdf.in',     # because they are simple
+			'examples/_dirinfo_.dsdf'
+		])
+	)
+	lDataFiles.append(
+		# Include files for data source definitions
+		('datasource/_include_',[
+			'datasource/_include_/ExtIfaceCoordsTime_Rng.j',
+			'datasource/_include_/ExtIface_Fmt.j',
+			'datasource/_include_/Ext_ProtoTimeRngFmt.j',
+			'datasource/_include_/Ext_ProtoTimeRngIntrFmt.j',
+			'datasource/_include_/Ext_ProtoTimeRngResFmt.j',
+			'datasource/_include_/IntCmds_Fmt.j'
 		])
 	)
 	lDataFiles.append( 

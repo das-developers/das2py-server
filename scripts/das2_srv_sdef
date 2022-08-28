@@ -35,6 +35,15 @@ def perr(item):
 	else:
 		sys.stderr.buffer.write(item)
 
+
+# ########################################################################## #
+# Work around ubuntu apport bugs
+#if sys.excepthook != sys.__excepthook__:
+#	perr("WARNING: 3rd party exception hook is active")
+#	if sys.excepthook.__name__ == 'apport_excepthook':
+#		perr("WARNING: disabling Ubuntu's Apport hook")
+#		sys.excepthook = sys.__excepthook__
+
 # ########################################################################## #
 # Get my config file, boiler plate that has to be re-included in each script
 # since the location of the modules can be configured in the config file
@@ -115,11 +124,13 @@ SYNOPSIS:
 
 DESCRIPTION:
    das2_srv_sdef may be used to see the final form of a data source definition.
+
    Since the server has the ability to up-convert old *.dsdf files to the 
    current object representation and since newer *.json files often use 
-   $include and $generate directives, the form on disk doesn't not represent
-   information used by the server to make command piplines or by clients to
-   generate end-user tool options.
+   $include and $generate directives, the form on disk usually does not
+   represent all the information used by the server to make command piplines
+   or by clients to generate end-user tool options.  Use this program to 
+   see the complete source definition as used by the server.
 
    The DATA_SOURCE_FILE may end in either *.dsdf or *.json, all output is
    to standard out unless otherwise redirected via program options below.
@@ -131,8 +142,9 @@ OPTIONS:
                Use FILE as the das2 server conifguration instead of the 
                compiled in default.
 
-   -f, --full  Fully expand all sections including the server side formatting
-               commands.
+   -i, --include  
+               Only expand $include sections, don't expand automatically 
+               $generate'd definitions.
 
    -o FILE, --output=FILE
                Output the expanded definition the specified FILE instead of
@@ -169,6 +181,7 @@ def main(argv):
 
 	psr.add_option('-c', '--config', dest="sConfig", default=g_sConfPath)
 	psr.add_option('-s', '--schema', dest="sSchema", default=None)
+	psr.add_option('-i', '--include', dest="bIncOnly", default=False)
 	psr.add_option(
 		'-v', '--verify', dest="bVerify", action="store_true", default=False
 	)
@@ -179,7 +192,7 @@ def main(argv):
 		return 13
 	else:
 		sPath = lArgs[0]
-	print("Reading %s"%sPath)
+	perr("Reading %s"%sPath)
 
 	bUpConvert = False
 	if sPath.lower().endswith('.dsdf'):
@@ -191,7 +204,6 @@ def main(argv):
 				"File %s is not recognized, does not end in one of '.dsdf' or '.json'"%sPath
 			)
 			return 14
-
 
 	perr("Server definition: %s"%opts.sConfig)
 	
@@ -214,20 +226,32 @@ def main(argv):
 	try:
 		mTmp = __import__('das2server', globals(), locals(), ['util'], 0)
 	except ImportError as e:
-		perr(u"Error importing module 'das2server'\r\n: %s\n"%(str(e)))
+		perr("Error importing module 'das2server'\r\n: %s\n"%(str(e)))
 		return 19
 	try:
 		U = mTmp.util
 	except AttributeError:
-		perr(u'No module named das2server.util under %s\n'%dConf['MODULE_PATH'])
+		perr('No module named das2server.util under %s\n'%dConf['MODULE_PATH'])
 		return 20
 
 	fLog = StderrLog()
 
+	if not os.path.isfile(sPath):
+		perr('File %s does not exist'%sPath)
+		return 21
+
+	sTarg = "all"
+	if opts.bIncOnly:
+		sTarg = "include"
+
 	if bUpConvert:
-		dSrc = U.source.dsdf2Source(fLog, dConf, sPath, sTarget="any")
+		dSrc = U.source.dsdf2Source(fLog, dConf, sPath, sTarget=sTarg)
 	else:
-		dSrc = U.source.json2Source(fLog, dConf, sPath, sTarget="any")
+		try:
+			dSrc = U.source.json2Source(fLog, dConf, sPath, sTarget=sTarg)
+		except U.errors.ServerError as e:
+			perr('ERROR: %s'%str(e))
+			return 22
 
 	sOut = json.dumps(dSrc, indent="  ");
 	print(sOut)
