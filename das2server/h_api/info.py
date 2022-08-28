@@ -55,8 +55,8 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	sScript = U.webio.getScriptUrl()
 	
-	if 'DSDF_ROOT' not in dConf:
-		error.sendUnkId(fLog, "Server misconfigured, DSDF_ROOT not specified")
+	if 'DATASRC_ROOT' not in dConf:
+		error.sendUnkId(fLog, "Server misconfigured, DATASRC_ROOT not specified")
 		return 10
 	
 	# See if we can just skip all this stuff and read the cached info response
@@ -77,7 +77,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 			
 		# Even if we have a ready file if the cache file is older than the
 		# associated DSDF ask for an update anyway	
-		sDsdfFile = pjoin(dConf['DSDF_ROOT'], sDsdf) + ".dsdf"
+		sDsdfFile = pjoin(dConf['DATASRC_ROOT'], sDsdf) + ".dsdf"
 		if os.path.getmtime(sDsdfFile) > os.path.getmtime(sInfoFile):
 			fLog.write("   HAPI Info older than DSDF, summiting build task for %s"%sId)
 			cache.reqInfoCacheBuild(fLog, dConf, sId, sHapiParam)

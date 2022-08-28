@@ -35,8 +35,8 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	fLog.write("\nDas2 HttpStreamSrc definition Handler")
 	
-	if 'DSDF_ROOT' not in dConf:
-		U.webio.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
+	if 'DATASRC_ROOT' not in dConf:
+		U.webio.serverError(fLog, u"DATASRC_ROOT not set in %s"%dConf['__file__'])
 		return 17
 	
 	# Hidden debug switch

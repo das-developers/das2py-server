@@ -75,8 +75,8 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	sScript = U.webio.getScriptUrl()
 	
-	if 'DSDF_ROOT' not in dConf:
-		error.sendUnkId(fLog, "Server misconfigured, DSDF_ROOT not specified", True)
+	if 'DATASRC_ROOT' not in dConf:
+		error.sendUnkId(fLog, "Server misconfigured, DATASRC_ROOT not specified", True)
 		return 10
 			
 	try:

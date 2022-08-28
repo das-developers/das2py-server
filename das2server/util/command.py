@@ -17,6 +17,15 @@ def _list2Str(thing):
 	else:
 		return thing
 
+
+# ########################################################################## #
+#
+#  1. date, read, readCache
+#  2.       bin    |
+#  3.       psd    |
+#  4.      format
+
+
 # ########################################################################## #
 def _collapseByMime(dInOrder):
 	"""Solve the g'zin, g'zout problem in one of two ways.

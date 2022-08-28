@@ -30,8 +30,8 @@ class QueryError(DasError):
 
 class ForbidError(DasError):
 	"""Raised when the user tried to access something they are not allowed
-	to see.  Used exclsively with password proteceted datasets.  Misconfigured
-	file permissions are a ServerError"""
+	to see.  Used exclsively with password proteceted data sources. 
+	Misconfigured file permissions are a ServerError"""
 	
 	pass
 

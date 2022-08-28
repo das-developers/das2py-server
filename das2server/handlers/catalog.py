@@ -216,14 +216,14 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	interface
 	"""
 	
-	if 'DSDF_ROOT' not in dConf:
-		U.webio.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
+	if 'DATASRC_ROOT' not in dConf:
+		U.webio.serverError(fLog, u"DATASRC_ROOT not set in %s"%dConf['__file__'])
 		return 17
 	
 	# _dirOut and _fileOut append a list of tuples to lOut
 	
 	lOut = [] 
-	tData = ("%s/"%dConf['DSDF_ROOT'], lOut, fLog)
+	tData = ("%s/"%dConf['DATASRC_ROOT'], lOut, fLog)
 	
 	sPath = os.getenv("PATH_INFO")  
 	
@@ -233,7 +233,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	U.webio.pout('Access-Control-Allow-Headers: Content-Type\r\n')	
 	
 	# Walk the tree, following symlinks
-	U.misc.symWalk(fLog, dConf['DSDF_ROOT'], _fileOut, _dirOut, tData)
+	U.misc.symWalk(fLog, dConf['DATASRC_ROOT'], _fileOut, _dirOut, tData)
 	
 	lOut.sort(key=_sortNoDesc)
 	

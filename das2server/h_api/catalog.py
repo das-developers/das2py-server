@@ -216,8 +216,8 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	pout(b'Access-Control-Allow-Headers: Content-Type')
 	pout(b'Content-Type: application/json; charset=utf-8')
 	
-	if 'DSDF_ROOT' not in dConf:
-		U.webio.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
+	if 'DATASRC_ROOT' not in dConf:
+		U.webio.serverError(fLog, u"DATASRC_ROOT not set in %s"%dConf['__file__'])
 		return 17
 	
 	if not error.paramCheck(fLog, 'catalog', [], form):
@@ -236,10 +236,10 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	else:
 		sCkServer = sScript
 	
-	tData = ("%s/"%dConf['DSDF_ROOT'], lOut, fLog, sCkServer )
+	tData = ("%s/"%dConf['DATASRC_ROOT'], lOut, fLog, sCkServer )
 	
 	# Walk the tree, following symlinks
-	U.misc.symWalk(fLog, dConf['DSDF_ROOT'], _fileOut, _dirOut, tData)
+	U.misc.symWalk(fLog, dConf['DATASRC_ROOT'], _fileOut, _dirOut, tData)
 	
 	lOut.sort(key=_sortNoDesc)
 	

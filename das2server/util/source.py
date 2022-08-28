@@ -14,6 +14,7 @@ from copy import deepcopy
 from . import errors
 from . import webio
 from . import output
+from . import srcfunc
 
 import das2
 
@@ -216,7 +217,7 @@ def _loadDsdf(dConf, sName, sPath, fLog):
 		dDsdf['__name__'] = bname(sName)
 
 		# The case sensitive path portion that leads to this dsdf, without ".dsdf"
-		dDsdf['__caseid__'] = sPath.replace(dConf['DSDF_ROOT'],'')
+		dDsdf['__caseid__'] = sPath.replace(dConf['DATASRC_ROOT'],'')
 		dDsdf['__caseid__'] = dDsdf['__caseid__'].rstrip('.dsdf')
 		dDsdf['__caseid__'] = dDsdf['__caseid__'].strip('/')
 
@@ -377,16 +378,16 @@ def _mergeProto(dOut, dConf, dProps, fLog):
 		sServer = sMe
 	
 	if sSrvType == "das3":
-		dProto['convention']	= 'das3'
+		dProto['convention']	= 'das/3.0'
 		sBaseUrl = "%s/source/%s/data"%(sServer, dProps["__caseid__"].lower())
 	else:
-		dProto['convention']	= 'das2'
+		dProto['convention']	= 'das/2.2'
 		sBaseUrl = "%s?server=dataset&dataset=%s"%(sServer, dProps["__caseid__"])
 
-	dProto['base_urls'] = [sBaseUrl]
+	dProto['baseUrls'] = [sBaseUrl]
 
 	if ('WEBSOCKET_URI' in dConf) and (len(dConf['WEBSOCKET_URI']) > 6):
-		dProto['base_urls'].append(
+		dProto['baseUrls'].append(
 			"%s/%s"%(dConf['WEBSOCKET_URI'], dProps["__caseid__"].lower())
 		)
 
@@ -1042,7 +1043,7 @@ def dsdf2Source(fLog, dConf, sPath, sTarget="any"):
 		ServerError if there is a syntax error or other misconfiguration
 	"""
 
-	sName = sPath.replace(dConf['DSDF_ROOT']+'/', '')
+	sName = sPath.replace(dConf['DATASRC_ROOT']+'/', '')
 	sName.replace(".dsdf","").replace(".json",'')
 	dDsdf = _loadDsdf(dConf, sName, sPath, fLog)
 
@@ -1150,6 +1151,222 @@ def dsdf2Source(fLog, dConf, sPath, sTarget="any"):
 
 	return dOut
 
+
+# ########################################################################## #
+
+def stripCppComments(fLog, sPath):
+	lLines = []
+	try:
+		fIn = open(sPath, encoding='UTF-8')
+		for sLine in fIn:
+			sLine = sLine.strip()
+			# Walk the line, if we are not in quotes and see '//' ignore everything
+			# from there to the end
+			iQuote = 0
+			iComment = -1
+			n = len(sLine)
+			for i in range(n):
+				if sLine[i] == '"': 
+					iQuote += 1
+					continue
+				if sLine[i] == '/' and (i < n-1) and (sLine[i+1] == '/') \
+					and (iQuote % 2 == 0):
+					iComment = i
+					break;
+					
+			if iComment > -1:
+				sLine = sLine[:iComment]
+				sLine = sLine.strip()
+			
+			lLines.append(sLine)
+
+		sData = '\n'.join(lLines)
+
+	except FileNotFoundError:
+		fIn.close()
+		raise errors.ServerError("File '%s' does not exist."%sPath)
+
+	fIn.close()
+
+	return sData
+
+def loadCommentedJson(fLog, sPath):
+	"""Read a commented Json file
+
+	Pre-parse a *.json file removing all C++ style commets, '//', and then
+	build a dictionary using the standard json.loads function.
+
+	Returns (dict): A dictionary object if the file exists and could be read
+		otherwise a ServerError is raised if basic parsing failed.
+	"""
+	sData = stripCppComments(fLog, sPath)
+	
+	try:
+		dOut = json.loads(sData)
+	except ValueError as e:
+		raise errors.ServerError("Syntax error in %s: %s\n"%(sPath, str(e)))
+
+	return dOut
+
+
+# ########################################################################## #
+
+def includePath(fLog, dConf, sPath):
+	"""Get the include path for data source definitions, always include
+	the current directory first so that actions are predictable to server
+	administrators
+	"""
+	l = [ os.path.abspath(dname(sPath)) ]
+
+	if 'DATASRC_INC' in dConf:
+		l.append(dConf['DATASRC_INC'])
+	elif 'DATASRC_ROOT' in dConf:
+		l.append(pjoin(dConf['DATASRC_ROOT'], '_include_'))
+
+	return l
+
+def include(fLog, dCur, lIncPath, nLevel = 1):
+	"""Handle Include sections for das datasource definitons. 
+
+	For a given dictionary dCur:
+	
+	1. While there are any keys named '$include':
+		* Error out if content of the '$include' key is not a list
+
+		* For each filename in the list parse the content and include it
+		  as if it were added to the file via a simple C-style include.
+
+	2. Now iterate over all keys: 
+
+		* If the key starts with '$', then ignore it.
+		
+		If the value for the key is also a dictionary recusively call this
+		function on the sub-dictionary.
+
+	The maximum recursion level is 12, which should be good enough for almost
+	all cases, but still stops a run-away recursive include.
+	"""
+
+	if nLevel > 11:
+		raise errors.ServerError(
+			"Object depth of 12 encountered, does one of your files accidentally"+\
+			" include itself?"
+		)
+
+	nIncludes = 0
+	while '$include' in dCur:
+		nIncludes += 1
+		if nIncludes > 12:
+			raise errors.ServerError(
+				"Recursive $include limit of 12 encountered, does one of your"+\
+				" files accidentally include itself?"
+			)
+
+		if not isinstance(dCur['$include'], list):
+			raise errors.ServerError("$include does not contain a file list.")
+
+		lFiles = dCur.pop('$include')
+
+		for sFile in lFiles:
+			bLoaded = False
+			sPath = None
+			for sDir in lIncPath:
+				sPath = pjoin(sDir, sFile)
+				if os.path.isfile(sPath):
+					sSub = stripCppComments(fLog, sPath)
+					bLoaded = True
+					break
+
+			if not bLoaded:
+				raise errors.ServerError(
+					"Couldn't find include file %s in %s"%(sFile,str(lIncPath)
+				));
+
+			sSub = '{%s}'%sSub # Put it in a temporary dictionary structure
+
+			dSub = json.loads(sSub)
+
+			for sKey in dSub:
+				if sKey in dCur:
+					fLog.write("WARNING: Ignoring sub object %s from file %s "+\
+						"since it would hide an equivalent object in the parent."%(
+						sKey, sPath
+					))
+				dCur[sKey] = dSub[sKey]
+
+
+	# All the includes should be done at this level, now step down as needed
+	for sKey in dCur:
+		if sKey.startswith('$'): continue
+
+		if isinstance(dCur[sKey], dict):
+			include(fLog, dCur[sKey], lIncPath, nLevel+1)
+
+# ########################################################################## #
+def generate(fLog, dConf, dTop, dCur=None, nLevel=1):
+	"""Look for definition generators in the source description and 
+	call them with the given aruments.  All generators are called with
+	the original top level dictionary as the first argument, and the output
+	of the generator must be either a list or a dictionary that is expanded
+	in place.
+
+	Generator functions must not output $include directives since that
+	processing stage is *over* before this is run.  The basic processing
+	path is:
+
+	1. If the top level dictionary contains a key named $generate then
+	   then run the indicated generator.
+
+	2. If a sub item is a dictionary, call this function recursively.
+
+
+	Stop if the object depth hits 13 since that probably means something
+	is wrong
+	"""
+
+	if nLevel > 11:
+		raise errors.ServerError(
+			"Object depth of 12 encountered, does one of your files accidentally"+\
+			" include itself?"
+		)
+
+	if dCur == None:
+		dCur = dTop
+
+	# Let's do this bottom up instead of top down so that $generate 
+	# sections can't have other generators.
+	for sKey in dCur:
+		if isinstance( dCur[sKey], dict):
+			generate(fLog, dConf, dTop, dCur[sKey], nLevel+1)
+
+	if '$generate' in dCur:
+		dFuncs = dCur.pop('$generate')
+	
+		for sFunc in dFuncs:
+			if sFunc not in srcfunc.g_dRegistry:
+				raise errors.ServerError(
+					"Unknown server side source function '%s' referenced from '%s"%(
+					sFunc, bname(dTop['__path__'])
+				))
+
+			func = srcfunc.g_dRegistry[sFunc]
+
+			# "whole" file goes to the function to use for global inspection
+			dSub = func(fLog, dConf, dTop, dFuncs[sFunc])
+
+			fLog.write("Substituting: %s -> %s"%(sFunc, dSub))
+
+			# Expand the output into the current item, generated commands shouldn't
+			# step on other output
+			for sKey in dSub:
+				if sKey in dCur:
+					fLog.write("WARNING: Ignoring generated sub object %s from file %s "+\
+						"since it would hide an equivalent object in the parent."%(
+						sKey, sPath
+					))
+				dCur[sKey] = dSub[sKey]
+
+
 # ########################################################################## #
 
 def json2Source(fLog, dConf, sPath, sTarget='external'):
@@ -1162,49 +1379,35 @@ def json2Source(fLog, dConf, sPath, sTarget='external'):
 	fLog.write("INFO: Reading %s"%sPath)
 	
 	lLines = []
-	if not os.path.isfile(sPath):
-		return None
-
-	fIn = open(sPath, encoding='UTF-8')
-	for sLine in fIn:
-		sLine = sLine.strip()
-		# Walk the line, if we are not in quotes and see '//' ignore everything
-		# from there to the end
-		iQuote = 0
-		iComment = -1
-		n = len(sLine)
-		for i in range(n):
-			if sLine[i] == '"': 
-				iQuote += 1
-				continue
-			if sLine[i] == '/' and (i < n-1) and (sLine[i+1] == '/') \
-				and (iQuote % 2 == 0):
-				iComment = i
-				break;
-				
-		if iComment > -1:
-			sLine = sLine[:iComment]
-			sLine = sLine.strip()
-		
-		lLines.append(sLine)
-
-	sData = '\n'.join(lLines)
-	fIn.close()
 	
-	try:
-		dOut = json.loads(sData)
-	except ValueError as e:
-		raise errors.ServerError("Syntax error in %s: %s\n"%(sPath, str(e)))
+	dTop = loadCommentedJson(fLog, sPath)
 
-	# If the source had no name, give it one based on the filename
-	if 'name' not in dOut:
-		dOut['name'] = bname(sPath).replace('.json','')
+	# If the external catalog entry had no label, give it one based on the
+	# filename
+	if 'label' not in dTop['external']:
+		dTop['external']['label'] = bname(sPath).replace('.json','')
 
-	# And save the path to the file
-	dOut['__path__'] = sPath
+	# And save the path to the file as a whole
+	dTop['__path__'] = sPath
 
-	return dOut
+	# Now load any include files
+	lIncPath = includePath(fLog, dConf, sPath)
+	include(fLog, dTop, lIncPath)
 
+	# Now generate any required sections, if we're not just doing include
+	# diagnostics
+	if sTarget != 'include':
+		generate(fLog, dConf, dTop)
+
+	# If usage is for external clients, then cut out the whole internal section
+	if sTarget == 'external':
+		dTop.pop('internal')
+
+	# If usage is for internal operations, then cut out the interface section
+	elif sTarget == 'internal':
+		dTop['external'].pop('interface')
+
+	return dTop
 
 # ########################################################################## #
 
@@ -1313,14 +1516,14 @@ def load(fLog, dConf, sSource, sTarget="external"):
 		ServerError if there is a syntax error or other misconfiguration
 	"""
 	
-	(sName, sPath) = _findSrcNoCase(dConf['DSDF_ROOT'], sSource, '.json', fLog)
+	(sName, sPath) = _findSrcNoCase(dConf['DATASRC_ROOT'], sSource, '.json', fLog)
 	if sPath != None:
 		dSource = json2Source(fLog, dConf, sPath, sTarget)
 		return dSource
 
 
 	# Fall back to older DSDF if that is avaialable
-	(sName, sPath) = _findSrcNoCase(dConf['DSDF_ROOT'], sSource, '.dsdf', fLog)
+	(sName, sPath) = _findSrcNoCase(dConf['DATASRC_ROOT'], sSource, '.dsdf', fLog)
 	if sPath != None:
 		dSource = dsdf2Source(fLog, dConf, sPath, sTarget)
 		return dSource

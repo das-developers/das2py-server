@@ -40,8 +40,8 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 				u"module before running on windows.")
 		return 7	
 	
-	if 'DSDF_ROOT' not in dConf:
-		U.webio.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
+	if 'DATASRC_ROOT' not in dConf:
+		U.webio.serverError(fLog, u"DATASRC_ROOT not set in %s"%dConf['__file__'])
 		return 17
 					
 	# All das2.2 queries require a start and end time

@@ -50,14 +50,14 @@ def getWebTargets(dConf, fLog, sRelPath):
 	
 	# Keep a list of directories
 
-	if 'DSDF_ROOT' not in dConf:
-		fLog.write("   ERROR: Configuration item DSDF_ROOT missing")
+	if 'DATASRC_ROOT' not in dConf:
+		fLog.write("   ERROR: Configuration item DATASRC_ROOT missing")
 		return None
 
-	sRoot = dConf['DSDF_ROOT']
+	sRoot = dConf['DATASRC_ROOT']
 	
 	if not os.path.isdir(sRoot):
-		fLog.write("   ERROR: DSDF_ROOT dir '%s' does not exist"%sRoot)
+		fLog.write("   ERROR: DATASRC_ROOT dir '%s' does not exist"%sRoot)
 		return None
 	
 	if sRelPath == '/':

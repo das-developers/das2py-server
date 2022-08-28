@@ -220,7 +220,7 @@ class Dsdf(object):
 		ptrn = re.compile('\$\(.*\)')
 
 		# New for v3.0, allow dataset IDs to be case insensitive
-		(self.sName, self.sPath) = _findDsdfNoCase(dConf['DSDF_ROOT'], sDsdf, fLog);
+		(self.sName, self.sPath) = _findDsdfNoCase(dConf['DATASRC_ROOT'], sDsdf, fLog);
 		if self.sPath == None:
 			raise errors.QueryError(u"Data source %s doesn't exist on this server"%sDsdf)
 
@@ -458,7 +458,7 @@ class Dsdf(object):
 				sDas1ToDas2 = dConf['DAS1_TO_DAS2']
 			else:
 				sDas1ToDas2 = 'das2_from_das1'
-			self.d[u'reader'] = u'%s %s%s%s.dsdf'%(sDas1ToDas2, dConf['DSDF_ROOT'],
+			self.d[u'reader'] = u'%s %s%s%s.dsdf'%(sDas1ToDas2, dConf['DATASRC_ROOT'],
 			                                      os.sep, self.sName)
 			self.d[u'das2Stream'] == True
 

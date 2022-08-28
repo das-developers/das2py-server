@@ -34,7 +34,7 @@ def getDirUri(U, fLog, dConf, dDirInfo, sCatDir):
 	
 	sRelPath = None
 	_sOrigCatDir = sCatDir
-	while sCatDir != dConf['DSDF_ROOT']:
+	while sCatDir != dConf['DATASRC_ROOT']:
 	
 		# Go up one
 		if sRelPath == None:
@@ -187,14 +187,14 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	"""
 	pout = sys.stdout.write
 	
-	if 'DSDF_ROOT' not in dConf:
-		U.webio.serverError(fLog, u"DSDF_ROOT not set in %s"%dConf['__file__'])
+	if 'DATASRC_ROOT' not in dConf:
+		U.webio.serverError(fLog, u"DATASRC_ROOT not set in %s"%dConf['__file__'])
 		return 17
 	
 	# _dirOut and _fileOut append a list of tuples to lOut
 	
 	lOut = [] 
-	tData = ("%s/"%dConf['DSDF_ROOT'], lOut, fLog)
+	tData = ("%s/"%dConf['DATASRC_ROOT'], lOut, fLog)
 	
 	sCatPath = os.getenv("PATH_INFO")  # Knock off leading '/source'
 	
@@ -207,7 +207,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	if sCatPath.endswith('/'):
 		sCatPath = sCatPath[:-1]
 	
-	sPath = pjoin(dConf['DSDF_ROOT'], sCatPath)
+	sPath = pjoin(dConf['DATASRC_ROOT'], sCatPath)
 	
 	sDirInfo = pjoin(sPath, '_dirinfo_.dsdf')
 	if not os.path.isfile(sDirInfo):

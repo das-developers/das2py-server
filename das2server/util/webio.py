@@ -22,10 +22,19 @@ def flushOut():
 	sys.stdout.buffer.flush()
 
 ##############################################################################
-def getScriptUrl():
+def getScriptUrl(dConf=None):
 	"""Returns an ascii string (not utf-8) that provides the portion of the
-	url that leads to this script, should work for any python CGI program
+	url that leads to this script, should work for any python CGI program.
+
+	If you are offline AND the config is given AND it has SERVER_URL set, 
+	then you can also get something from that area as well, but live 
+	information from environment vars always takes precedence.
 	"""
+
+	if 'SERVER_NAME' not in os.environ:
+		if dConf and ('SERVER_URL' in dConf):
+			return dConf['SERVER_URL']
+
 	sProto = 'http://'
 	sPort = ''
 
