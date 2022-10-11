@@ -19,7 +19,6 @@
 //  }
 //
 
-
 "protocol":{
 
   // auto-generate the protocol method (http-get, ws-get) and the base URLs

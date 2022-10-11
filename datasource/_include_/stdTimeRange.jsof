@@ -1,0 +1,11 @@
+// standard fixed resolution time range.  Depending on the convention in use, 
+// will merge in a das2, das3 definition
+
+"$convention":{
+	"das2":{
+		"$merge":"das2/timeRange.json"
+	},
+	"das3":{
+		"$merge":"das3/timeRange.json"
+	}
+}

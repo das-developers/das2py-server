@@ -40,7 +40,7 @@ def _xmlEscape(sMsg):
 class RequestError(Exception):
 	def __init__(self, sType, sMsg):
 		self.status = None
-		self.headers = [('Content-Type','text/vnd.das2.das2stream')]
+		self.headers = [('Content-Type','text/vnd.das2.stream')]
 		self.body = None
 		if sType == NoSuchDataSource:
 			self.status = 404
@@ -67,15 +67,31 @@ def getReaderCmd(request):
 	#lCmd = ['cat','/home/cwp/git/das2py/test/ex05_waveform_extra.d3t']
 
 	sSrc = request.path
-	sQuery = None
+	dQuery = {}
 	i = sSrc.find('?')
-	if i > 2: sSrc = sSrc[:i]
+	if i > 2:
+		#g_log.info("Query String is: %s"%(sSrc[i+1:].strip()))
+		sQuery = sSrc[i+1:].strip()
+		sSrc = sSrc[:i]
+		if len(sQuery) > 3:
+			lQuery = [s.strip() for s in sQuery.split('&')]
+			#g_log.info("Query pairs are: %s", lQuery)
+			for sPair in lQuery:
+				j = sPair.find('=');
+				if j > 2:
+					dQuery[ sPair[:j].strip() ] = sPair[j+1:].strip()
+		
 	if len(sSrc) > 64: sSrc = sSrc[:64]
 
 	if sSrc == '/tracers/l0/msc/em1/sci/data':
-		sFile = 'tra-preflight_L0_msc-em1_x242_20220309_v1.0.0.d3s'
-		return ("cat %s/%s"%(sDir, sFile), False)
-
+	
+		for sExpect in ('read.time.min', 'read.time.max'):
+			if sExpect not in dQuery:
+				raise RequestError(QueryError, "Expected query key %s missing"%sExpect)
+		
+		sCmd = "tis_l1db_das msc em1 %s %s"%(dQuery['read.time.min'], dQuery['read.time.max'])
+		return (sCmd, False) # False = no keepalive
+	
 	elif sSrc == '/tracers/l0/msc/em1/sci-psd/data':
 		sFile = 'tra-preflight_L0_msc-em1_x242-psd_20220309_v1.0.0.d3s'
 		return ("cat %s/%s"%(sDir, sFile), False)
@@ -124,7 +140,10 @@ async def HandleAny(request):
 	to be advertised using standard web requests not web sockets
 	'''
 
+	#g_log.info('The object type is: %s', type(request))
 	g_log.info('Handler starting on path "%s"', request.path)
+	#g_log.info('The full request object is: %s', dir(request))
+	#g_log.info('The _event sub-object is: %s', dir(request._event))
 
 	try:
 		(sCmd, bKeepAlive) = getReaderCmd(request)

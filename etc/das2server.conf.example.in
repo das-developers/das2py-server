@@ -30,7 +30,7 @@ CONTACT_URL  = "https://update-das2server.conf.nowhere.edu/~someone/"
 DATASRC_ROOT = "%(PREFIX)s/datasource"
 
 # The top location of data source include files
-DATASRC_INC  = "%(PREFIX)s/datasource/_include_"
+DATASRC_INC  = "%(PREFIX)s/datasource/sdef/include"
 
 # If using simple local authentication, the name of the group and users files
 # Version 3.1 of the server should add better authentication methods
@@ -226,7 +226,7 @@ ENABLE_VERIFIER = false
 # channel and output a PNG image.  See the das2-pyserver user's guide for
 # details.
 #
-#PNG_MAKER = autoplot_url2png.py
+#DAS_TO_PNG = autoplot_url2png.py
 
 # Turn this on to enable support for heliophysics API services
 #ENABLE_HAPI_SUBSYS = true

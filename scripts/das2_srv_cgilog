@@ -130,16 +130,16 @@ def main():
 	if not setModulePath(dConf):
 		return 18
 		
-	# Load the util module
+	# Load the webutil module
 	try:
-		mTmp = __import__('das2server', globals(), locals(), ['util'], 0)
+		mTmp = __import__('das2server', globals(), locals(), ['webutil'], 0)
 	except ImportError as e:
 		preLoadError(u"Error importing module 'das2server'\r\n: %s"%(str(e)))
 		return 19
 	try:
-		U = mTmp.util
+		U = mTmp.webutil
 	except AttributeError:
-		preLoadError(u'No module named das2server.util under %s'%dConf['MODULE_PATH'])
+		preLoadError(u'No module named das2server.webutil under %s'%dConf['MODULE_PATH'])
 		return 20
 	
 	if 'LOG_PATH' not in dConf:

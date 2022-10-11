@@ -175,16 +175,16 @@ Create or update the das2 server password file whose located is defined in
 	if not setModulePath(dConf):
 		return 18
 		
-	# Load the util module
+	# Load the webutil module
 	try:
-		mTmp = __import__('das2server', globals(), locals(), ['util'], 0)
+		mTmp = __import__('das2server', globals(), locals(), ['webutil'], 0)
 	except ImportError as e:
 		perr(u"Error importing module 'das2server'\r\n: %s"%(str(e)))
 		return 19
 	try:
-		U = mTmp.util
+		U = mTmp.webutil
 	except AttributeError:
-		perr(u'No module named das2server.util under %s'%dConf['MODULE_PATH'])
+		perr(u'No module named das2server.webutil under %s'%dConf['MODULE_PATH'])
 		return 20
 	
 	if 'USER_PASSWD' not in dConf:

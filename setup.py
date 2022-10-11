@@ -307,7 +307,7 @@ class install_data_wconf(install_data):
 ##############################################################################
 
 lPkg = [
-	'das2server','das2server.util','das2server.handlers', 
+	'das2server','das2server.webutil','das2server.util','das2server.handlers', 
 	'das2server.tasks', 'das2server.h_api'
 ]
 
@@ -357,12 +357,12 @@ else:
 	lDataFiles.append(
 		# Include files for data source definitions
 		('datasource/_include_',[
-			'datasource/_include_/ExtIfaceCoordsTime_Rng.j',
-			'datasource/_include_/ExtIface_Fmt.j',
-			'datasource/_include_/Ext_ProtoTimeRngFmt.j',
-			'datasource/_include_/Ext_ProtoTimeRngIntrFmt.j',
-			'datasource/_include_/Ext_ProtoTimeRngResFmt.j',
-			'datasource/_include_/IntCmds_Fmt.j'
+			'datasource/_include_/ExtIfaceCoordsTime_Rng.jsof',
+			'datasource/_include_/ExtIface_Fmt.jsof',
+			'datasource/_include_/Ext_ProtoTimeRngFmt.jsof',
+			'datasource/_include_/Ext_ProtoTimeRngIntrFmt.jsof',
+			'datasource/_include_/Ext_ProtoTimeRngResFmt.jsof',
+			'datasource/_include_/IntCmds_Fmt.jsof'
 		])
 	)
 	lDataFiles.append( 

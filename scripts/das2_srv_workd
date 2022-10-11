@@ -379,16 +379,16 @@ The current version can't process more than one job at a time.
 	if not setModulePath(dConf):
 		return 18
 		
-	# Load the util module
+	# Load the webutil module
 	try:
-		mTmp = __import__('das2server', globals(), locals(), ['util'], 0)
+		mTmp = __import__('das2server', globals(), locals(), ['webutil'], 0)
 	except ImportError as e:
 		perr(u"Error importing module 'das2server'\r\n: %s\n"%(str(e)))
 		return 19
 	try:
-		U = mTmp.util
+		U = mTmp.webutil
 	except AttributeError:
-		perr(u'No module named das2server.util under %s\n'%dConf['MODULE_PATH'])
+		perr(u'No module named das2server.webutil under %s\n'%dConf['MODULE_PATH'])
 		return 20
 		
 		

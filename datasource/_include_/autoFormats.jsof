@@ -1,4 +1,4 @@
-// ExtIface_Fmt.json - A source include which defines user interface controls
+ // ExtIface_Fmt.json - A source include which defines user interface controls
 // depending on a the current server configuration and output format of the
 // data reader.  
 //

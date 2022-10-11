@@ -175,10 +175,11 @@ or <a href="%(script)s/sources.csv">sources.csv</a> is sufficent.</p>
   |             |
   |             |- <i>data-source</i>/ - A data source directory
   |                  |
-  |                  |- api.json - A das2 HttpStreamSrc definiton
-  |                  |- dsdf.d2t - A das2 v2.1/2.2 source definition
-  |                  |- form.html - A web form for querying this source   
-  |                  |- voservice.xml - A VO <a href="https://www.ivoa.net/documents/DataLink/20150617/index.html">DataLink</a> definition
+  |                  |- dsdf.d2t  - A das2 source definition
+  |                  |- form.html - A web form for querying the stream source
+  |                  |- query.json  - An HttpStreamSrc definiton
+  |                  |- voservice.xml - (optional) A VO <a href="https://www.ivoa.net/documents/DataLink/20150617/index.html">DataLink</a> definition
+  |                  |- socket.json - (optional) a WebSockSrc interface definition
   |                  |
   |                  |- data - form action handler (hidden)
   |

@@ -26,9 +26,13 @@
   // auto-generate the protocol method (http-get, ws-get) and the base URLs
   "$generate":{"extProtoGetStream":[]},
 
-  "httpParams":{
-    "read.time.min": {"required": true,  "type": "isotime" },
-    "read.time.max": {"required": true,  "type": "isotime" },
+  "$generate":{"httpParams":[
+    "external.interface.coords.time","external.interface.formats"
+  ]}
+
+  //"httpParams":{
+  //  "read.time.min": {"required": true,  "type": "isotime" },
+//    "read.time.max": {"required": true,  "type": "isotime" },
 
     // auto-gen params for final output control based on reader output format
     //
@@ -38,6 +42,6 @@
     //   extProtoParams_Fmt - Auto add server query parameters for stream formatting
     //   intCmds_Fmt        - Auto add comand line templates for stream formatting
 
-    "$generate":{"extProtoParams_Fmt":["internal.commands.read.output"]}
-  }
+//    "$generate":{"extProtoParams_Fmt":["internal.commands.read.output"]}
+//  }
 }

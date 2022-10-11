@@ -1,3 +1,5 @@
 build
 das2server/__pycache__
 das2server/util/__pycache__
+test/temp*
+

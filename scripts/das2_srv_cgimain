@@ -334,9 +334,9 @@ def main(form):
 	if not setModulePath(dConf):
 		return 18
 		
-	# Load the util module
+	# Load the webutil module
 	try:
-		mTmp = __import__('das2server', globals(), locals(), ['util'], 0)
+		mTmp = __import__('das2server', globals(), locals(), ['webutil'], 0)
 	except ImportError as e:
 		preLoadError(
 			"Error importing module 'das2server': %s\r\nsys.path is:\r\n%s\r\n"%(
@@ -344,9 +344,9 @@ def main(form):
 		))
 		return 19
 	try:
-		U = mTmp.util
+		U = mTmp.webutil
 	except AttributeError:
-		preLoadError('No module named das2server.util under %s'%dConf['MODULE_PATH'])
+		preLoadError('No module named das2server.webutil under %s'%dConf['MODULE_PATH'])
 		return 20
 		
 	U.misc.envPathMunge("PATH", dConf['BIN_PATH'])
@@ -502,11 +502,11 @@ def main(form):
 				sReqType = 'HANDLE_INFO'
 			elif sPathInfo.endswith('form.html'):
 				sReqType = 'HANDLE_FORM'  
-			elif sPathInfo.endswith('dsdf.d2t'):
+			elif sPathInfo.endswith('das2-api.d2t'):
 				sReqType = 'HANDLE_DSDF'
-			elif sPathInfo.endswith('api.json'):
+			elif sPathInfo.endswith('das3-api.json'):
 				sReqType = 'HANDLE_SOURCE'
-			elif sPathInfo.endswith('voservice.xml'):
+			elif sPathInfo.endswith('vo-api.xml'):
 				sReqType = 'HANDLE_VOSERVICE'
 			elif sPathInfo.endswith('data'):
 				sReqType = 'HANDLE_DATA'

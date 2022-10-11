@@ -130,7 +130,7 @@ $ cd ../das2-pyserver
 $ python${PYVER} setup.py install --prefix=${PREFIX} --install-lib=${PREFIX}/lib/python${PYVER}
 ```
 You can add the argument `--no-examples` to avoid installing the example
-datasets if these are not desired.
+data sources if these are not desired.
 
 Copy over the example configuration file:
 
@@ -200,7 +200,7 @@ instead of httpd.conf because das2 clients may transmit passwords.
 By default, authorization headers are not made available to CGI scripts.
 The re-write rule above allows the `Authorization` header to be passed down
 to the `das2_srv_cgimain` script.  This is needed to allow your server to
-support password protected datasets.
+support password protected data sources.
 
 Now symlink the top level CGI scripts into your new CGI directory.  Choose
 the name of the symlink carefully as it will be part of the public URL for

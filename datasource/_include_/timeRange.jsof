@@ -1,4 +1,4 @@
-// ExtIfaceCoordsTime_Rng.json - A source include that defines minimum and maximum
+// ExtIfaceCoordsTime_Rng.json - A json fragment that defines minimum and maximum
 //    aspects for a variable that is labeled "Time".
 //
 // Include this in a external.interface.coords.time section:

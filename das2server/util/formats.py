@@ -1,29 +1,16 @@
 """Helpers related to output formatting"""
 
-# ######################################################################### #
-def getConverters(dConf):
+# This is just a convetion used by this server, federated catalog items
+# advertise thier keys in an API file.
+g_tKeyConvention = (
+	"read.time.min", "read.time.max", "bin.time.max", "read.time.intr",
+	"read.opts"
+)
 
-	# Binary, Type In, Type Out, Options
-	tTxtOpts = ('format.frac_secs', 'format.sig_digits')
-	tBinOpts = ('bin.time.max')
-
-	lConv = [
-		['das2_ascii', ('das','2.2','bin'), ('das','2.2','text'), tTxtOpts ]
-		['das2_csv',   ('das','2.2','bin'), ('csv',None,None), tTxtOpts    ]
-		['das2_csv',   ('das','2.2','bin'), ('csv',None,None), tTxtOpts    ]
-		['das2_hapi',  ('das','2.2','bin'), ('hapi','1.0','text'), tTxtOpts]
-		['das1_ascii', ('das','1.0','bin'), ('das','1.0','text'), tTxtOpts ]
-	
-		['das2_from_das1',('das','1.0','bin'), ('das','2.2','bin'), None]
-		['das2_from_tagged_das1',('das','1.1','bin'), ('das','2.2','bin'), None]
-
-		['das2_bin_avgsec',('das','2.2','bin'),('das','2.2','bin'), tBinOpts]
-		['das2_bin_avg',   ('das','2.2','bin'),('das','2.2','bin'), tBinOpts]
-		['das2_bin_peakavgsec', ('das','2.2','bin'),('das','2.2','bin'), tBinOpts]
-		['das2_psd',   ('das','2.2','bin'),('das','2.2','bin'), tDftOpts]
-
-	]
-
+g_sDas1File = 'das1.pro'
+g_sParamSecFrac = "format.secfrac"
+g_sParamSigDigit = "format.sigdigit"
+g_sParamDelim = "format.delim"
 
 # ######################################################################### #
 def getMime(sType, sVersion, sSerial):
@@ -46,12 +33,12 @@ def getMime(sType, sVersion, sSerial):
 	if sType == 'das':
 		if sVersion.startswith('3'):
 			if sSerial == 'text':
-				sExt = 'dast'
+				sExt = 'tdas'
 				sTitle = 'das text packet stream'
 				sMime = 'text/vnd.das.stream; charset=utf-8'
 
 			elif sSerial == 'xml':
-				sExt = 'dasx'
+				sExt = 'xdas'
 				sTitle = 'das XML stream'
 				sMime = 'application/vnd.das.doc+xml'
 
@@ -118,7 +105,7 @@ def getMime(sType, sVersion, sSerial):
 
 #############################################################################
 
-def getFormatSelection(dConf, lRdrOut):
+def getFormatSelection(dConf, lRdrOut, bWebSockConn=False):
 	"""
 	Args:
 		dConf (dict) - The server configuration information
@@ -128,7 +115,7 @@ def getFormatSelection(dConf, lRdrOut):
 	   A format controls interface suitable for conversion to a json description
 
 	Notes:
-	Here we olve for the formats that can be supported and return them as
+	Here we solve for the formats that can be supported and return them as
 	output options.  Since the rule in das2 is that everything is a stream,
 	so long as A -transforms-> B and B -transforms-> C, then A -> C.
 	
@@ -204,16 +191,16 @@ def getFormatSelection(dConf, lRdrOut):
 	# General properties to add in for many text formats
 	dTextOpts = {
 		"frac_secs":{
-			"name":  "Factional Seconds",
+			"label":  "Factional Seconds",
 			"title": "How many digits to include for fractional seconds, minimum is 0",
 			"value": 3,
-			"set":{"param":"format.secfrac"}
+			"set":{"param":g_sParamSecFrac}
 		},
 		"sig_digits":{
-			"name":"Significant Digits",
+			"label":"Significant Digits",
 			"title":"Number of significant digits for general values (not time strings)",
 			"value":5,					
-			"set":{"param":"format.sigdigit"}
+			"set":{"param":g_sParamSigDigit}
 		}
 	}
 
@@ -222,7 +209,7 @@ def getFormatSelection(dConf, lRdrOut):
 	# Handle qstream
 	if sRdr == 'qstream':
 		dFmts['qstream'] = {
-			"name":"QStream",
+			"label":"QStream",
 			"title":"Native Autoplot data format",
 			"enabled":{"value":True,
 				"set":{"param":"format.type", "value":"qstream"},
@@ -231,7 +218,7 @@ def getFormatSelection(dConf, lRdrOut):
 
 		if 'QDS_TO_UTF8' in dConf:
 			dFmts['qstream']['variant'] = {
-				"name":"Variant",
+				"label":"Variant",
 				"value":"binary",
 				"set":{
 					"param":"format.serial",
@@ -244,7 +231,7 @@ def getFormatSelection(dConf, lRdrOut):
 	
 	else:
 		dFmts['das'] = {
-			"name":"Das Stream",
+			"label":"Das Stream",
 			"title":"Streaming format for plots",
 			"enabled":{"value":True, "set":{"param":"format.type", "value":"das"} }
 		}
@@ -261,7 +248,7 @@ def getFormatSelection(dConf, lRdrOut):
 		elif sVer == "2.2":        lVers = [sVer]
 		elif sVer == "3.0":        lVers = [sVer]
 
-		dFmts['das']['version'] = { "name":"Stream Version", "value": sVer}
+		dFmts['das']['version'] = { "label":"Stream Version", "value": sVer}
 
 		if len(lVers) > 1:
 			lVers = [ {"value":s} for s in lVers ]
@@ -273,7 +260,7 @@ def getFormatSelection(dConf, lRdrOut):
 			lSerials.append( {"value":"xml"} )
 		
 		dFmts['das']['serial'] = {
-			"name":"Serialization",
+			"label":"Serialization",
 			"value":"binary",
 			"set":{"param":"format.serial", "enum":lSerials }
 		}
@@ -286,7 +273,7 @@ def getFormatSelection(dConf, lRdrOut):
 	# Generic translation formats, depending on installed converters
 	if ('D2S_CSV_CONVERTER' in dConf) and (sRdr == 'das') and (sVer != '3.0'):
 		dFmts['csv'] = {
-			"name":"Delimited Text",
+			"label":"Delimited Text",
 			"title":"Delimited Text (CSV, TSV, etc.)",
 			#"mime":"text/csv",
 			#"extension":".csv",
@@ -294,11 +281,11 @@ def getFormatSelection(dConf, lRdrOut):
 				"set":{"param":"format.type", "value":"csv"},
 			},
 			"delim":{
-				"name":"Field Deliminator",
+				"label":"Field Deliminator",
 				#"title":"Field Deliminator",
-				"value":"comma",
+				"value":"semicolon",
 				"set":{
-					"param":"format.delim",
+					"param":g_sParamDelim,
 					"enum":[{"value":"comma"},{"value":"semicolon"},{"value":"tab"}]
 				}
 			}	
@@ -306,13 +293,12 @@ def getFormatSelection(dConf, lRdrOut):
 		
 		# Add in general purpose text formating information:
 		for sOpt in dTextOpts:
-			dFmts['csv'][sOpt] = dTextOpts[sOpt]			
-		
+			dFmts['csv'][sOpt] = dTextOpts[sOpt]
 
 
 	if ('DAS_TO_PNG' in dConf) and (sRdr == 'das') and (sVer != '3.0'):
 		dFmts['png'] = {
-			"name":"PNG Image",
+			"label":"PNG Image",
 			"title":"Output a plot image instead of data",
 			#"mime":"image/png",
 			#"extension":".png",
@@ -320,22 +306,22 @@ def getFormatSelection(dConf, lRdrOut):
 				"set":{"param":"format.mime","value":"image/png"}
 			},
 			"width":{
-				"name":"Image Width",
+				"label":"Image Width",
 				"title":"The width of the plot image in pixels",
 				"value":800,
 				"set":{"param":"format.width"}
 			},
 			"height":{
-				"name":"Image Height",
+				"label":"Image Height",
 				"title":"The height of the plot image in pixels",
 				"value":640,
-				"set":{"param":"format.width"}
+				"set":{"param":"format.height"}
 			}
 		}
 
 	if ('DAS_TO_VOTABLE' in dConf):
 		dFmts["votable"] = {
-			"name":"VOTable",
+			"label":"VOTable",
 			"title":"Output a VOTable for use with TOPCAT, application/x-votable+xml (*.xml)",
 			#"mime":"application/x-votable+xml",
 			#"extension":".xml",
@@ -343,7 +329,7 @@ def getFormatSelection(dConf, lRdrOut):
 				"set":{"param":"format.mime","value":"application/x-votable+xml"}
 			},
 			"serial":{
-				"name":"Serialization",
+				"label":"Serialization",
 				"title":"VOTable data can be included within the file, or as an external stream",
 				"value":"tabledata",
 				"set":{"param":"format.serial",
@@ -353,10 +339,9 @@ def getFormatSelection(dConf, lRdrOut):
 		}
 
 	return dFmts
-	
 
 ##############################################################################
-def addFormatHttpParams(dConf, dParams):
+def addFormatHttpParams(dConf, dParams, lRdrOut, bWebSockConn=False):
 	"""Add our output formatting parameters to the protocol/http_params section
 	Should check dConf to see if:
 		Image server is set
@@ -364,6 +349,9 @@ def addFormatHttpParams(dConf, dParams):
 	Here we say what the server will accept and don't really care if any of these
 	are enabled in the inteface section or not.
 	"""
+	sRdr = lRdrOut[0]
+	sVer = lRdrOut[1]
+	sVar = lRdrOut[2]
 
 	dParams["format.type"]     = {
 		"required":False, "name":"Format",
@@ -371,9 +359,15 @@ def addFormatHttpParams(dConf, dParams):
 	}
 	dParams["format.secfrac"]  = {"required":False, "type":"integer"}
 	dParams["format.sigdigit"] = {"required":False, "type":"integer"}
-	dParams["format.delim"]    = {"required":False, "type":"string"}
-	dParams["format.width"]    = {"required":False, "type":"integer"}
-	dParams["format.height"]   = {"required":False, "type":"integer"}
+	
+	if ('D2S_CSV_CONVERTER' in dConf) and (sRdr == 'das') and (sVer != '3.0'):
+		dParams["format.delim"]    = {"required":False, "type":"string"}
+
+	if (not bWebSockConn) and  ('DAS_TO_PNG' in dConf) \
+	   and (sRdr == 'das') and (sVer != '3.0'):
+		dParams["format.width"]    = {"required":False, "type":"integer"}
+		dParams["format.height"]   = {"required":False, "type":"integer"}
+
 	dParams["format.serial"]   = {
 		"name":"Serialization",
 		"required":False, 
@@ -381,5 +375,100 @@ def addFormatHttpParams(dConf, dParams):
 	}
 	dParams['format.version']  = {"required":False, "type":"string"}
 	
+##############################################################################
+def addFormatCommands(dConf, dFmts, lRdrOut):
+	"""Add command templates for formatting output."""
 
-	
+	(sKeyBeg, sKeyEnd, sKeyRes, sKeyIntr, sKeyParams) = g_tKeyConvention
+
+	sRdr = lRdrOut[0]
+	sVer = lRdrOut[1]
+	sVar = lRdrOut[2]
+
+	nFmt = 0
+
+	if sRdr == 'qstream' and ('QDS_TO_UTF8' in dConf):
+		dFmts[nFmt] = {
+			'label':'.qds to .qdt converter',
+			'triggers':[{'key':'format.serial','value':'text'}],
+			'template': dConf['QDS_TO_UTF8'],
+			'input':{'type':'qstream'},
+			'output':{'type':'qstream','variant':'text'}
+		}
+		nFmt += 1
+		return   # Don't know of anything else I can do with QStream
+
+	if sRdr == 'das':
+		
+		# If this is a das1 stream, add in the converter for to get to das2
+		if sVer == '1.0': # Raw big-endian floats
+			sCmd = 'das2_from_das1'
+			if 'DAS1_TO_DAS2' in dConf: sCmd = dConf['DAS1_TO_DAS2']
+
+			dFmts[nFmt] = {
+				'label':'das v1.0 to v2.2 converter',
+				'template':[
+					"%s #[_THIS_DIRECTORY_]/%s #%s #%s #[%s#@#]"%(
+						sCmd, g_sDas1File, sKeyBeg, sKeyEnd, sKeyIntr
+					)
+				],
+				'triggers':[{'key':'format.version','value':"2.2", 'compare':'ge'}],
+				'input':{'type':'das','version':'1.0'},
+				'output':{'type':'das','version':'2.2'}
+			}
+			nFmt += 1
+
+			# Now act as if my version was v2 :)
+			sVer = '2.2'
+
+		elif sVer == '1.1': # Tagged stream (B0, etc.)
+			sCmd = 'das2_from_tagged_das1'
+			dFmts[nFmt] = {
+				'label':'das v1.1 (tagged) to v2.2 converter',
+				'template':'%s -s -tBeg #%s'%(sCmd, sKeyBeg),
+				'triggers':[{'key':'format.version','value':"2.2", 'compare':'ge'}],
+				'input':{'type':'das','version':'1.1'},
+				'output':{'type':'das','version':'2.2'}
+			}
+			nFmt += 1
+			sVer = '2.2'
+
+		if sVer == '2.2':
+			sCmd = 'das2_ascii'
+			if 'D2S_TO_UTF8' in dConf: sCmd = dConf['D2S_TO_UTF8']
+			dFmts[nFmt] = {
+				'label':'das 2.2 binary to text',
+				'template':'%s -c #[%s#-s @#] #[%s#-r @#]'%(
+					sCmd, g_sParamSecFrac, g_sParamSigDigit
+				),
+				'triggers':[{'key':'format.serial','value':'text'}],
+				'input':{'type':'das','version':'2.2'},
+				'output':{'type':'das','version':'2.2','variant':'text'}
+			}
+			nFmt += 1	
+			sCmd = 'das2_csv'
+			if 'D2S_CSV_CONVERTER' in dConf: sCmd = dConf['D2S_CSV_CONVERTER']
+			dFmts[nFmt] = {
+				'label':'das 2.2 to CSV converter',
+				'template':'%s #[%s#-s @#] #[%s#-r @#] #[%s#-d @#]'%(
+					sCmd, g_sParamSecFrac, g_sParamSigDigit, g_sParamDelim
+				),
+				'triggers':[{'key':'format.type','value':'csv'}],
+				'input':{'type':'das','version':'2.2'},
+				'output':{'type':'csv'}
+			}
+			nFmt += 1	
+			if 'DAS_TO_PNG' in dConf:
+				sCmd = dConf['DAS_TO_PNG']
+				dFmts[nFmt] = {
+					'label':'das v2.2 plot image generator',
+					'template':'%s #[%s#-w @#] #[%s#-h @#]'%(
+						sCmd, 'format.width', 'format.height'
+					),
+					'triggers':[{'key':'format.type','value':'png'}],
+					'input':{'type':'das','version':'2.2'},
+					'output':{'type':'png'},
+					'streaming':False
+				}
+				nFmt += 1
+			
