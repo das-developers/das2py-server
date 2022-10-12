@@ -9,9 +9,35 @@ SERVER_NAME = "%(SERVER_ID)s"
 # Identify this server seperatly in combined logs, will be reduced to lower case
 SERVER_ID = "%(SERVER_ID)s"
 
-# Provide the server URL, this is for self referential items when NOT
-# invoked by apache.
+# Provide the server URL, this is for self referential items
+#
+#  Note: Re-run das_srv_sdef on your source definitions if this is changed
 SERVER_URL = "http://localhost/das/server"
+
+# This server can send das streams over websocket frames.  To enable this
+# functionality set the value of the WEBSOCKET_ROOT below to the *external*
+# address of your websocket server.  For example:
+# 
+#   wss://jupiter.physics.uiowa.edu:/dasws/juno/wav/survey 
+#
+# The das2 websocket will typically sit behind a more secure webserver
+# such as apache.  To do this first enable the apache2 proxy_wstunnel
+# module:
+#
+#  sudo a2enmod proxy_wstunnel
+#
+# Then name the path on your server to map to the das2 websocket server in
+# your apache2 configuration:
+#
+#  <Location "/dasws/">
+#     ProxyPass "ws://localhost:52242/"
+#  </Location>
+#
+# Where the apache URI path and local server location match the
+# WEBSOCKET_PATH and WEBSOCKET_CONN below.  The 
+#
+#  Note: Re-run das_srv_sdef on your source definitions if this is changed
+WEBSOCKET_URI = "ws://localhost/dasws"
 
 # Contact email.  You can use replacement characters to obscure the address
 # a bit, for example:
@@ -178,30 +204,6 @@ ENABLE_VALIDATOR    = true
 # See format in the ALLOW_TEST_FROM description.
 # The default value is "127.0.0.0/8 ::1/128" if keyword is missing.
 ALLOW_VALIDATE_FROM  = 127.0.0.1 ::1
-
-# This server can send das streams over websocket frames.  To enable this
-# functionality set the value of the WEBSOCKET_ROOT below to the *external*
-# address of your websocket server.  For example:
-# 
-#   wss://jupiter.physics.uiowa.edu:/dasws/juno/wav/survey 
-#
-# The das2 websocket will typically sit behind a more secure webserver
-# such as apache.  To do this first enable the apache2 proxy_wstunnel
-# module:
-#
-#  sudo a2enmod proxy_wstunnel
-#
-# Then name the path on your server to map to the das2 websocket server in
-# your apache2 configuration:
-#
-#  <Location "/dasws/">
-#     ProxyPass "ws://localhost:52242/"
-#  </Location>
-#
-# Where the apache URI path and local server location match the
-# WEBSOCKET_PATH and WEBSOCKET_CONN below.  The 
-
-WEBSOCKET_URI = ws://localhost/dasws
 
 # Set the intefaces to bind to the web-socket server along with the port
 # If not specified only the loop-back interface is bound to port 52242

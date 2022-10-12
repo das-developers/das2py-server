@@ -20,7 +20,11 @@ build:
 
 install:
 	python${PYVER} setup.py install --prefix=${PREFIX} \
-	   --install-lib=${PREFIX}/lib/python${PYVER} --no-examples
+	   --install-lib=${PREFIX}/lib/python${PYVER}
+
+#python${PYVER} setup.py install --prefix=${PREFIX} \
+#   --install-lib=${PREFIX}/lib/python${PYVER} --no-examples
+
 
 distclean:
 	rm -r build

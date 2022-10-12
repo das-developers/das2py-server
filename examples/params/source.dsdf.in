@@ -23,6 +23,8 @@
 ; a third argument to the reader call 'params'.  Params are not required and
 ; readers should work without them.
 
+localId = 'Examples/Params'
+
 description = 'THEMIS SCW-EFW Power Spectral Density (Sample Dataset)'
 
 summary = 'The coordinate system for these data are local magnetic '+$

@@ -19,6 +19,7 @@ from distutils.util import convert_path, change_root
 from distutils.command.build		 import build
 from distutils.command.build_scripts import build_scripts
 from distutils.command.install_data  import install_data
+from distutils.command.install import install
 
 from distutils.errors import DistutilsFileError
 
@@ -31,6 +32,8 @@ if not g_sPrefix:
 
 g_sEtc	= pjoin(g_sPrefix, 'etc')
 g_sConfig = pjoin(g_sEtc, 'das2server.conf')
+
+g_bInstExamples = True
 
 if 'SERVER_ID' not in os.environ:
 	os.environ['SERVER_ID'] = platform.node()
@@ -238,7 +241,7 @@ class install_data_wconf(install_data):
 		sufficies = ('.sh','.ksh','.py')
 		for suffix in sufficies:
 			if dst.endswith(suffix): 
-				log.info("changing mode of %s to 755"%dst)
+				#log.info("changing mode of %s to 755"%dst)
 				os.chmod(dst, 0o755)
 		
 		return (dst, 1)
@@ -258,10 +261,16 @@ class install_data_wconf(install_data):
 			if os.path.isfile(sFinal) and (os.path.basename(sFinal) in self.lKeepDest):
 				return (sFinal, 0)
 			else:
-				return self.copy_file(sFile, sDir)
-				
+				(dst, nRet) = self.copy_file(sFile, sDir)
+				if (nRet == 1):
+					sufficies = ('.sh','.ksh','.py')
+					for suffix in sufficies:
+						if dst.endswith(suffix): 
+							log.info("changing mode of %s to 755"%dst)
+							os.chmod(dst, 0o755)
+				return (dst, nRet)
 		else:
-			return self.file_from_tplt(sFile, sDir)			
+			return self.file_from_tplt(sFile, sDir)		
 	
 	
 	def run(self):
@@ -302,7 +311,6 @@ class install_data_wconf(install_data):
 						(out, _) = self.copy_file_or_tplt(data, dir)
 				
 						if out: self.outfiles.append(out)
-	
 
 ##############################################################################
 
@@ -312,14 +320,14 @@ lPkg = [
 ]
 
 lScripts = [ 'scripts/%s'%s for s in [
-	'das2_srv_cgimain', 'das2_srv_cgilog', 'das2_srv_wsockd',
-	'das2_srv_workd', 'das2_srv_passwd',  'das2_srv_todo',
-	'das2_srv_sdef' 
+	'das_srv_cgimain', 'das_srv_cgilog', 'das_srv_wsockd',
+	'das_srv_workd', 'das_srv_passwd',  'das_srv_todo',
+	'das_srv_sdef' 
 	# 'das2_svr_cgiadm' someday we'll have an admin module
 ]]
 
 lDataFiles = [
-	('bin', ['scripts/das2_startup.sh.in']),
+	('bin', ['scripts/das_startup.sh.in']),
 	('etc', [
 		'etc/das2server.conf.example.in','etc/das2peers.ini.example.in',
 		'etc/group', 'etc/passwd', 'etc/ReadMe-Passwords.txt.in'
@@ -335,56 +343,61 @@ lDataFiles = [
 	
 	# And a couple empty dirs...
 	('log', []), ('cache', [])
-
 ]
 
 # Hack in a "--no-examples" argument
 if '--no-examples' in sys.argv:
 	sys.argv.remove('--no-examples')
+	g_bInstExamples = False
 else:
+	
+	# For now only use *.dsdf as the input source
+	#lDataFiles.append(
+	#	# Include files for data source definitions
+	#	('sdef/include',[
+	#		'sdef/include/ExtIfaceCoordsTime_Rng.jsof',
+	#		'sdef/include/ExtIface_Fmt.jsof',
+	#		'sdef/include/Ext_ProtoTimeRngFmt.jsof',
+	#		'sdef/include/Ext_ProtoTimeRngIntrFmt.jsof',
+	#		'sdef/include/Ext_ProtoTimeRngResFmt.jsof',
+	#		'sdef/include/IntCmds_Fmt.jsof'
+	#	])
+	#)
+	lDataFiles.append( ('examples', [
+		'examples/catinfo.dsdf','examples/define.sh'
+	]))
+
+	lDataFiles.append( ('examples/random', [
+		'examples/random/randata.py','examples/random/source.dsdf.in'
+	]))
+
+	lDataFiles.append( ('examples/waveform', [
+		'examples/waveform/waveform.py','examples/waveform/source.dsdf.in'
+	]))
+
 	lDataFiles.append( 
-		('datasource/Examples', [ 
-			# 'examples/Random.dsdf.in' switch to .json
-			# 'examples/Params.dsdf.in', switched to .json
-			'examples/random.json.in', 
-			'examples/params.json.in', 
-			'examples/Spectra.dsdf.in',  # Some older .dsdf files,
-			'examples/Waveform.dsdf.in', # people are going to want these
-			'examples/Auth.dsdf.in',     # because they are simple
-			'examples/_dirinfo_.dsdf'
-		])
-	)
-	lDataFiles.append(
-		# Include files for data source definitions
-		('datasource/_include_',[
-			'datasource/_include_/ExtIfaceCoordsTime_Rng.jsof',
-			'datasource/_include_/ExtIface_Fmt.jsof',
-			'datasource/_include_/Ext_ProtoTimeRngFmt.jsof',
-			'datasource/_include_/Ext_ProtoTimeRngIntrFmt.jsof',
-			'datasource/_include_/Ext_ProtoTimeRngResFmt.jsof',
-			'datasource/_include_/IntCmds_Fmt.jsof'
-		])
-	)
-	lDataFiles.append( 
-		('examples', [
-			'examples/randata.py','examples/spectra.sh.in', 'examples/waveform.py',
-			'examples/cdf.py'
-		])
-	)
-	lDataFiles.append( 
-		('examples/vgr_data', [
-			'examples/vgr_data/VG1_1979-03-01_12-26-11-956.DAT',
-			'examples/vgr_data/VG1_1979-03-01_12-26-59-956.DAT',
-			'examples/vgr_data/VG1_1979-03-01_12-27-47-956.DAT',
-			'examples/vgr_data/VG1_1979-03-01_12-28-35-956.DAT'
-		])
-	)
-	lDataFiles.append( 
-		('examples/themis_data', [
-			'examples/themis_data/tha_l3_sm_20080629_171151_20080629_171152_burst_v01.cdf'
+		('examples/waveform/vgr_data', [
+			'examples/waveform/vgr_data/VG1_1979-03-01_12-26-11-956.DAT',
+			'examples/waveform/vgr_data/VG1_1979-03-01_12-26-59-956.DAT',
+			'examples/waveform/vgr_data/VG1_1979-03-01_12-27-47-956.DAT',
+			'examples/waveform/vgr_data/VG1_1979-03-01_12-28-35-956.DAT'
 		])
 	)
 
+	lDataFiles.append( ('examples/spectra', [
+		'examples/spectra/spectra.sh.in','examples/spectra/source.dsdf.in'
+	]))
+
+	lDataFiles.append( ('examples/params',[
+		'examples/params/cdf.py','examples/params/source.dsdf.in'
+	]))
+	lDataFiles.append( ('examples/params/themis_data', [
+		'examples/params/themis_data/tha_l3_sm_20080629_171151_20080629_171152_burst_v01.cdf'
+	]))
+
+	lDataFiles.append( ('examples/auth', [
+		'examples/auth/source.dsdf.in', 'examples/auth/sine.py'
+	]))
 
 # Hack around command constructors not accessable.  These files won't be
 # overwritten if destination exists.
@@ -401,6 +414,5 @@ setup(
 	cmdclass={
 		'build_scripts':build_scripts_wconf,
 		'install_data':install_data_wconf
-		
 	}
 )

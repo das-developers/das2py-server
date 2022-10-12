@@ -1,0 +1,596 @@
+#!/usr/bin/env python3
+"""Expand source definitions into final form based on the server configuration"""
+
+import sys
+import os.path
+from os.path import join as pjoin
+from os.path import basename as bname
+from os.path import dirname as dname
+import optparse
+import json
+from io import StringIO
+
+g_sConfPath = REPLACED_ON_BUILD
+
+g_sStdDas1 = 'das1.pro'
+g_sStdDas2 = 'das2.d2t'
+g_sStdDas3 = 'das3.json'
+g_sStdRt   = 'das3rt.json'
+g_sStdHapi2 = 'hapi2.json'
+g_sStdVo  = 'voservice.xml'
+g_sIntern = 'internal.json'
+
+U = None  # Namespace anchor for das2server.util module, loaded after sys.path 
+          # is set via the config file
+
+# ########################################################################## #
+# Work around ubuntu apport bugs
+if sys.excepthook != sys.__excepthook__:
+	if sys.excepthook.__name__ == 'apport_excepthook':
+		sys.stderr.write("Info: disabling Ubuntu's Apport hook\n")
+		sys.excepthook = sys.__excepthook__
+	else:
+		sys.stderr.write("Warning: 3rd party exception hook is active\n")
+
+# ########################################################################## #
+# handle output
+try:
+	unicode
+except NameError:
+	unicode = str
+
+def pout(item):
+	"""If input item is bytes, write them, if item is a unicode string encode as
+	utf-8 first"""	
+	if isinstance(item, str):
+		sys.stdout.buffer.write(item.encode('utf-8'))
+		sys.stdout.buffer.write('\n'.encode('utf-8'))
+	else:
+		sys.stdout.buffer.write(item)
+			
+def perr(item):
+	"""If input item is bytes, write them, if item is a unicode string encode as
+	utf-8 first"""	
+	if isinstance(item, str):
+		sys.stderr.buffer.write(item.encode('utf-8'))
+		sys.stderr.buffer.write('\n'.encode('utf-8'))
+	else:
+		sys.stderr.buffer.write(item)
+
+
+class BufferLog(object):
+	def __init__(self):
+		self.fOut = StringIO()
+
+	def write(self, sThing):
+		self.fOut.write("%s\n"%sThing)
+
+	def getvalue(self):
+		return self.fOut.getvalue()
+
+# ########################################################################## #
+# Get my config file, boiler plate that has to be re-included in each script
+# since the location of the modules can be configured in the config file
+
+def getConf():
+	
+	if not os.path.isfile(g_sConfPath):
+		if os.path.isfile(g_sConfPath + ".example"):
+			perr(u"Move\n   %s.example\nto\n   %s\nto enable your site\n"%(
+				  g_sConfPath, g_sConfPath))
+		else:
+			perr(u"%s is missing\n"%g_sConfPath)
+			
+		return None
+
+	fIn = open(g_sConfPath, 'r')
+	
+	dConf = {}
+	nLine = 0
+	for sLine in fIn:
+		nLine += 1
+		iComment = sLine.find('#')
+		if iComment > -1:
+			sLine = sLine[:iComment]
+	
+		sLine = sLine.strip()
+		if len(sLine) == 0:
+			continue
+		
+		iEquals = sLine.find('=')
+		if iEquals < 1 or iEquals > len(sLine) - 2:
+			preLoadError(u"Error in %s line %d"%(g_sConfPath, nLine))
+			fIn.close()
+			return None
+		
+		sKey = sLine[:iEquals].strip()
+		sVal = sLine[iEquals + 1:].strip(' \t\v\r\n\'"')
+		dConf[sKey] = sVal
+	
+	fIn.close()
+	
+	# As a final step, inclued a reference to the config file itself
+	dConf['__file__'] = g_sConfPath
+	
+	return dConf
+
+# ########################################################################## #
+# Update sys.path, boiler plate code that has to be re-included in each script
+# since config file can change module path
+
+def setModulePath(dConf):
+	if 'MODULE_PATH' not in dConf:
+		perr(u"Set MODULE_PATH = /dir/containing/das2server_python_module")
+		return False	
+	
+	lDirs = dConf['MODULE_PATH'].split(os.pathsep)
+	for sDir in lDirs:
+		if os.path.isdir(sDir):
+				if sDir not in sys.path:
+					sys.path.insert(0, sDir)
+		
+	return True
+
+# ########################################################################## #
+# Writing files #
+
+def _writeFile(sPath, sOutput):
+	#perr("Writing: %s"%sPath)
+	sDir = dname(sPath)
+
+	if not os.path.isdir(sDir):
+		os.makedirs(sDir)
+
+	with open(sPath, 'w') as f:
+		f.write(sOutput)
+
+def _writeJsonFile(sPath, dOutput):
+	sOutput = json.dumps(dOutput, indent="  ");
+	_writeFile(sPath, sOutput)
+
+# Utility ################################################################## #
+
+def _loadJson(sInPath):
+	"""The missing 1-liner from the json module"""
+	with open(sInPath) as fIn:
+		dQuery = json.load(fIn)
+	return dQuery
+
+def _loadText(sInPath):
+	with open(sInPath) as fIn:
+		sData = fIn.read()
+	return sData
+
+def _getDas3Fmts(dSource):
+	dFmts = dSource['interface']['formats']
+
+	lProvides = []
+	for sFmt in dFmts:
+		dFmt = dFmts[sFmt]
+		for sMime in dFmt['mimeTypes']:
+			if sMime not in lProvides:
+				lProvides.append(sMime)
+
+	return lProvides
+
+def _getDas2Fmts(sSource):
+	lLines = [sLine.strip() for sLine in sSource.split('\n')]
+	for sLine in lLines:
+		if sLine.startswith('das2Stream'):
+			lSub = [s.strip() for s in sLine.split('=')]
+			if (len(lSub) > 1) and (lSub[1].lower() in ('1','t','true')):
+				return [ U.formats.getMime('das','2','binary')[0] ]
+
+		if sLine.startswith('qstream'):
+			lSub = [s.strip() for s in sLine.split('=')]
+			if (len(lSub) > 1) and (lSub[1].lower() in ('1','t','true')):
+				return [ U.formats.getMime('qstream','2','binary')[0] ]
+
+	return [ U.formats.getMime('das','1.0','binary')[0]]
+
+# ########################################################################## #
+# Update the data source collection #
+
+def _makeCollection(dConf, sSet, lInput, sOutPath, bOverWrite=False):
+	"""Create or update the source collection file at sPath.  Source collections
+	define a list of sources that basically return the same data but do so
+	via different methods.  They are typed by the convention, the following
+	conventions are known:
+
+		das/2.2 ---> dsdf.d2t
+	   das/3.0 ---> The federated catalog httpstreamsrc object (required)
+	   das-websock/1.0 --> The federted catalog websocksrc object
+	   hapi/2.0 ---> Output of das2_hapi -d source.dsdf -i -n
+
+	Returns (bool) True if the catalog was updated
+	"""
+
+	# First read the stream source to get basic coordinate and data info
+	dDas3Src = None
+	for sInPath in lInput:
+		if bname(sInPath) == g_sStdDas3:
+			dDas3Src = _loadJson(sInPath)
+			break
+
+	if not dDas3Src:
+		perr("Can't update source catalog at %s, couldn't find input '%s'"%(
+			sOutPath, g_sStdDas3))
+		return False
+
+	dCat = {
+		'type':'SourceSet', 'version':'0.1','coords':{},'data':{},'contacts':[],
+		'sources':{}
+	}
+	
+	for s in ('label','title'): 
+		if s in dDas3Src: dCat[s] = dDas3Src[s]
+
+	# There are many ways to advertise the coordinates and data for this source
+	# but the only one I care about are the ones in source.json.
+	
+	# Pull up the coordinates and data from the interface description
+	dIFace = dDas3Src['interface']
+	for sCategory in ('coords','data'):
+		for sDim in dIFace[sCategory]:
+			dCat[sCategory][sDim] = {}
+			for sProp in ('label','validRange'):
+				if sProp in dIFace[sCategory][sDim]: 
+					dCat[sCategory][sDim][sProp] = dIFace[sCategory][sDim][sProp]
+
+	
+	# Pull up any science contacts
+	for d in dDas3Src['contacts']: 
+		if d['type'] == 'scientific': dCat['contacts'].append(d)
+
+	dSources = dCat['sources']
+
+	if sSet.startswith('/'): sSet = sSet[1:]
+	sSetUrl = "%s/source/%s"%(dConf['SERVER_URL'], sSet)
+
+	# Examine the inputs
+	for sInPath in lInput:
+		if bname(sInPath) == g_sStdDas3:
+
+			# Re-use the source file already loaded
+			dSources['das3'] = {
+				'type':'HttpStreamSrc', 'purpose':'primary-stream',
+				'label':'Das3 Data Source',
+				'description':'A semantic interface definition as '+\
+				   'well as a server protocol API definition for an HTTP GET '+\
+				   'based, variable resolution, fixed coverage period, data source.',
+				'mime':'application/json',
+				'provides':_getDas3Fmts(dDas3Src),
+				'urls':[ "%s/%s"%(sSetUrl,g_sStdDas3) ]
+			}
+
+		elif bname(sInPath) == g_sStdRt:
+			dSource = _loadJson(sInPath)
+			
+			dSources['das3ws'] = {
+				'type':'WebSocSrc', 'purpose':'primary-stream',
+				'label':'Das3 Real-time Source',
+				'description':'Similar to regular Das3 sources but also supports real-time '+\
+				    'data via a web socket.',
+				'mime':'application/json',
+				'provides':_getDas3Fmts(dSource),
+				'urls':[ "%s/%s"%(sSetUrl,g_sStdRt) ]
+			}
+
+		if bname(sInPath) == g_sStdDas2:
+			sSource = _loadText(sInPath)
+			dSources['das2'] = {
+				'type':'Das2DSDF', 'purpose':'primary-stream','label':'Das2 Source',
+				'description':'A variable resolution data source description '+\
+				   'accessed via a static API',
+				'mime':'text/vnd.das2.das2stream; charset=utf-8',
+				'provides':_getDas2Fmts(sSource),
+				'urls':[ "%s/%s"%(sSetUrl,g_sStdDas2)]
+			}
+
+		elif bname(sInPath) == g_sStdHapi2:
+			dSources['hapi2'] = {
+				'type':'HAPIInfo', 'purpose':'primary-stream','label':'HAPI Data Source',
+				'description':'A fixed resolution data source description '+\
+				    'with selectable output parameters accesed via a static API.',
+				'format':'application/json',
+				'provides':['text/csv'],
+				'urls':[ "%s/%S"%(sSetUrl,g_sStdHapi2) ]
+			}
+
+		elif bname(sInPath) == g_sStdDas1:
+			dSources['das1'] = {
+				'type':'Das1DSDF', 'purpose':'primary-stream','label':'Das1 Data Source',
+				'description':'Legacy local source definition used by Gifferator.pro',
+				'provides':'application/octet-stream',
+				'mime':'text/plain',
+				'urls':[ "%s/%s"%(SetUrl,g_sStdDas1) ]
+			}
+
+		elif bname(sInPath) == g_sStdVo:
+			dSources['ivoa'] = {
+				'type':'VOService', 'purpose':'primary-stream','label':'IVOA DataLink',
+				'description':'A fixed resolution data source definition compatable '+\
+				'with the IVOA datalink protocol',
+				'mime':'application/x-votable+xml;content=datalink',
+				'provides':['application/x-votable+xml'],
+				'urls':[ "%s/%s"%(sSetUrl,g_sStdVo) ]
+			}
+
+		# Ignore anything else
+
+	_writeJsonFile(sOutPath, dCat)
+	return True
+
+
+# ########################################################################## #
+# The program needs way better help than the default OptionParser can provide
+
+class MyOptParse(optparse.OptionParser):
+	def print_help(self, file=None):
+		if file == None:
+			file = sys.stdout
+	
+		file.write("""
+NAME:
+   das_srv_sdef - Create a data source definition from flexible inputs
+
+SYNOPSIS:
+   das_srv_sdef [options] FILE [LOCAL_ID]
+
+DESCRIPTION:
+   das_srv_sdef defines a data source collection for a server.  A single
+   input FILE in either *.dsdf or *.json syntax is parsed to produced the
+   output.  The output consists of at least four files:
+
+      $LOCAL_ID.json          - An SourceSet object grouping the output methods
+      $LOCAL_ID/%(das2)s      - A das v2.2 source description 
+      $LOCAL_ID/%(das3)s     - An HttpStreamSrc das federated catalog object
+      $LOCAL_ID/%(intern)s - Internal processing instructions for the server.
+
+   Other outputs may be added to the basic forms above for real-time support
+   and external system compatability.
+
+   The LOCAL_ID argument must be usable as a legal relative directory name
+   and defines the relative path of the data source from the server root.
+   Typically IDs from a 3-level hierachy that organize sources by mission
+   name, then by instrument name, and finially by specific data source, but
+   this is merely a convention.
+
+   If the source FILE provides the LOCAL_ID it need not be provided on the
+   command line.
+
+OPTIONS:
+   -h, --help  Print this help message and exit
+	
+   -c FILE, --config=FILE
+               Use FILE as the das2server.conf configuration instead of the
+               compiled in default.
+
+   -i, --install
+               Install the source definition under the datasources directory
+               for the server defined by the configuration file.
+
+   -e, --erase-set
+               Write only the new sources into the source set file overwriting
+               any that are already present.
+
+   -W, --no-web-sock
+               Even if the source supports realtime operations and $WEBSOCK_URI
+               is defined in the server configuration, don't output or link a
+               WebSockSrc catalog object.
+
+   -H, --no-hapi 
+               Even if the source and the server support the HAPI protocol,
+               don't output or link a HAPI v2.0 info object.
+
+   -V, --no-vo Even if the source and the server support the IVOA datalink 
+               protocol, don't output or link an IVOA service definition.
+
+   --no-gen    When processing JSON source templates, only expand $include
+               sections, don't expand automatically $generate'd definitions.
+               This is incompatable with --install
+
+FILES:
+   Each das2py-server is defined by a single top-level configuration file.
+   By default, configuration data for this program are taken from:
+	
+      %s
+
+EXAMPLES:
+   1. Process a das2 DSDF file for the Survey dataset from the Waves instrument
+      on the Juno mission and produce output under the current directory:
+
+         das_srv_sdef survey.dsdf Juno/WAV/Survey
+
+      this creates at least the following files:
+
+         ./juno/wav/survey.json 
+         ./juno/wav/survey/%(das2)s    # If source is das v2.2 compatable
+         ./juno/wav/survey/%(das3)s  
+         ./juno/wav/survey/%(das3ws)s # If source supports real-time operation
+
+      Other source definitions files may be created for compatability with
+      other APIs, depending on the server configuration.
+
+   2. Process a JSON template for the Waveform dataset from the PWS instrument
+      on Voyager 1 and install it for use by the server:
+
+         das_srv_sdef -i waveform.json Voyager/1/PWS/Waveform
+
+      The resulting data source set will be visible at:
+
+         $SERVER_URL/source/voyager/1/pws/waveform.json
+
+      and the %(das2)s file with be available at:
+
+         $SERVER_URL?server=dsdf&dataset=Voyager/1/PWS/Waveform         
+
+      In the paths above, $SERVER_URL and are defined by the server
+      configuration file.
+
+SEE ALSO:
+   The dsdf format is defined by das2 ICD at DOI: 10.5281/zenodo.3588534
+
+   The json template format is yet to be codified, see examples distributed
+   with das2py-server.
+
+"""%{'das2':g_sStdDas2, 'das3':g_sStdDas3, 'das3ws':g_sStdRt, 'conf':g_sConfPath})
+
+# ########################################################################## #
+def main(argv):
+	global das2, U
+
+	sUsage = "das_srv_sdef [options] DATA_SOURCE_FILE"
+	psr = MyOptParse(prog="das_srv_sdef", usage="sUsage")
+
+	psr.add_option('-c', '--config', dest="sConfig", default=g_sConfPath)
+	psr.add_option(
+		'-i', '--install', action="store_true", dest="bInstall", default=False
+	)
+	psr.add_option(
+		'-W', '--no-web-sock', action="store_false", dest='bSocSrc', default=True
+	)
+	psr.add_option(
+		'', '--no-gen', action="store_true", dest="bIncOnly", default=False
+	)
+
+	(opts,lArgs) = psr.parse_args()
+
+	if len(lArgs) < 1:
+		perr("No data source file specified, use -h for help.")
+		return 13
+	else: 
+		sPath = lArgs[0]
+
+	if len(lArgs) < 2:
+		sSrcSet = None  # Find it in the file
+	else:
+		sSrcSet = lArgs[1].strip('/').strip()
+		if len(sSrcSet) < 1:
+			perr("Invalid source-set path: '%s', use -h for help.")
+			return 13
+	
+	# Check the input type
+	sInType = None
+	if sPath.lower().endswith('.dsdf'):
+		sInType = 'dsdf'
+	else:
+		sInType = 'json'
+		if not sPath.lower().endswith('.json'):
+			perr(
+				"File %s is not recognized, does not end in one of '.dsdf' or '.json'"%sPath
+			)
+			return 14
+	
+	dConf = getConf()
+	if dConf == None:
+		return 17
+		
+	# Set the system path
+	if not setModulePath(dConf):
+		return 18
+		
+	# Load the das2 module
+	#try:
+	#	das2 = __import__('das2', globals(), locals(), [], 0)
+	#except ImportError as e:
+	#	perr("Error importing module 'das2' using %s\r\n: %s\n"%(
+	#		str(e), opts.sConfig))
+	#	return 19
+	
+	# Load the das2server.util module
+	try:
+		mTmp = __import__('das2server', globals(), locals(), ['util'], 0)
+	except ImportError as e:
+		perr("Error importing module 'das2server' using %s\r\n: %s\n"%(
+			str(e), opts.sConfig))
+		return 19
+	try:
+		U = mTmp.util
+	except AttributeError:
+		perr("Server definition: %s"%opts.sConfig)
+		perr('No module named das2server.util under %s\n'%dConf['MODULE_PATH'])
+		return 20
+
+	fLog = BufferLog()
+
+	if not os.path.isfile(sPath):
+		perr('File %s does not exist'%sPath)
+		return 21
+
+	if opts.bSocSrc:
+		if 'WEBSOCKET_URI' not in dConf:
+			perr('Set WEBSOCKET_URI in %s to support realtime readers'%opts.sConfig);
+			return 22
+	
+		if not U.convdsdf.hasRtSupport(fLog, dConf, sPath):
+			perr('Not web-socket capable, Keyword "realTime" does not evaluate '+\
+			     'to True in %s.'%sPath)
+			return 22
+
+	# If sSrcSet defined, use it.  Otherwise get it from the source
+	sSrcSet = U.confdsdf.getLocalId(fLog, dConf, sPath)
+	if sSrcSet == None:
+		perr("Local ID not defined in %s nor provided via the command line"%sPath)
+
+	if opts.bInstall:
+		sOutSet = pjoin(dConf['DATASRC_ROOT'], sSrcSet.lower()+'.json')
+		sOutDir = pjoin(dConf['DATASRC_ROOT'], sSrcSet.lower())
+	else:
+		sOutSet = pjoin('.', sSrcSet.lower()+".json")
+		sOutDir = pjoin('.', sSrcSet.lower())
+
+	# Now for input/output switch
+	sOutApi = pjoin(sOutDir, g_sStdDas3)
+	sOutWs  = pjoin(sOutDir, g_sStdRt)
+	sOutInt = pjoin(sOutDir, g_sStdIntern)
+	sOutDas1 = pjoin(sOutDir, U.formats.g_sDas1File)
+	sOutD2t = pjoin(sOutDir, g_sStdDas2)
+
+	perr("Input:  %s %s"%(opts.sConfig, sPath))
+	lOutput = []
+	try:
+		if sInType == 'dsdf':
+			_writeJsonFile(sOutApi, U.convdsdf.makeGetSrc(fLog, dConf, sPath))
+			lOutput.append(sOutApi)
+			
+			if opts.bSocSrc:
+				_writeJsonFile(sOutWs, U.convdsdf.makeSockSrc(fLog, dConf, sPath))
+				lOutput.append(sOutWs)
+
+			_writeJsonFile(sOutInt, U.convdsdf.makeInternal(fLog, dConf, sPath))
+			lOutput.append(sOutInt)
+
+			_writeFile(sOutD2t, U.convdsdf.makeD2t(fLog, dConf, sPath))
+			lOutput.append(sOutD2t)
+
+			sDas1 = U.convdsdf.makeDas1(fLog, dConf, sPath)
+			if sDas1: 
+				_writeFile(sOutDas1, sDas1)
+				lOutput.append(sOutDas1)
+		else:
+			_writeJsonFile(sOutApi, U.convjson.makeFedCat(fLog, dConf, sPath))
+			_writeJsonFile(sOutInt, U.convjson.makeDas3Int(fLog, dConf, sPath))
+			_writeFile(sOutD2t, U.convjson.makeD2t(fLog, dConf, sPath))
+
+		# Read the sources you've written and update the collection
+		lOutput.append(sOutSet)
+		_makeCollection(dConf, sSrcSet, lOutput, sOutSet, opts.bOverWrite)
+
+		perr("Output: %s"%(" ".join(lOutput)))
+
+	except U.errors.ServerError as e:
+		perr('%s'%fLog.getvalue())
+		perr('ERROR: %s'%str(e))
+		return 22
+
+	if opts.bInstall:
+		# Walk backwards up the tree updating catalogs as you go
+
+		perr("INFO: Updating catalog: ")
+
+	return 0
+
+# ########################################################################## #
+if __name__ == '__main__':
+	main(sys.argv)

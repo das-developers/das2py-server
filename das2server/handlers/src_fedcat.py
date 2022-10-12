@@ -65,6 +65,3 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	sOut = json.dumps(dDef, ensure_ascii=False, sort_keys=True, indent=3)
 	sys.stdout.write(sOut)
 	return 0
-
-
-

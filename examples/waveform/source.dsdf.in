@@ -18,6 +18,7 @@
 ; low-frequency electric field waveforms collected by Voyager 1 while
 ; crossing Jupiter's bow-shock in the solar wind.
 
+localId = 'Examples/Waveform'
 
 ; All Data sources must have a one-line description
 

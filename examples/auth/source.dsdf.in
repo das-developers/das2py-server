@@ -30,6 +30,7 @@ securityRealm = 'My Random Data Realm'
 readAccess = 'GROUP:testgroup'
 
 ; Optional Items
-;  none
+localId = 'Examples/Auth'
+
 
 

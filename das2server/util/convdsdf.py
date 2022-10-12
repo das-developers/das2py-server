@@ -380,15 +380,15 @@ def _mergeSrcCoordInfo(dOut, dProps, fLog):
 	if 'label' not in dTime: dTime['label']  = 'Time'
 
 	# Use the lowest numbered example for the default range, interval
-	dTime['minimum'] = {'label':'Minimum', sV:None}
-	dTime['maximum'] = {'label':'Maximum', sV:None}
-	
-	dTime['units'] = {'value':'UTC'}
+	dTime['properties'] = {
+		'min':{'label':'Minimum', sV:None},'max':{'label':'Maximum', sV:None},
+		'units':{'value':'UTC'}
+	}
 		
 	if 'requiresInterval' in dProps:
-		dTime['interval'] = {sV:None}
+		dTime['properties']['intr'] = {sV:None}
 	else:
-		dTime['resolution'] = {sV:None, "units":"s"}
+		dTime['properties']['res'] = {sV:None, "units":"s"}
 	
 	sNum = None
 	if 'exampleRange' in dProps:
@@ -398,9 +398,9 @@ def _mergeSrcCoordInfo(dOut, dProps, fLog):
 	
 		lTmp = [s.strip() for s in dProps['exampleRange'][sNum].split('|')]
 		lTmp = [s.strip() for s in lTmp[0].split('to')]
-		dTime['minimum'][sV] = lTmp[0]		
+		dTime['properties']['min'][sV] = lTmp[0]		
 		if len(lTmp) > 1:
-			dTime['maximum'][sV] = lTmp[1].replace('UTC','').strip()
+			dTime['properties']['max'][sV] = lTmp[1].replace('UTC','').strip()
 	
 	if 'exampleInterval' in dProps:
 		lNums = list(dProps['exampleRange'].keys())
@@ -410,18 +410,18 @@ def _mergeSrcCoordInfo(dOut, dProps, fLog):
 		if 'interval' not in dTime:
 			fLog.write("ERROR: Updating from %s\n"%dOut['path'])
 			
-		dTime['interval'][sV] = dProps['exampleInterval'][sNum]
+		dTime['properties']['intr'][sV] = dProps['exampleInterval'][sNum]
 	else:	
 		# Default to 1/2000th of the range, here's where we need the
 		# das2 module.
-		if dTime['minimum'][sV] and dTime['maximum'][sV]:
-			dtBeg = das2.DasTime(dTime['minimum'][sV])
-			dtEnd = das2.DasTime(dTime['maximum'][sV])
-			dTime['resolution'][sV] = (dtEnd - dtBeg) / 2000.0
+		if dTime['properties']['min'][sV] and dTime['properties']['max'][sV]:
+			dtBeg = das2.DasTime(dTime['properties']['min'][sV])
+			dtEnd = das2.DasTime(dTime['properties']['max'][sV])
+			dTime['properties']['res'][sV] = (dtEnd - dtBeg) / 2000.0
 				
 	# Set up the alteration rules
-	dTime['minimum']['set'] = {'param':sBegKey, 'required':True}
-	dTime['maximum']['set'] = {'param':sEndKey, 'required':True}
+	dTime['properties']['min']['set'] = {'param':sBegKey, 'required':True}
+	dTime['properties']['max']['set'] = {'param':sEndKey, 'required':True}
 	
 	if 'validRange' in dProps:
 		lTimeRng = [ s.strip() for s in dProps['validRange']['00'].split('to') ]
@@ -429,9 +429,9 @@ def _mergeSrcCoordInfo(dOut, dProps, fLog):
 			dTime['validRange'] = lTimeRng
 	
 	if 'interval' in dTime:
-		dTime['interval']['set'] = {'param':sIntKey, 'required':True}
+		dTime['properties']['intr']['set'] = {'param':sIntKey, 'required':True}
 	else:
-		dTime['resolution']['set'] = {'param':sResKey, 'required':False}
+		dTime['properties']['res']['set'] = {'param':sResKey, 'required':False}
 
 
 	if 'coord' in dProps:
@@ -443,7 +443,7 @@ def _mergeSrcCoordInfo(dOut, dProps, fLog):
 				dVar = _getDict(dCoords, lItem[0])
 				dVar['label'] = lItem[0][0].upper() + lItem[0][1:]
 				if len(lItem) > 1: dVar['title'] = lItem[1]
-				if len(lItem) > 2: dVar['units'] = {'value':lItem[2]}
+				if len(lItem) > 2: dVar['properties'] = {'units':{'value':lItem[2]}}
 	
 
 def _mergeSrcDataInfo(dOut, dProps, fLog):
@@ -466,7 +466,7 @@ def _mergeSrcDataInfo(dOut, dProps, fLog):
 			dVar = _getDict(dData, lItem[0])
 			dVar['label'] = lItem[0][0].upper() + lItem[0][1:]
 			if len(lItem) > 1: dVar['title'] = lItem[1]
-			if len(lItem) > 2: dVar['units'] = lItem[2]
+			if len(lItem) > 2: dVar['properties'] = {'units': {'value':lItem[2]}}
 		
 	if 'data' in dProps:
 		for sNum in dProps['data']:
@@ -475,7 +475,7 @@ def _mergeSrcDataInfo(dOut, dProps, fLog):
 			dVar = _getDict(dData, lItem[0])
 			dVar['label'] = lItem[0][0].upper() + lItem[0][1:]
 			if len(lItem) > 1: dVar['title'] = lItem[1]
-			if len(lItem) > 2: dVar['units'] = lItem[2]
+			if len(lItem) > 2: dVar['properties'] = {'units': {'value':lItem[2]}}
 
 def _mergeDas2Params(dOut, dProps, fLog):
 	"""Merge in params.  This is a das 2.2 thing.  Any option that is needs
@@ -527,7 +527,7 @@ def _mergeDas2Params(dOut, dProps, fLog):
 			'type':'FlagSet',
 			'required':False,
 			'title': 'Optional reader arguments',
-			'flag_sep': ' ',
+			'flagSep': ' ',
 			'flags': dFlags
 		}
 		
@@ -662,7 +662,7 @@ def _mergeExamples(dOut, dProps, sBaseUrl, fLog):
 	for sNum in lRange:
 		bKeep = True
 		dQuery = {}
-		dExample = {"params":dQuery}
+		dExample = {"settings":dQuery}
 		dExample['label'] = "Example %s"%sNum
 			
 		lTmp = [s.strip() for s in dProps['exampleRange'][sNum].split('|')]
@@ -695,8 +695,8 @@ def _mergeExamples(dOut, dProps, sBaseUrl, fLog):
 		#
 		# To these interface values:
 		# 
-		#  read.opt.10kHz = true
-		#  read.opt.1kHz = true
+		#  options.10kHz = true
+		#  options.1kHz = true
 		#
 		# And to these HTTP param flags:
 		#
@@ -708,16 +708,16 @@ def _mergeExamples(dOut, dProps, sBaseUrl, fLog):
 		
 		if sNum in lParams:
 			sOpts = dProps['exampleParams'][sNum]
-			if ('option' not in dOut['interface']) or ('extra' in dOut['interface']['option']):
+			if ('options' not in dOut['interface']) or ('extra' in dOut['interface']['options']):
 				# Assume no 'param_' items in the DSDF so all options must just
 				# be crammed into a string.  Same thing is true if the interface
 				# parser just gave up on made an 'extra' item.
-				dQuery['option.extra'] = {'extra': sOpts}
+				dQuery['options.extra'] = sOpts
 			else:
 				# Okay, param_00 and friends were defined, so set each one
 				lFlags = sOpts.split()
 				for sFlag in lFlags:
-					dQuery['option.%s'%sFlag] = 'true'
+					dQuery['option.%s'%sFlag.lower()] = True
 				
 		
 		lQuery = [
@@ -742,10 +742,6 @@ def _mergeExamples(dOut, dProps, sBaseUrl, fLog):
 
 def _mergeFormat(dConf, dOut, dProps, fLog):
 
-	# Different das3 servers can have different capabilities so we *really*
-	# shouldn't make api.json files for others.  I have done so here, but
-	# they aren't in the catalog at least and they are hidden from wget.
-	
 	# If this really is one of my data sources, add in the extra formatting
 	# options provided by this server
 
@@ -966,6 +962,15 @@ def hasRtSupport(fLog, dConf, sPath):
 	dProps = _loadDsdf(dConf, sName, sPath, fLog)
 
 	return ('realTime' in dProps)
+
+def getLocalId(fLog, dConf, sPath):
+	sName = bname(sPath).replace(".dsdf","")
+	dProps = _loadDsdf(dConf, sName, sPath, fLog)
+
+	if ('localId' in dProps) and '00' in dProps['localId']:
+		return dProps['localId']['00']
+	else:
+		return None
 
 # ########################################################################## #
 def makeSockSrc(fLog, dConf, sPath):
