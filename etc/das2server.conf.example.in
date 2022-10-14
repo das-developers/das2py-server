@@ -9,6 +9,9 @@ SERVER_NAME = "%(SERVER_ID)s"
 # Identify this server seperatly in combined logs, will be reduced to lower case
 SERVER_ID = "%(SERVER_ID)s"
 
+# The top location of the data source definitions
+DATASRC_ROOT = "%(PREFIX)s/catalog"
+
 # Provide the server URL, this is for self referential items
 #
 #  Note: Re-run das_srv_sdef on your source definitions if this is changed
@@ -51,9 +54,6 @@ CONTACT_EMAIL = "update&#45;das2server&#46;conf&#64;nowhere&#45;ed&#117;"
 
 # A contact page for the person responsible for the server
 CONTACT_URL  = "https://update-das2server.conf.nowhere.edu/~someone/"
-
-# The top location of the data source definitions
-DATASRC_ROOT = "%(PREFIX)s/datasource"
 
 # The top location of data source include files
 DATASRC_INC  = "%(PREFIX)s/datasource/sdef/include"

@@ -1,7 +1,7 @@
 # Just pushes commands down to setup.py
 
 ifeq ($(PREFIX),)
-	PREFIX:=/var/www/das2srv
+	PREFIX:=/var/www/das3srv
 endif
 
 ifeq ($(N_ARCH),)  # Default to no sub-dir for architecture dependent files

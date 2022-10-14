@@ -19,7 +19,7 @@ $PREFIX/bin/das_srv_sdef -i waveform/source.dsdf
 $PREFIX/bin/das_srv_sdef -i spectra/source.dsdf
 $PREFIX/bin/das_srv_sdef -i params/source.dsdf
 $PREFIX/bin/das_srv_sdef -i auth/source.dsdf
-#$PREFIX/bin/das_srv_cdef catinfo.dsdf
+#$PREFIX/bin/das_srv_catmain catinfo.dsdf
 
 
 

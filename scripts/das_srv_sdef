@@ -18,7 +18,7 @@ g_sStdDas3 = 'das3.json'
 g_sStdRt   = 'das3rt.json'
 g_sStdHapi2 = 'hapi2.json'
 g_sStdVo  = 'voservice.xml'
-g_sIntern = 'internal.json'
+g_sStdIntern = 'internal.json'
 
 U = None  # Namespace anchor for das2server.util module, loaded after sys.path 
           # is set via the config file
@@ -27,7 +27,7 @@ U = None  # Namespace anchor for das2server.util module, loaded after sys.path
 # Work around ubuntu apport bugs
 if sys.excepthook != sys.__excepthook__:
 	if sys.excepthook.__name__ == 'apport_excepthook':
-		sys.stderr.write("Info: disabling Ubuntu's Apport hook\n")
+		#sys.stderr.write("Info: disabling Ubuntu's Apport hook\n")
 		sys.excepthook = sys.__excepthook__
 	else:
 		sys.stderr.write("Warning: 3rd party exception hook is active\n")
@@ -191,7 +191,7 @@ def _getDas2Fmts(sSource):
 # ########################################################################## #
 # Update the data source collection #
 
-def _makeCollection(dConf, sSet, lInput, sOutPath, bOverWrite=False):
+def _makeCollection(dConf, sSet, lInput, sOutPath):
 	"""Create or update the source collection file at sPath.  Source collections
 	define a list of sources that basically return the same data but do so
 	via different methods.  They are typed by the convention, the following
@@ -231,11 +231,12 @@ def _makeCollection(dConf, sSet, lInput, sOutPath, bOverWrite=False):
 	# Pull up the coordinates and data from the interface description
 	dIFace = dDas3Src['interface']
 	for sCategory in ('coords','data'):
-		for sDim in dIFace[sCategory]:
-			dCat[sCategory][sDim] = {}
-			for sProp in ('label','validRange'):
-				if sProp in dIFace[sCategory][sDim]: 
-					dCat[sCategory][sDim][sProp] = dIFace[sCategory][sDim][sProp]
+		if sCategory in dIFace:
+			for sDim in dIFace[sCategory]:
+				dCat[sCategory][sDim] = {}
+				for sProp in ('label','validRange'):
+					if sProp in dIFace[sCategory][sDim]: 
+						dCat[sCategory][sDim][sProp] = dIFace[sCategory][sDim][sProp]
 
 	
 	# Pull up any science contacts
@@ -321,6 +322,111 @@ def _makeCollection(dConf, sSet, lInput, sOutPath, bOverWrite=False):
 	_writeJsonFile(sOutPath, dCat)
 	return True
 
+# ########################################################################## #
+def _updateCatFrom(dConf, sRootDir, sSrcSet):
+	"""Starting with the target file walk backwards up the directory tree
+	updating catalog files
+
+	args:
+		dConf - The server configuration
+		sRootDir - A root directory, typically: $PREFIX/catalog.  Not that
+		   This function writes above the "root" directory so don't provide
+		   './' as the root.
+		sSrcSet - The logical ID of the Data Source Set, this is assumed to
+		   Relate to the actual data source set file in the following manner:
+
+		   Dir = Root + "/" + sSrcSet.lower() + ".json"
+
+	returns (list,None): The list of all catalogs checked and possibly updated
+		None otherwise
+	"""
+
+	# Given:  Root = "."  sSrcSet = ./juno/wav/survey.json
+	# 
+	# Output or update:
+	#   ./juno/wav.json
+	#   ./juno.json
+	#
+	# Given:  Root = /var/www/das2srv/catalog/sources
+	#         Set  = /var/www/das2srv/catalog/sources/juno/wav/survey.json
+	# 
+	# Produce:                                             wav.json
+	#                                                 juno.json
+	#                                        sources.json
+
+	sSetFile = pjoin( sRootDir, sSrcSet.lower().replace('/', os.sep) + '.json')
+
+	if not sSetFile.startswith(sRootDir):
+		perr("ERROR: Source set %s is not under the root directory %s"%(sSrcSet, sRoot))
+		return None
+
+	sDir = sSetFile.replace(sRootDir+os.sep, '')
+	sDir = sDir.replace(os.sep + bname(sSetFile), '')
+	lDirs = [sRootDir] + sDir.split(os.sep)
+
+	sDir = dname(pjoin(sRootDir, sSrcSet.lower().replace('/', os.sep)))
+	lDirs = [sDir]
+	while lDirs[-1] != sRootDir:
+		lDirs.append(dname(lDirs[-1]))
+
+	lLbls = sSrcSet.split('/')
+	lLbls.reverse()
+	lLbls = lLbls[1:] + ['Sources']
+
+	# ASSUME here that the server root points to one above the root given 
+	# to this function.  Bad assumption, this needs rework.
+	sAboveRoot = dname(sRootDir)
+	lUrls = [
+		s.replace(sAboveRoot, dConf['SERVER_URL']).replace(os.sep, '/')
+		for s in lDirs
+	]
+	
+	if len(lLbls) > 1:
+		lTitles = ['Local Root Catalog'] + [None]*(len(lLbls)-1)
+	else:
+		lTitles = ['Local Root Catalog']
+
+	#print("lLbls:", lLbls)
+	#print("lDirs:", lDirs)
+	#print("lUrls:", lUrls)
+	#sys.exit(117)
+
+	lUpdates = []
+	for i in range(len(lDirs)):
+		
+		sCatPath = lDirs[i]+'.json'
+
+		if os.path.isfile(sCatPath):
+			dObject = _loadJson(sCatPath)
+			dCat = dObject['catalog']
+		else:
+			dCat = {}
+			dObject = {
+				'version':'0.5', 'type':'Catalog', 'label':lLbls[i], 'catalog':dCat
+			}
+			if lTitles[i]: dObject['title'] = lTitles[i]
+
+		# List all the objects in this directory and add them to the catalog
+		# you will need to make URLs for them
+		lItems = os.listdir(lDirs[i])
+		lItems.sort()
+		for sItem in lItems:
+			if not sItem.endswith('.json'): continue
+
+			dItem = _loadJson(pjoin(lDirs[i], sItem))
+
+			dEntry = {'urls':[ "%s/%s"%(lUrls[i], sItem) ]}
+			for s in 'label','title','type':
+				if s in dItem:
+					dEntry[s] = dItem[s]
+			
+			dCat[sItem.lower().replace('.json','')] = dEntry
+
+		_writeJsonFile(sCatPath, dObject)
+		lUpdates.append(sCatPath)
+
+	return lUpdates
+
 
 # ########################################################################## #
 # The program needs way better help than the default OptionParser can provide
@@ -332,7 +438,7 @@ class MyOptParse(optparse.OptionParser):
 	
 		file.write("""
 NAME:
-   das_srv_sdef - Create a data source definition from flexible inputs
+   das_srv_sdef - Create a set of related data source definitions
 
 SYNOPSIS:
    das_srv_sdef [options] FILE [LOCAL_ID]
@@ -370,9 +476,9 @@ OPTIONS:
                Install the source definition under the datasources directory
                for the server defined by the configuration file.
 
-   -e, --erase-set
-               Write only the new sources into the source set file overwriting
-               any that are already present.
+   -n, --no-catalog
+               Don't try to creat or update any catalog files that would lead
+               to the source set.
 
    -W, --no-web-sock
                Even if the source supports realtime operations and $WEBSOCK_URI
@@ -453,6 +559,9 @@ def main(argv):
 	psr.add_option(
 		'', '--no-gen', action="store_true", dest="bIncOnly", default=False
 	)
+	psr.add_option(
+		'', '--no-cat', action="store_false", dest="bNewCat", default=True
+	)
 
 	(opts,lArgs) = psr.parse_args()
 
@@ -520,26 +629,27 @@ def main(argv):
 
 	if opts.bSocSrc:
 		if 'WEBSOCKET_URI' not in dConf:
-			perr('Set WEBSOCKET_URI in %s to support realtime readers'%opts.sConfig);
-			return 22
+			perr('INFO: Set WEBSOCKET_URI in %s to support realtime readers'%opts.sConfig);
+			opts.bSocSrc = False
 	
 		if not U.convdsdf.hasRtSupport(fLog, dConf, sPath):
-			perr('Not web-socket capable, Keyword "realTime" does not evaluate '+\
-			     'to True in %s.'%sPath)
-			return 22
+			#perr('Not web-socket capable, Keyword "realTime" does not evaluate '+\
+			#     'to True in %s.'%sPath)
+			#return 22
+			opts.bSocSrc = False
 
 	# If sSrcSet defined, use it.  Otherwise get it from the source
-	sSrcSet = U.confdsdf.getLocalId(fLog, dConf, sPath)
-	if sSrcSet == None:
-		perr("Local ID not defined in %s nor provided via the command line"%sPath)
+	if not sSrcSet:
+		sSrcSet = U.convdsdf.getLocalId(fLog, dConf, sPath)
+		if not sSrcSet:
+			perr("Local ID not defined in %s nor provided via the command line"%sPath)
+			return 22
 
-	if opts.bInstall:
-		sOutSet = pjoin(dConf['DATASRC_ROOT'], sSrcSet.lower()+'.json')
-		sOutDir = pjoin(dConf['DATASRC_ROOT'], sSrcSet.lower())
-	else:
-		sOutSet = pjoin('.', sSrcSet.lower()+".json")
-		sOutDir = pjoin('.', sSrcSet.lower())
-
+	sRoot = './sources'
+	if opts.bInstall: sRoot = pjoin(dConf['DATASRC_ROOT'], 'sources')
+	sOutSet = pjoin(sRoot, sSrcSet.lower()+'.json')
+	sOutDir = pjoin(sRoot, sSrcSet.lower())
+	
 	# Now for input/output switch
 	sOutApi = pjoin(sOutDir, g_sStdDas3)
 	sOutWs  = pjoin(sOutDir, g_sStdRt)
@@ -575,20 +685,22 @@ def main(argv):
 
 		# Read the sources you've written and update the collection
 		lOutput.append(sOutSet)
-		_makeCollection(dConf, sSrcSet, lOutput, sOutSet, opts.bOverWrite)
+		_makeCollection(dConf, sSrcSet, lOutput, sOutSet)
 
-		perr("Output: %s"%(" ".join(lOutput)))
+		perr("Output: %s"%("\n        ".join(lOutput)))
 
 	except U.errors.ServerError as e:
 		perr('%s'%fLog.getvalue())
 		perr('ERROR: %s'%str(e))
 		return 22
 
-	if opts.bInstall:
+	if opts.bNewCat:
 		# Walk backwards up the tree updating catalogs as you go
-
-		perr("INFO: Updating catalog: ")
-
+		lUpdates = _updateCatFrom(dConf, sRoot, sSrcSet)
+		if not lUpdates:
+			return 7
+		perr("Updated: %s"%("\n         ".join(lUpdates)))
+		
 	return 0
 
 # ########################################################################## #
