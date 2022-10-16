@@ -102,7 +102,7 @@ via an HTTP GET query protocol.</p>
 <img src="%(script)s/static/flowdiagram.svg"
   alt="das2-pyserver data flow diagram" class="flowdiagram"
 />
-<center><i><span style="font-size: 80%%">Das2 Stream Processing</span></i></center>
+<center><i><span style="font-size: 80%%">Das Stream Processing</span></i></center>
 </div>
 
 <p>This server runs full-resolution data stream generators, processes the
@@ -115,7 +115,7 @@ functionality is complete.</i></span></h4>
 
 <h2>Clients</h2>
 
-<p>Forms are provided to download data from this server as das2 streams,
+<p>Forms are provided to download data from this server as das streams,
 text delimited value streams (CSV), PNG images, hapi streams, and eventually
 as VOTables (in work) via the navigation bar to the right.
 </p>
@@ -131,6 +131,11 @@ This is the most common client.</li>
 via the <a href="https://github.com/das-developers/das2dlm">das2dlm</a> module.</li>
 <li><a href="http://www.sddas.org/">SDDAS (Southwest Data Display and Analysis System)</a>
     via the <a href="https://github.com/das-developers/das2C">das2C</a> library</li>
+</ul>
+<p>Programs which can parse das3 real-time streams include:</p>
+<ul>
+<li> <a href="https://research-git.uiowa.edu/space-physics/tracers/soc/dasoc>DASOC</a>
+</li>
 </ul>
 
 <p>In addition, custom scripts written in 
@@ -161,7 +166,7 @@ or <a href="%(script)s/sources.csv">sources.csv</a> is sufficent.</p>
   |
   |- <a href="%(script)s/static/">static/</a> - static files such as logos, etc
   |
-  |- <a href="%(script)s/source/">source/</a> - root directory for all data sources 
+  |- <a href="%(script)s/sources/">sources/</a> - root directory for all data sources 
   |    |
   |    |- <i>category</i>/ - A top level category directory
   |         |         <i>(typically named after missions)</i>
@@ -175,44 +180,47 @@ or <a href="%(script)s/sources.csv">sources.csv</a> is sufficent.</p>
   |             |
   |             |- <i>data-source</i>/ - A data source directory
   |                  |
-  |                  |- dsdf.d2t  - A das2 source definition
+  |                  |- das2.d2t  - A das2 source definition (if source is compatable with das2)
   |                  |- form.html - A web form for querying the stream source
-  |                  |- query.json  - An HttpStreamSrc definiton
+  |                  |- das3.json  - An HttpStreamSrc definiton
   |                  |- voservice.xml - (optional) A VO <a href="https://www.ivoa.net/documents/DataLink/20150617/index.html">DataLink</a> definition
-  |                  |- socket.json - (optional) a WebSockSrc interface definition
+  |                  |- das3ws.json - (optional) a real-time interface definition
   |                  |
   |                  |- data - form action handler (hidden)
   |
-  |- <a href="%(script)s/sources.json">sources.json</a> - A das2 catalog listing all HttpStreamSource objects
-  |     on this server.  Provide this URL to <b>new_RootNode_url()</b> in das2C or 
-  |     <b>das2.get_node()</b> in das2py.
+  |- <a href="%(script)s/catalog.json">catalog.json</a> - A das federated catalog head node for data 
+  |     source sets that are local to this server.  This format is suitable for merging into 
+  |     multi-server catalogs.  Providing this URL to <b>new_RootNode_url()</b> in das2C or
+  |     <b>das2.get_node()</b> in das2py will provide access only to this server's data sources.
   |
-  |- <a href="%(script)s/sources.csv">sources.csv</a> - A listing of all das2/v2.2 source definitions.
+  |- <a href="%(script)s/catalog.csv">catalog.csv</a> - An alternate flat listing of all data sources
+  |     defined for this server.
   |
-  |- <a href="%(script)s/verify">verify/</a> - Included das2 stream verification tool (if enabled)
+  |- <a href="%(script)s/verify">verify/</a> - Included das stream verification tool (if enabled)
   |
   |- <a href="%(script)s/id.json">id.json</a> - Server identification information
-  |- <a href="%(script)s/id.txt">id.txt</a> - das2 v2.1 style info text
+  |- <a href="%(script)s/id.txt">id.txt</a> - das2 v2.2 style info text
   |- <a href="%(script)s/logo.png">logo.png</a> - A server identifier logo
   |- <a href="%(script)s/peers.xml">peers.xml</a> - Other recognized das2 servers
 </pre>
-
-<p>
-Almost all content provided by this server is generated dynamically.  The filesystem
-interface is just a facade.  You can ease the load on your server and provide faster
-metadata response times by replicating non-data content onto a static site.
-The following commands illustrate this process.
-</p>
-<pre>
-   $ wget -nH --cut-dirs=2 -r --no-parent %(script)s/sources/  # note trailing slash
-   $ wget -nH %(script)s/sources.json
-   $ wget -nH %(script)s/sources.csv
-</pre>
-<p>Of course you'll have to repeat the process whenever data source definitions
-are altered.</p>
-
 """%dReplace)
-	
+
+#	'''	
+#	<p>
+#	Almost all content provided by this server is generated dynamically.  The filesystem
+#	interface is just a facade.  You can ease the load on your server and provide faster
+#	metadata response times by replicating non-data content onto a static site.
+#	The following commands illustrate this process.
+#	</p>
+#	<pre>
+#	   $ wget -nH --cut-dirs=2 -r --no-parent %(script)s/sources/  # note trailing slash
+#	   $ wget -nH %(script)s/sources.json
+#	   $ wget -nH %(script)s/sources.csv
+#	</pre>
+#	<p>Of course you'll have to repeat the process whenever data source definitions
+#	are altered.</p>
+#	'''
+
 	# Das 2.1/2.2 support ################################################### #
 
 	if 'SAMPLE_DSDF' in dConf:
@@ -225,7 +233,7 @@ are altered.</p>
 	pout("""
 <h2>Traditional Queries</h2>
 
-<p>The das2/v2.1 server query API is also supported by this server.  A summary
+<p>The das2/v2.2 server query API is also supported by this server.  A summary
 of the scheme follows.</p>
 <ul>
 <li><b>Data Source List:</b>  <a href="%(script)s?server=list">%(script)s?server=list</a><br /><br /></li>

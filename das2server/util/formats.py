@@ -35,7 +35,8 @@ def getMime(sType, sVersion, sSerial):
 			if sSerial == 'text':
 				sExt = 'tdas'
 				sTitle = 'das text packet stream'
-				sMime = 'text/vnd.das.stream; charset=utf-8'
+				#sMime = 'text/vnd.das.stream; charset=utf-8'
+				sMime = 'text/vnd.das.stream'
 
 			elif sSerial == 'xml':
 				sExt = 'xdas'
@@ -51,7 +52,8 @@ def getMime(sType, sVersion, sSerial):
 			if sSerial == 'text':
 				sExt = 'd2t'
 				sTitle = 'das2 text packet stream'
-				sMime = 'text/vnd.das2.das2stream; charset=utf-8'
+				#sMime = 'text/vnd.das2.das2stream; charset=utf-8'
+				sMime = 'text/vnd.das2.das2stream'
 
 			else:
 				sExt = 'd2s'
@@ -62,7 +64,8 @@ def getMime(sType, sVersion, sSerial):
 			if sSerial == 'text':
 				sExt = 'd2t'
 				sTitle = 'das1 text packet stream'
-				sMime = 'text/vnd.das2.das1stream; charset=utf-8'
+				#sMime = 'text/vnd.das2.das1stream; charset=utf-8'
+				sMime = 'text/vnd.das2.das1stream'
 
 			else:
 				sExt = 'd1s'
@@ -73,7 +76,8 @@ def getMime(sType, sVersion, sSerial):
 			if sSerial == 'text':
 				sExt = 'tab'
 				sTitle = 'Tabular listing'
-				sMime = 'text/plain; charset=utf-8'
+				#sMime = 'text/plain; charset=utf-8'
+				sMime = 'text/plain'
 
 			else:
 				sExt = 'bin'
@@ -93,7 +97,8 @@ def getMime(sType, sVersion, sSerial):
 	elif sType == 'qstream':
 		if sSerial == 'text':
 			sTitle = 'Autoplot intrinsic stream'
-			sMime = 'text/vnd.das2.qstream; charset=utf-8'
+			#sMime = 'text/vnd.das2.qstream; charset=utf-8'
+			sMime = 'text/vnd.das2.qstream'
 			sExt = 'qdt'
 		else:
 			sTitle = 'Autoplot intrinsic stream'

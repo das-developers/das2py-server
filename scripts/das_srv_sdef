@@ -4,21 +4,13 @@
 import sys
 import os.path
 from os.path import join as pjoin
-from os.path import basename as bname
 from os.path import dirname as dname
+from os.path import basename as bname
 import optparse
 import json
 from io import StringIO
 
 g_sConfPath = REPLACED_ON_BUILD
-
-g_sStdDas1 = 'das1.pro'
-g_sStdDas2 = 'das2.d2t'
-g_sStdDas3 = 'das3.json'
-g_sStdRt   = 'das3rt.json'
-g_sStdHapi2 = 'hapi2.json'
-g_sStdVo  = 'voservice.xml'
-g_sStdIntern = 'internal.json'
 
 U = None  # Namespace anchor for das2server.util module, loaded after sys.path 
           # is set via the config file
@@ -34,29 +26,14 @@ if sys.excepthook != sys.__excepthook__:
 
 # ########################################################################## #
 # handle output
-try:
-	unicode
-except NameError:
-	unicode = str
-
-def pout(item):
-	"""If input item is bytes, write them, if item is a unicode string encode as
-	utf-8 first"""	
-	if isinstance(item, str):
-		sys.stdout.buffer.write(item.encode('utf-8'))
-		sys.stdout.buffer.write('\n'.encode('utf-8'))
-	else:
-		sys.stdout.buffer.write(item)
 			
 def perr(item):
-	"""If input item is bytes, write them, if item is a unicode string encode as
-	utf-8 first"""	
+	"""If input item is bytes encode as utf-8 first"""	
 	if isinstance(item, str):
 		sys.stderr.buffer.write(item.encode('utf-8'))
 		sys.stderr.buffer.write('\n'.encode('utf-8'))
 	else:
 		sys.stderr.buffer.write(item)
-
 
 class BufferLog(object):
 	def __init__(self):
@@ -70,7 +47,7 @@ class BufferLog(object):
 
 # ########################################################################## #
 # Get my config file, boiler plate that has to be re-included in each script
-# since the location of the modules can be configured in the config file
+# since the location of the server module is in the config file, not sys.path
 
 def getConf():
 	
@@ -148,285 +125,6 @@ def _writeJsonFile(sPath, dOutput):
 	sOutput = json.dumps(dOutput, indent="  ");
 	_writeFile(sPath, sOutput)
 
-# Utility ################################################################## #
-
-def _loadJson(sInPath):
-	"""The missing 1-liner from the json module"""
-	with open(sInPath) as fIn:
-		dQuery = json.load(fIn)
-	return dQuery
-
-def _loadText(sInPath):
-	with open(sInPath) as fIn:
-		sData = fIn.read()
-	return sData
-
-def _getDas3Fmts(dSource):
-	dFmts = dSource['interface']['formats']
-
-	lProvides = []
-	for sFmt in dFmts:
-		dFmt = dFmts[sFmt]
-		for sMime in dFmt['mimeTypes']:
-			if sMime not in lProvides:
-				lProvides.append(sMime)
-
-	return lProvides
-
-def _getDas2Fmts(sSource):
-	lLines = [sLine.strip() for sLine in sSource.split('\n')]
-	for sLine in lLines:
-		if sLine.startswith('das2Stream'):
-			lSub = [s.strip() for s in sLine.split('=')]
-			if (len(lSub) > 1) and (lSub[1].lower() in ('1','t','true')):
-				return [ U.formats.getMime('das','2','binary')[0] ]
-
-		if sLine.startswith('qstream'):
-			lSub = [s.strip() for s in sLine.split('=')]
-			if (len(lSub) > 1) and (lSub[1].lower() in ('1','t','true')):
-				return [ U.formats.getMime('qstream','2','binary')[0] ]
-
-	return [ U.formats.getMime('das','1.0','binary')[0]]
-
-# ########################################################################## #
-# Update the data source collection #
-
-def _makeCollection(dConf, sSet, lInput, sOutPath):
-	"""Create or update the source collection file at sPath.  Source collections
-	define a list of sources that basically return the same data but do so
-	via different methods.  They are typed by the convention, the following
-	conventions are known:
-
-		das/2.2 ---> dsdf.d2t
-	   das/3.0 ---> The federated catalog httpstreamsrc object (required)
-	   das-websock/1.0 --> The federted catalog websocksrc object
-	   hapi/2.0 ---> Output of das2_hapi -d source.dsdf -i -n
-
-	Returns (bool) True if the catalog was updated
-	"""
-
-	# First read the stream source to get basic coordinate and data info
-	dDas3Src = None
-	for sInPath in lInput:
-		if bname(sInPath) == g_sStdDas3:
-			dDas3Src = _loadJson(sInPath)
-			break
-
-	if not dDas3Src:
-		perr("Can't update source catalog at %s, couldn't find input '%s'"%(
-			sOutPath, g_sStdDas3))
-		return False
-
-	dCat = {
-		'type':'SourceSet', 'version':'0.1','coords':{},'data':{},'contacts':[],
-		'sources':{}
-	}
-	
-	for s in ('label','title'): 
-		if s in dDas3Src: dCat[s] = dDas3Src[s]
-
-	# There are many ways to advertise the coordinates and data for this source
-	# but the only one I care about are the ones in source.json.
-	
-	# Pull up the coordinates and data from the interface description
-	dIFace = dDas3Src['interface']
-	for sCategory in ('coords','data'):
-		if sCategory in dIFace:
-			for sDim in dIFace[sCategory]:
-				dCat[sCategory][sDim] = {}
-				for sProp in ('label','validRange'):
-					if sProp in dIFace[sCategory][sDim]: 
-						dCat[sCategory][sDim][sProp] = dIFace[sCategory][sDim][sProp]
-
-	
-	# Pull up any science contacts
-	for d in dDas3Src['contacts']: 
-		if d['type'] == 'scientific': dCat['contacts'].append(d)
-
-	dSources = dCat['sources']
-
-	if sSet.startswith('/'): sSet = sSet[1:]
-	sSetUrl = "%s/source/%s"%(dConf['SERVER_URL'], sSet)
-
-	# Examine the inputs
-	for sInPath in lInput:
-		if bname(sInPath) == g_sStdDas3:
-
-			# Re-use the source file already loaded
-			dSources['das3'] = {
-				'type':'HttpStreamSrc', 'purpose':'primary-stream',
-				'label':'Das3 Data Source',
-				'description':'A semantic interface definition as '+\
-				   'well as a server protocol API definition for an HTTP GET '+\
-				   'based, variable resolution, fixed coverage period, data source.',
-				'mime':'application/json',
-				'provides':_getDas3Fmts(dDas3Src),
-				'urls':[ "%s/%s"%(sSetUrl,g_sStdDas3) ]
-			}
-
-		elif bname(sInPath) == g_sStdRt:
-			dSource = _loadJson(sInPath)
-			
-			dSources['das3ws'] = {
-				'type':'WebSocSrc', 'purpose':'primary-stream',
-				'label':'Das3 Real-time Source',
-				'description':'Similar to regular Das3 sources but also supports real-time '+\
-				    'data via a web socket.',
-				'mime':'application/json',
-				'provides':_getDas3Fmts(dSource),
-				'urls':[ "%s/%s"%(sSetUrl,g_sStdRt) ]
-			}
-
-		if bname(sInPath) == g_sStdDas2:
-			sSource = _loadText(sInPath)
-			dSources['das2'] = {
-				'type':'Das2DSDF', 'purpose':'primary-stream','label':'Das2 Source',
-				'description':'A variable resolution data source description '+\
-				   'accessed via a static API',
-				'mime':'text/vnd.das2.das2stream; charset=utf-8',
-				'provides':_getDas2Fmts(sSource),
-				'urls':[ "%s/%s"%(sSetUrl,g_sStdDas2)]
-			}
-
-		elif bname(sInPath) == g_sStdHapi2:
-			dSources['hapi2'] = {
-				'type':'HAPIInfo', 'purpose':'primary-stream','label':'HAPI Data Source',
-				'description':'A fixed resolution data source description '+\
-				    'with selectable output parameters accesed via a static API.',
-				'format':'application/json',
-				'provides':['text/csv'],
-				'urls':[ "%s/%S"%(sSetUrl,g_sStdHapi2) ]
-			}
-
-		elif bname(sInPath) == g_sStdDas1:
-			dSources['das1'] = {
-				'type':'Das1DSDF', 'purpose':'primary-stream','label':'Das1 Data Source',
-				'description':'Legacy local source definition used by Gifferator.pro',
-				'provides':'application/octet-stream',
-				'mime':'text/plain',
-				'urls':[ "%s/%s"%(SetUrl,g_sStdDas1) ]
-			}
-
-		elif bname(sInPath) == g_sStdVo:
-			dSources['ivoa'] = {
-				'type':'VOService', 'purpose':'primary-stream','label':'IVOA DataLink',
-				'description':'A fixed resolution data source definition compatable '+\
-				'with the IVOA datalink protocol',
-				'mime':'application/x-votable+xml;content=datalink',
-				'provides':['application/x-votable+xml'],
-				'urls':[ "%s/%s"%(sSetUrl,g_sStdVo) ]
-			}
-
-		# Ignore anything else
-
-	_writeJsonFile(sOutPath, dCat)
-	return True
-
-# ########################################################################## #
-def _updateCatFrom(dConf, sRootDir, sSrcSet):
-	"""Starting with the target file walk backwards up the directory tree
-	updating catalog files
-
-	args:
-		dConf - The server configuration
-		sRootDir - A root directory, typically: $PREFIX/catalog.  Not that
-		   This function writes above the "root" directory so don't provide
-		   './' as the root.
-		sSrcSet - The logical ID of the Data Source Set, this is assumed to
-		   Relate to the actual data source set file in the following manner:
-
-		   Dir = Root + "/" + sSrcSet.lower() + ".json"
-
-	returns (list,None): The list of all catalogs checked and possibly updated
-		None otherwise
-	"""
-
-	# Given:  Root = "."  sSrcSet = ./juno/wav/survey.json
-	# 
-	# Output or update:
-	#   ./juno/wav.json
-	#   ./juno.json
-	#
-	# Given:  Root = /var/www/das2srv/catalog/sources
-	#         Set  = /var/www/das2srv/catalog/sources/juno/wav/survey.json
-	# 
-	# Produce:                                             wav.json
-	#                                                 juno.json
-	#                                        sources.json
-
-	sSetFile = pjoin( sRootDir, sSrcSet.lower().replace('/', os.sep) + '.json')
-
-	if not sSetFile.startswith(sRootDir):
-		perr("ERROR: Source set %s is not under the root directory %s"%(sSrcSet, sRoot))
-		return None
-
-	sDir = sSetFile.replace(sRootDir+os.sep, '')
-	sDir = sDir.replace(os.sep + bname(sSetFile), '')
-	lDirs = [sRootDir] + sDir.split(os.sep)
-
-	sDir = dname(pjoin(sRootDir, sSrcSet.lower().replace('/', os.sep)))
-	lDirs = [sDir]
-	while lDirs[-1] != sRootDir:
-		lDirs.append(dname(lDirs[-1]))
-
-	lLbls = sSrcSet.split('/')
-	lLbls.reverse()
-	lLbls = lLbls[1:] + ['Sources']
-
-	# ASSUME here that the server root points to one above the root given 
-	# to this function.  Bad assumption, this needs rework.
-	sAboveRoot = dname(sRootDir)
-	lUrls = [
-		s.replace(sAboveRoot, dConf['SERVER_URL']).replace(os.sep, '/')
-		for s in lDirs
-	]
-	
-	if len(lLbls) > 1:
-		lTitles = ['Local Root Catalog'] + [None]*(len(lLbls)-1)
-	else:
-		lTitles = ['Local Root Catalog']
-
-	#print("lLbls:", lLbls)
-	#print("lDirs:", lDirs)
-	#print("lUrls:", lUrls)
-	#sys.exit(117)
-
-	lUpdates = []
-	for i in range(len(lDirs)):
-		
-		sCatPath = lDirs[i]+'.json'
-
-		if os.path.isfile(sCatPath):
-			dObject = _loadJson(sCatPath)
-			dCat = dObject['catalog']
-		else:
-			dCat = {}
-			dObject = {
-				'version':'0.5', 'type':'Catalog', 'label':lLbls[i], 'catalog':dCat
-			}
-			if lTitles[i]: dObject['title'] = lTitles[i]
-
-		# List all the objects in this directory and add them to the catalog
-		# you will need to make URLs for them
-		lItems = os.listdir(lDirs[i])
-		lItems.sort()
-		for sItem in lItems:
-			if not sItem.endswith('.json'): continue
-
-			dItem = _loadJson(pjoin(lDirs[i], sItem))
-
-			dEntry = {'urls':[ "%s/%s"%(lUrls[i], sItem) ]}
-			for s in 'label','title','type':
-				if s in dItem:
-					dEntry[s] = dItem[s]
-			
-			dCat[sItem.lower().replace('.json','')] = dEntry
-
-		_writeJsonFile(sCatPath, dObject)
-		lUpdates.append(sCatPath)
-
-	return lUpdates
-
 
 # ########################################################################## #
 # The program needs way better help than the default OptionParser can provide
@@ -438,10 +136,10 @@ class MyOptParse(optparse.OptionParser):
 	
 		file.write("""
 NAME:
-   das_srv_sdef - Create a set of related data source definitions
+   das_srv_sdef - Create a sets of related data source definitions
 
 SYNOPSIS:
-   das_srv_sdef [options] FILE [LOCAL_ID]
+   das_srv_sdef [options] FILE1 [FILE2 FILE3 ...]
 
 DESCRIPTION:
    das_srv_sdef defines a data source collection for a server.  A single
@@ -456,14 +154,18 @@ DESCRIPTION:
    Other outputs may be added to the basic forms above for real-time support
    and external system compatability.
 
-   The LOCAL_ID argument must be usable as a legal relative directory name
-   and defines the relative path of the data source from the server root.
-   Typically IDs from a 3-level hierachy that organize sources by mission
-   name, then by instrument name, and finially by specific data source, but
-   this is merely a convention.
+   The LOCAL_ID value is critical to properly organizing data sources.  It 
+   can be provide inside the files via:
 
-   If the source FILE provides the LOCAL_ID it need not be provided on the
-   command line.
+      localId = Value      DSDF
+      "localId":"Value"    JSON
+      -l ID                Command Line
+
+   or via the -l argument.  No matter the source, the LOCAL_ID must be 
+   usable as a legal relative directory name as it defines the relative path
+   of the data source from the server root.  Typically LOCAL_IDs from a 3-level
+   hierachy that organize sources by mission name, then by instrument name
+   and finially by specific data source, but this is merely a convention.
 
 OPTIONS:
    -h, --help  Print this help message and exit
@@ -475,6 +177,18 @@ OPTIONS:
    -i, --install
                Install the source definition under the datasources directory
                for the server defined by the configuration file.
+
+   -d DIR, --dir-to-id DIR
+               Useful for importing DSDFs from an existing das2 server.  Do
+               not look in DSDFs for a 'localId' property.  Instead assume 
+               that the ID is defined by the relative path from the directory
+               DIR.  Also assume that the filename provides the last component
+               of the local ID.
+
+   -l ID, --local-id=ID
+               Provide the local ID of the data source via the command line.
+               This over-rides any value provided by '-d' or in the source
+               file itself.
 
    -n, --no-catalog
                Don't try to creat or update any catalog files that would lead
@@ -503,12 +217,12 @@ FILES:
       %s
 
 EXAMPLES:
-   1. Process a das2 DSDF file for the Survey dataset from the Waves instrument
-      on the Juno mission and produce output under the current directory:
+   1. Processing a das2 DSDF file that has localId keyword defined as 
+      'Juno/WAV/Survey' within the file using the command:
 
-         das_srv_sdef survey.dsdf Juno/WAV/Survey
+         das_srv_sdef survey.dsdf
 
-      this creates at least the following files:
+      will creates at least the following files:
 
          ./juno/wav/survey.json 
          ./juno/wav/survey/%(das2)s    # If source is das v2.2 compatable
@@ -518,10 +232,10 @@ EXAMPLES:
       Other source definitions files may be created for compatability with
       other APIs, depending on the server configuration.
 
-   2. Process a JSON template for the Waveform dataset from the PWS instrument
-      on Voyager 1 and install it for use by the server:
+   2. Process a JSON template for the dataset that does not define a local
+      ID and install it for use by the server:
 
-         das_srv_sdef -i waveform.json Voyager/1/PWS/Waveform
+         das_srv_sdef -i -l Voyager/1/PWS/Waveform waveform.json
 
       The resulting data source set will be visible at:
 
@@ -531,8 +245,16 @@ EXAMPLES:
 
          $SERVER_URL?server=dsdf&dataset=Voyager/1/PWS/Waveform         
 
-      In the paths above, $SERVER_URL and are defined by the server
-      configuration file.
+      In the paths above, $SERVER_URL is defined in das2server.conf.
+
+   3. Import all DSDFs for a server in one command using the file path
+      as the Local ID:
+
+         ROOT=/var/www/das2srv/datasets
+         das_srv_sdef -d $ROOT $(find $ROOT -name "*.dsdf")
+
+      Note: To get the directory comments, you'll have to run the 
+      companion program das_srv_cdef.
 
 SEE ALSO:
    The dsdf format is defined by das2 ICD at DOI: 10.5281/zenodo.3588534
@@ -562,34 +284,21 @@ def main(argv):
 	psr.add_option(
 		'', '--no-cat', action="store_false", dest="bNewCat", default=True
 	)
+	psr.add_option(
+		'-l','--local-id', dest="sLocalId", default=None
+	)
+	psr.add_option(
+		'-d','--dir-to-id', dest="sLocalRoot", default=None
+	)
 
-	(opts,lArgs) = psr.parse_args()
+	(opts,lPaths) = psr.parse_args()
 
-	if len(lArgs) < 1:
+	if len(lPaths) < 1:
 		perr("No data source file specified, use -h for help.")
 		return 13
-	else: 
-		sPath = lArgs[0]
-
-	if len(lArgs) < 2:
-		sSrcSet = None  # Find it in the file
-	else:
-		sSrcSet = lArgs[1].strip('/').strip()
-		if len(sSrcSet) < 1:
-			perr("Invalid source-set path: '%s', use -h for help.")
-			return 13
 	
-	# Check the input type
-	sInType = None
-	if sPath.lower().endswith('.dsdf'):
-		sInType = 'dsdf'
-	else:
-		sInType = 'json'
-		if not sPath.lower().endswith('.json'):
-			perr(
-				"File %s is not recognized, does not end in one of '.dsdf' or '.json'"%sPath
-			)
-			return 14
+	if (len(lPaths) > 1) and opts.sLocalId:
+		perr("Argument '-l' can only be used when processing files one at a time.")
 	
 	dConf = getConf()
 	if dConf == None:
@@ -623,83 +332,157 @@ def main(argv):
 
 	fLog = BufferLog()
 
-	if not os.path.isfile(sPath):
-		perr('File %s does not exist'%sPath)
-		return 21
-
 	if opts.bSocSrc:
 		if 'WEBSOCKET_URI' not in dConf:
 			perr('INFO: Set WEBSOCKET_URI in %s to support realtime readers'%opts.sConfig);
 			opts.bSocSrc = False
-	
-		if not U.convdsdf.hasRtSupport(fLog, dConf, sPath):
-			#perr('Not web-socket capable, Keyword "realTime" does not evaluate '+\
-			#     'to True in %s.'%sPath)
-			#return 22
-			opts.bSocSrc = False
 
-	# If sSrcSet defined, use it.  Otherwise get it from the source
-	if not sSrcSet:
-		sSrcSet = U.convdsdf.getLocalId(fLog, dConf, sPath)
-		if not sSrcSet:
-			perr("Local ID not defined in %s nor provided via the command line"%sPath)
+	lLocalSrcIds = [] # Save list of source IDs for second pass work
+
+	sRoot = '.'
+	if opts.bInstall: sRoot = dConf['DATASRC_ROOT']
+
+	for sPath in lPaths:
+
+		if not os.path.isfile(sPath):
+			perr('File %s does not exist'%sPath)
+			return 21
+
+		# If we're named _dirinfo_.dsdf, delay usage
+		if bname(sPath) == '_dirinfo_.dsdf': continue
+
+		# Check the input type
+		sInType = None
+		if sPath.lower().endswith('.dsdf'): sInType = 'dsdf'
+		else:
+			sInType = 'json'
+			if not sPath.lower().endswith('.json'):
+				perr("File %s is not recognized, does not end "%sPath+\
+					"in one of '.dsdf' or '.json'")
+			return 14
+		
+		if opts.bSocSrc:
+			if not U.convdsdf.hasRtSupport(fLog, dConf, sPath):
+				#perr('Not web-socket capable, Keyword "realTime" does not evaluate '+\
+				#     'to True in %s.'%sPath)
+				#return 22
+				opts.bSocSrc = False
+	
+		# If sLocalId defined, use it.  Otherwise get it from the source
+		if not opts.sLocalId:
+
+			# Check to see if we are getting local IDs from filesystem paths
+			if opts.sLocalRoot:
+				n = sPath.find(sLocalRoot)
+				if n < 0:
+					perr("Local Root %s does not appear in source path %s"%(
+						opts.sLocalRoot, sPath
+					))
+				sLocalId = sPath[n+1:].replace(".dsdf",'').replace(".json",'')
+				sLocalId = sLocalId.strip(os.sep)
+
+			else:
+				sLocalId = U.convdsdf.getLocalId(fLog, dConf, sPath)
+				if not sLocalId:
+					perr("Local ID not defined in %s nor provided via the command line"%sPath)
+					return 22
+		else:
+			sLocalId = opts.sLocalId
+
+		dPaths = U.catalog.sourceFiles(sRoot, sLocalId)
+	
+		perr("Input:  %s %s"%(opts.sConfig, sPath))
+		lOutput = []
+		try:
+			if sInType == 'dsdf':
+				lOutput.append(dPaths['das3'])
+				_writeJsonFile(lOutput[-1], U.convdsdf.makeGetSrc(fLog, dConf, sPath))
+				
+				if opts.bSocSrc:
+					lOutput.append(dPaths['das3rt'])
+					_writeJsonFile(lOutput[-1], U.convdsdf.makeSockSrc(fLog, dConf, sPath))
+				
+				lOutput.append(dPaths['intern'])	
+				_writeJsonFile(lOutput[-1], U.convdsdf.makeInternal(fLog, dConf, sPath))
+				
+				lOutput.append(dPaths['das2'])
+				_writeFile(lOutput[-1], U.convdsdf.makeD2t(fLog, dConf, sPath))
+				
+
+				sDas1 = U.convdsdf.makeDas1(fLog, dConf, sPath)
+				if sDas1: 
+					lOutput.append(dPaths['das1'])
+					_writeFile(lOutput[-1], sDas1)
+					
+			else:
+				lOutput.append(dPaths['das3'])
+				_writeJsonFile(lOutput[-1], U.convjson.makeFedCat(fLog, dConf, sPath))
+
+				lOutput.append(dPaths['intern'])
+				_writeJsonFile(lOutput[-1], U.convjson.makeDas3Int(fLog, dConf, sPath))
+
+				lOutput.append(dPaths['das2'])
+				_writeFile(lOutput[-1], U.convjson.makeD2t(fLog, dConf, sPath))
+	
+			# Read the sources you've written and update the collection
+			lOutput.append(dPaths['set'])
+			U.catalog.makeCollection(dConf, sLocalId, lOutput, lOutput[-1])
+	
+			perr("Output: %s"%("\n        ".join(lOutput)))
+	
+		except U.errors.ServerError as e:
+			perr('%s'%fLog.getvalue())
+			perr('ERROR: %s'%str(e))
 			return 22
 
-	sRoot = './sources'
-	if opts.bInstall: sRoot = pjoin(dConf['DATASRC_ROOT'], 'sources')
-	sOutSet = pjoin(sRoot, sSrcSet.lower()+'.json')
-	sOutDir = pjoin(sRoot, sSrcSet.lower())
-	
-	# Now for input/output switch
-	sOutApi = pjoin(sOutDir, g_sStdDas3)
-	sOutWs  = pjoin(sOutDir, g_sStdRt)
-	sOutInt = pjoin(sOutDir, g_sStdIntern)
-	sOutDas1 = pjoin(sOutDir, U.formats.g_sDas1File)
-	sOutD2t = pjoin(sOutDir, g_sStdDas2)
+		lLocalSrcIds.append(sLocalId)
 
-	perr("Input:  %s %s"%(opts.sConfig, sPath))
-	lOutput = []
-	try:
-		if sInType == 'dsdf':
-			_writeJsonFile(sOutApi, U.convdsdf.makeGetSrc(fLog, dConf, sPath))
-			lOutput.append(sOutApi)
-			
-			if opts.bSocSrc:
-				_writeJsonFile(sOutWs, U.convdsdf.makeSockSrc(fLog, dConf, sPath))
-				lOutput.append(sOutWs)
+	# Handle catalog updates if desired...
+	if not opts.bNewCat:
+		return 0
 
-			_writeJsonFile(sOutInt, U.convdsdf.makeInternal(fLog, dConf, sPath))
-			lOutput.append(sOutInt)
+	# Write in the _dirinfo_.dsdf entries
+	for sPath in lPaths:
 
-			_writeFile(sOutD2t, U.convdsdf.makeD2t(fLog, dConf, sPath))
-			lOutput.append(sOutD2t)
+		if bname(sPath) != '_dirinfo_.dsdf': continue
 
-			sDas1 = U.convdsdf.makeDas1(fLog, dConf, sPath)
-			if sDas1: 
-				_writeFile(sOutDas1, sDas1)
-				lOutput.append(sOutDas1)
+		# If sLocalId defined, use it.  Otherwise get it from the source
+		if not opts.sLocalId:
+
+			# Check to see if we are getting local IDs from filesystem paths
+			if opts.sLocalRoot:
+				sDir = dname(sPath)
+				n = sDir.find(sLocalRoot)
+				if n < 0:
+					perr("Local Root %s does not appear in source path %s"%(
+						opts.sLocalRoot, sPath
+					))
+				sLocalId = sDir[n+1:].replace(os.sep, '/')
+			else:
+				sLocalId = U.convdsdf.getLocalId(fLog, dConf, sPath)
+				if not sLocalId:
+					perr("Local ID not defined in %s nor provided via the command line"%sPath)
+					return 22
 		else:
-			_writeJsonFile(sOutApi, U.convjson.makeFedCat(fLog, dConf, sPath))
-			_writeJsonFile(sOutInt, U.convjson.makeDas3Int(fLog, dConf, sPath))
-			_writeFile(sOutD2t, U.convjson.makeD2t(fLog, dConf, sPath))
+			sLocalId = opts.sLocalId
 
-		# Read the sources you've written and update the collection
-		lOutput.append(sOutSet)
-		_makeCollection(dConf, sSrcSet, lOutput, sOutSet)
+		sDesc = U.convdsdf.getDescription(fLog, dConf, sPath)
+		if sDesc:
+			U.catalog.addCatTitle(dConf, sRoot, sLocalId, sDesc)
 
-		perr("Output: %s"%("\n        ".join(lOutput)))
 
-	except U.errors.ServerError as e:
-		perr('%s'%fLog.getvalue())
-		perr('ERROR: %s'%str(e))
-		return 22
-
-	if opts.bNewCat:
-		# Walk backwards up the tree updating catalogs as you go
-		lUpdates = _updateCatFrom(dConf, sRoot, sSrcSet)
+	# Walk backwards up the tree updating catalogs as you go
+	for sLocalId in lLocalSrcIds:
+		lUpdates = U.catalog.updateFromSrc(dConf, sRoot, sLocalId)
 		if not lUpdates:
 			return 7
-		perr("Updated: %s"%("\n         ".join(lUpdates)))
+		perr("Update: %s"%("\n        ".join(lUpdates)))
+
+	# Recreate the summary listings
+	lWrote = U.catalog.updateLists(dConf, sRoot)
+	if not lWrote:
+		return 8
+	perr("Output: %s"%("\n        ".join(lUpdates)))
 		
 	return 0
 

@@ -147,7 +147,7 @@ def _rawReadDsdf(fIn, fLog):
 
 # ########################################################################## #
 
-def _loadDsdf(dConf, sName, sPath, fLog):
+def loadDsdf(dConf, sName, sPath, fLog):
 		"""Load a dsdf as a dictionary of dictionaries.  Every parameter becomes
 		the key name for a dictionary of values.  Thus single values and
 		lists take on the same form.
@@ -800,7 +800,7 @@ def makeGetSrc(fLog, dConf, sPath):
 	"""
 
 	sName = bname(sPath).replace(".dsdf","")
-	dDsdf = _loadDsdf(dConf, sName, sPath, fLog)
+	dDsdf = loadDsdf(dConf, sName, sPath, fLog)
 
 	dOut = {}
 
@@ -959,16 +959,25 @@ def _mergeWsFormat(dConf, dOut, dProps, fLog):
 def hasRtSupport(fLog, dConf, sPath):
 
 	sName = bname(sPath).replace(".dsdf","")
-	dProps = _loadDsdf(dConf, sName, sPath, fLog)
+	dProps = loadDsdf(dConf, sName, sPath, fLog)
 
 	return ('realTime' in dProps)
 
 def getLocalId(fLog, dConf, sPath):
 	sName = bname(sPath).replace(".dsdf","")
-	dProps = _loadDsdf(dConf, sName, sPath, fLog)
+	dProps = loadDsdf(dConf, sName, sPath, fLog)
 
 	if ('localId' in dProps) and '00' in dProps['localId']:
 		return dProps['localId']['00']
+	else:
+		return None
+
+def getDescription(fLog, dConf, sPath):
+	sName = bname(sPath).replace(".dsdf","")
+	dProps = loadDsdf(dConf, sName, sPath, fLog)
+
+	if ('description' in dProps) and '00' in dProps['description']:
+		return dProps['description']['00']
 	else:
 		return None
 
@@ -1006,13 +1015,13 @@ def makeSockSrc(fLog, dConf, sPath):
 	"""
 
 	sName = bname(sPath).replace(".dsdf","")
-	dProps = _loadDsdf(dConf, sName, sPath, fLog)
+	dProps = loadDsdf(dConf, sName, sPath, fLog)
 
 	if ('realTime' not in dProps) or ('WEBSOCKET_URI' not in dConf):
 		return None
 
 	sName = bname(sPath).replace(".dsdf","")
-	dDsdf = _loadDsdf(dConf, sName, sPath, fLog)
+	dDsdf = loadDsdf(dConf, sName, sPath, fLog)
 
 	dOut = {}
 
@@ -1125,7 +1134,7 @@ def makeInternal(fLog, dConf, sPath):
 	dOut = {}
 
 	sName = bname(sPath).replace(".dsdf","")
-	dProps = _loadDsdf(dConf, sName, sPath, fLog)
+	dProps = loadDsdf(dConf, sName, sPath, fLog)
 	
 	# Save the mime-type for the command inputs and outputs
 	dOutType = {'type':"das",'version':"1.1"}
@@ -1350,7 +1359,7 @@ def makeInternal(fLog, dConf, sPath):
 def makeD2t(fLog, dConf, sPath):
 
 	sName = bname(sPath).replace(".dsdf","")
-	dProps = _loadDsdf(dConf, sName, sPath, fLog)
+	dProps = loadDsdf(dConf, sName, sPath, fLog)
 
 	tDrop = (
 		'reader', 'reducer', 'compressor', 'readAccess', 'groupAccess',
@@ -1425,7 +1434,7 @@ def makeDas1(fLog, dConf, sPath):
 	# If this does not have das2stream or qstream for formats, output the
 	# dsdf itself
 	sName = bname(sPath).replace(".dsdf","")
-	dProps = _loadDsdf(dConf, sName, sPath, fLog)
+	dProps = loadDsdf(dConf, sName, sPath, fLog)
 
 	if (not _isPropTrue(dProps, 'qstream')) and \
 	   (not _isPropTrue(dProps, 'das2Stream')) and \

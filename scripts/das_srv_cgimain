@@ -63,8 +63,8 @@ _g_BrowserAgent = ['firefox','explorer','chrome','safari','edge']
 #   |             |- survey/ - An html directory with listing an blurb
 #   |                  |
 #   |                  |- form.html - a web form for humans to get data
-#   |                  |- dsdf.d2t - the old dsdf as das2 stream trick
-#   |                  |- das2.json - a fed cat HttpStreamSource object
+#   |                  |- das2.d2t - the old dsdf as das2 stream trick
+#   |                  |- das3.json - a fed cat HttpStreamSource object
 #   |                  |- voservice.xml 
 #   |                  |
 #   |                  |- data - form action handler (hidden from indexes)
@@ -78,8 +78,8 @@ _g_BrowserAgent = ['firefox','explorer','chrome','safari','edge']
 #   |- verify - Included das2 stream verification tool
 #   |
 #   |- id.json - Server identification information
-#   |- id.txt  - Old das2.1 info text
-#   |- logo.png - Old das2.1 logo
+#   |- id.txt  - Old das2.2 info text
+#   |- logo.png - Old das2.2 logo
 #   |- peers.xml - A listing of peer servers
 #
 #
