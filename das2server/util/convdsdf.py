@@ -806,7 +806,11 @@ def makeGetSrc(fLog, dConf, sPath):
 
 	# The disk entries may have been hand edited.  Don't override the name and
 	# description, go ahead and smash the type and path
-	dOut['label'] = dDsdf['__name__']
+	if ('localId' in dDsdf) and ('00' in dDsdf['localId']):
+		dOut['label'] = bname(dDsdf['localId']['00'])
+	else:
+		dOut['label'] = dDsdf['__name__']
+
 	if 'description' in dDsdf: 
 		dOut["title"] = dDsdf['description']['00']
 	dOut['type'] = 'HttpStreamSrc'

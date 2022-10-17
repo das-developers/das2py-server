@@ -3,6 +3,7 @@
 import os
 import sys
 from os.path import join as pjoin
+import json
 
 from . import webio
 
@@ -42,77 +43,76 @@ def getWebTargets(dConf, fLog, sRelPath):
 	"""Get a list of display names, filesystem names and links and names for
    everything at a particular level
 	
-	sRelPath - Level under SCRIPT/source, use a '/' to get
-	           information for the top of the dsdf root
-	"""
+	Args:
+	   dConf (dict):   Server configuration
 
-	sScriptURL = webio.getScriptUrl()
-	
-	# Keep a list of directories
+	   fLog  (object): An object with a .write method
+
+		sRelPath (str): Level under SCRIPT/source, use a '/' to get information
+		   for the top of the dsdf root
+   
+   Returns [(str, str, str)]: A list of the: 
+      Item label, the sub-relative path (for recursive calls), the URL target
+	"""
 
 	if 'DATASRC_ROOT' not in dConf:
 		fLog.write("   ERROR: Configuration item DATASRC_ROOT missing")
 		return None
 
-	sRoot = dConf['DATASRC_ROOT']
+	sCatRoot = dConf['DATASRC_ROOT']
 	
-	if not os.path.isdir(sRoot):
+	if not os.path.isdir(sCatRoot):
 		fLog.write("   ERROR: DATASRC_ROOT dir '%s' does not exist"%sRoot)
 		return None
 	
 	if sRelPath == '/':
-		sPath = sRoot
+		sPath = pjoin(sCatRoot, 'root.json')
 	else:
-		sPath = pjoin(sRoot, sRelPath)
+		sMiddle = sRelPath.strip('/').replace('/', os.sep)
+		sPath = pjoin(sCatRoot, 'root', sMiddle + ".json")
 		
-	if not os.path.isdir(sPath):
-		fLog.write("   ERROR: Data directory '%s' does not exist"%sPath)
+		sRelPath = "/%s/"%(sRelPath.strip('/'))
+		
+	if not os.path.isfile(sPath):
+		fLog.write("   ERROR: Catalog node '%s' does not exist"%sPath)
 		return None
 	
 	lOut = []
 	
-	lItems = os.listdir(sPath)
-	lItems.sort()
-	
+	try:
+		with open(sPath) as fIn:
+			dCat = json.load(fIn)
+	except Exception as e:
+		fLog.write("   ERROR: %s"%str(e))
+		return None
+
+	if ('catalog' not in dCat) or (len(dCat['catalog']) == 0):
+		fLog.write("   WARN: Catalog node '%s' is empty"%sPath)
+		return None
+
 	#fLog.write("   INFO: Listing items in %s for relpath %s"%(sPath, sRelPath))
-	for sItem in lItems:
-		sItemPath = pjoin(sPath, sItem)
-		if os.path.isdir( sItemPath ):
 
-			sDirDsdf = pjoin(sItemPath, '_dirinfo_.dsdf')
-			if not isVisible(sDirDsdf): continue
-			
-			if(sRelPath == '/'):
-				sUrl = '%s/source/%s/info.html'%(sScriptURL, sItem.lower())
-			else:
-				sUrl = '%s/source/%s/%s/info.html'%(sScriptURL, sRelPath.lower(), sItem.lower())
-			
-				
-			sName = sItem.replace('_',' ')
-			if sRelPath == '/':
-				lOut.append( (sName, sItem, sUrl) )
-			else:
-				lOut.append( (sName, pjoin(sRelPath, sItem), sUrl) )
+	lItems = list(dCat['catalog'].keys())
+	lItems.sort()
+	lOut = []
 
-		elif os.path.isfile( sItemPath ):
-			if not sItem.endswith(".dsdf"): continue
-			if sItem == "_dirinfo_.dsdf": continue
-			if not isVisible(sItemPath): continue
-
-			sSrcDir = sItemPath.strip('.dsdf').lower();
-			sUrl = '%s/source/%s/%s/form.html'%(
-				sScriptURL, sRelPath.lower(), sItem.lower().replace('.dsdf','')
-			)
-			sName = sItem.replace('_',' ').replace('.dsdf','')
-			if sRelPath == '/':
-				lOut.append( (sName, sItem, sUrl) )
-			else:
-				lOut.append( (sName, pjoin(sRelPath, sItem), sUrl) )
+	sScriptUrl = webio.getScriptUrl()
 	
-	#for t in lOut:
-	#	fLog.write(">>>lOut>>> %s"%str(t))
-	#fLog.write("<<<")
+	# Don't open sub catlogs, just print details from this one
+	for sItem in lItems:
 
+		dItem = dCat['catalog'][sItem]
+
+		if dItem['type'] == 'SourceSet':
+			sItemUrl = "%s/source%s%s/form.html"%(sScriptUrl, sRelPath, sItem)
+		elif dItem['type'] == 'Catalog':
+			sItemUrl = "%s/source%s%s/info.html"%(sScriptUrl, sRelPath, sItem)
+		else:
+			continue
+	
+		lOut.append( (dItem['label'], "%s%s"%(sRelPath, sItem), sItemUrl) )
+	
+	fLog.write("TARGETS: %s"%str(lOut))
 	return lOut
 
 # ########################################################################## #
@@ -205,8 +205,8 @@ def sidenav(dConf, fLog):
 			pout('   <br></li>')
 
 	pout('  </ul><hr>')
-	pout('<a href="%s/sources.csv">Catalog (csv)</a><br><br>'%sScriptUrl)
-	pout('<a href="%s/sources.json">Catalog (json)</a><br><br>'%sScriptUrl)
+	pout('<a href="%s/catalog.json">Full Catalog</a><br><br>'%sScriptUrl)
+	pout('<a href="%s/nodes.csv">Catalog Nodes</a><br><br>'%sScriptUrl)
 	pout('''%s<br><br>
   %s<br><br>
   <a href="%s/peers.xml">Peer Servers</a>

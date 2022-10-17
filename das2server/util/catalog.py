@@ -9,7 +9,7 @@ from os.path import dirname as dname
 
 from . import formats
 
-# NOTE: If these change, update MyOptParse in das_srv_sdef
+# NOTE: If these change, update class MyOptParse in das_srv_sdef
 g_sStdDas1 = 'das1.pro'
 g_sStdDas2 = 'das2.d2t'
 g_sStdDas3 = 'das3.json'
@@ -602,9 +602,9 @@ def updateLists(dConf, sRoot=None):
 
 	lWrote.append( pjoin(sRoot, 'nodes.csv'))
 	fOut = open(lWrote[-1], 'w')
-	fOut.write('"LocalID","Type","Title","URL","MIME"')
+	fOut.write('"LocalID","Type","Title","URL","Item-MIME"')
 	for i in range(nProvides):
-		fOut.write(',"Provides"')
+		fOut.write(',"Provides-MIME"')
 	fOut.write('\r\n')
 
 	for lItem in llCsvItems:

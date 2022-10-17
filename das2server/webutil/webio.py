@@ -345,6 +345,64 @@ class DasLogFile(object):
 		if self._file != sys.stderr:
 			self._file.close()
 
+# ########################################################################## #
 
+def fileOut(fLog, lHeaders, sPath, sErrMsg=None):
+	"""Send a web response that's just a single file and the headers.  If 
+	the file can't be sent, then a not-found error is transmitted instead.
 
+	Returns: 0 if everything went well, 1 otherwise
+	"""
 
+	try:
+		fIn = open(sPath, 'rb')
+	except:
+		pout("Status: 404 Not Found\r\n\r\n")
+		if sErrMsg:
+			pout(sErrMsg)
+			fLog.write("File %s not found on this server"%sPath)
+		return 1
+	
+	try:
+		sHdrs = "%s\r\n\r\n"%('\r\n'.join(lHeaders))
+		pout(sHdrs)
+		flushOut()
+
+		xBytes = fIn.read(8192)
+		while len(xBytes) > 0: 
+			pout(xBytes)
+			xBytes = fIn.read(8192)
+
+	except Exception as e:
+		# Nothing much we can do, data has already went out the door, just log it
+		fLog.write(str(e))
+		return 1
+	
+	return 0
+
+def d2sOut(fLog, lHeaders, sPath, sErrMsg):
+	"""Send a web response that just a das2 stream on disk and it's headers.
+	If an error occurs, send a message as a das2 error packet
+	"""
+
+	try:
+		fIn = open(sPath, 'rb')
+	except:
+		if not sErrMsg: sErrMsg = "File %s not found on this server"%sPath
+		return notFoundError(fLog, sErrMsg)
+
+	try: 
+		sHdrs = "%s\r\n\r\n"%('\r\n'.join(lHeaders))
+		pout(sHdrs)
+
+		xBytes = fIn.read(8192)
+		while len(xBytes) > 0:
+			pout(xBytes)
+			xBytes = fIn.read(8192)
+
+	except Exception as e:
+		# Nothing much we can do, data has already went out the door, just log it
+		fLog.write(str(e))
+		return 1
+
+	return 0

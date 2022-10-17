@@ -58,7 +58,6 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	"""
 	
 	pout('Content-Type: text/html; charset=utf-8\r\n')
-	pout('<!DOCTYPE html>')
 	
 	dReplace = {"script":U.webio.getScriptUrl()}
 				
@@ -134,7 +133,7 @@ via the <a href="https://github.com/das-developers/das2dlm">das2dlm</a> module.<
 </ul>
 <p>Programs which can parse das3 real-time streams include:</p>
 <ul>
-<li> <a href="https://research-git.uiowa.edu/space-physics/tracers/soc/dasoc>DASOC</a>
+<li> <a href="https://research-git.uiowa.edu/space-physics/tracers/soc/dasoc">DASOC</a>
 </li>
 </ul>
 

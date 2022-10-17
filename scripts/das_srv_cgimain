@@ -72,8 +72,9 @@ _g_BrowserAgent = ['firefox','explorer','chrome','safari','edge']
 #   |- catalog.json  A das2 catalog listing of all items down to the
 #   |     HttpStreamSource level, can feed URL to node.c as detached root
 #   |
-#   |- catalog.csv   A listing of all directories and dsdf files on this
-#   |                server
+#   |- nodes.csv     A listing of all stand along catalog end points
+#   |
+#   |- root.json     The root node of the stand alone catalog points
 #   |
 #   |- verify - Included das2 stream verification tool
 #   |
@@ -85,7 +86,7 @@ _g_BrowserAgent = ['firefox','explorer','chrome','safari','edge']
 #
 # To merge sources list here into a central catalog:
 #
-#  1) Pull catalog.json
+#  1) Pull root.json
 #  2) Iterate through the levels merging information, creating collections
 
 g_dDefHandlers = {
@@ -108,7 +109,7 @@ g_dDefHandlers = {
 	# ?server=id    /id.txt  /id.json
 	'HANDLE_ID':     'das2server.handlers.id',
 	
-	# ?server=discovery ?server=list /catalog.csv /catalog.json
+	# ?server=discovery ?server=list /catalog.json /nodes.csv /root.json
 	'HANDLE_LIST':   'das2server.handlers.catalog',
 	
 	# Effectively index.html files for wget... /source /static
@@ -469,12 +470,12 @@ def main(form):
 				sReqType = 'HANDLE_H_API_NONE'
 			
 			
-	# Handle Das3 style queries
+	# Handle Das3 path oriented queries
 	else:
 		if sPathInfo in [None, '', '/']:
 			sReqType = 'HANDLE_NONE'
 
-		elif sPathInfo == "/catalog.json" or sPathInfo == "/catalog.csv":
+		elif sPathInfo in ("/catalog.json", "/nodes.csv", "/root.json"):
 			sReqType = 'HANDLE_LIST'
 		
 		elif sPathInfo == "/id.txt" or sPathInfo == "/id.json":
