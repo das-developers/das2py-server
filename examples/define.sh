@@ -14,12 +14,5 @@ THIS_FILE=$(realpath -s "${BASH_SOURCE[0]}")
 PREFIX=$(dirname "$THIS_FILE")
 PREFIX=$(dirname "$PREFIX")
 
-$PREFIX/bin/das_srv_sdef -i random/source.dsdf
-$PREFIX/bin/das_srv_sdef -i waveform/source.dsdf
-$PREFIX/bin/das_srv_sdef -i spectra/source.dsdf
-$PREFIX/bin/das_srv_sdef -i params/source.dsdf
-$PREFIX/bin/das_srv_sdef -i auth/source.dsdf
-#$PREFIX/bin/das_srv_catmain catinfo.dsdf
-
-
-
+$PREFIX/bin/das_srv_sdef -i random/source.dsdf waveform/source.dsdf \
+  spectra/source.dsdf params/source.dsdf auth/source.dsdf _dirinfo_.dsdf

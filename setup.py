@@ -364,7 +364,7 @@ else:
 	#	])
 	#)
 	lDataFiles.append( ('examples', [
-		'examples/catinfo.dsdf','examples/define.sh'
+		'examples/_dirinfo_.dsdf','examples/define.sh'
 	]))
 
 	lDataFiles.append( ('examples/random', [

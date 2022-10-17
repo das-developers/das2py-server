@@ -9,6 +9,7 @@ from os.path import dirname as dname
 
 from . import formats
 
+# NOTE: If these change, update MyOptParse in das_srv_sdef
 g_sStdDas1 = 'das1.pro'
 g_sStdDas2 = 'das2.d2t'
 g_sStdDas3 = 'das3.json'
@@ -55,7 +56,7 @@ def topCat(sRoot):
 	Returns (str,str) - The top catalog filename and it's contents directory
 	"""
 
-	return (pjoin(sRoot, 'sources.json'), pjoin(sRoot, 'sources'))
+	return (pjoin(sRoot, 'root.json'), pjoin(sRoot, 'root'))
 
 # ########################################################################## #
 def sourceFiles(sRoot, sLocalId):
@@ -117,12 +118,12 @@ def _getDas2Fmts(sSource):
 	lLines = [sLine.strip() for sLine in sSource.split('\n')]
 	for sLine in lLines:
 		if sLine.startswith('das2Stream'):
-			lSub = [s.strip() for s in sLine.split('=')]
+			lSub = [s.strip('"\'').strip() for s in sLine.split('=')]
 			if (len(lSub) > 1) and (lSub[1].lower() in ('1','t','true')):
 				return [ formats.getMime('das','2','binary')[0] ]
 
 		if sLine.startswith('qstream'):
-			lSub = [s.strip() for s in sLine.split('=')]
+			lSub = [s.strip('"\'').strip() for s in sLine.split('=')]
 			if (len(lSub) > 1) and (lSub[1].lower() in ('1','t','true')):
 				return [ formats.getMime('qstream','2','binary')[0] ]
 
@@ -163,7 +164,7 @@ def makeCollection(dConf, sSet, lInput, sOutPath):
 		if s in dDas3Src: dCat[s] = dDas3Src[s]
 
 	# There are many ways to advertise the coordinates and data for this source
-	# but the only one I care about are the ones in source.json.
+	# but the only one I care about are the ones in das3.json
 	
 	# Pull up the coordinates and data from the interface description
 	dIFace = dDas3Src['interface']
@@ -192,7 +193,7 @@ def makeCollection(dConf, sSet, lInput, sOutPath):
 			# Re-use the source file already loaded
 			dSources['das3'] = {
 				'type':'HttpStreamSrc', 'purpose':'primary-stream',
-				'label':'Primary',
+				'label':'Primary Source',
 				'description':'A semantic interface definition as '+\
 				   'well as a server protocol API definition for an HTTP GET '+\
 				   'based, variable resolution, fixed coverage period, data source.',
@@ -206,7 +207,7 @@ def makeCollection(dConf, sSet, lInput, sOutPath):
 			
 			dSources['das3rt'] = {
 				'type':'WebSocSrc', 'purpose':'primary-stream',
-				'label':'Real-time',
+				'label':'Real-time Source',
 				'description':'Similar to regular Das3 sources but also supports real-time '+\
 				    'data via a web socket.',
 				'mime':'application/json',
@@ -217,7 +218,7 @@ def makeCollection(dConf, sSet, lInput, sOutPath):
 		if bname(sInPath) == g_sStdDas2:
 			sSource = _loadText(sInPath)
 			dSources['das2'] = {
-				'type':'Das2DSDF', 'purpose':'primary-stream','label':'Das2',
+				'type':'Das2DSDF', 'purpose':'primary-stream','label':'Das2 Source',
 				'description':'A variable resolution data source description '+\
 				   'accessed via a static API',
 				'mime':'text/vnd.das2.das2stream',
@@ -227,7 +228,7 @@ def makeCollection(dConf, sSet, lInput, sOutPath):
 
 		elif bname(sInPath) == g_sStdHapi2:
 			dSources['hapi2'] = {
-				'type':'HAPIInfo', 'purpose':'primary-stream','label':'HAPI2',
+				'type':'HAPIInfo', 'purpose':'primary-stream','label':'HAPI2 Source',
 				'description':'A fixed resolution data source description '+\
 				    'with selectable output parameters accesed via a static API.',
 				'format':'application/json',
@@ -237,7 +238,7 @@ def makeCollection(dConf, sSet, lInput, sOutPath):
 
 		elif bname(sInPath) == g_sStdDas1:
 			dSources['das1'] = {
-				'type':'Das1DSDF', 'purpose':'primary-stream','label':'Das1',
+				'type':'Das1DSDF', 'purpose':'primary-stream','label':'Das1 Source',
 				'description':'Legacy local source definition used by Gifferator.pro',
 				'provides':'application/octet-stream',
 				'mime':'text/plain',
@@ -296,7 +297,7 @@ def updateFromSrc(dConf, sRootDir, sLocalId):
 	args:
 		dConf - The server configuration
 
-		sRootDir - A root catalog directory, typically: $PREFIX/catalog/sources
+		sRootDir - A root catalog directory, typically: $PREFIX/catalog
 		   but can be ./ if desired.
 		   
 		sLocalId - The logical ID of the Data Source Set, this is assumed to
@@ -314,12 +315,12 @@ def updateFromSrc(dConf, sRootDir, sLocalId):
 	#   ./juno/wav.json
 	#   ./juno.json
 	#
-	# Given:  Root = /var/www/das2srv/catalog/sources
-	#         Set  = /var/www/das2srv/catalog/sources/juno/wav/survey.json
+	# Given:  Root = /var/www/das2srv/catalog/
+	#         Set  = /var/www/das2srv/catalog/root/juno/wav/survey.json
 	# 
 	# Produce:                                             wav.json
 	#                                                 juno.json
-	#                                        sources.json
+	#                                        root.json
 
 	(sTopSrc, sTopSrcDir) = topCat(sRootDir)
 
@@ -341,8 +342,10 @@ def updateFromSrc(dConf, sRootDir, sLocalId):
 	lLbls.reverse()
 	lLbls += ['Sources']
 
-	sSrvUrl = dConf['SERVER_URL']
-	lUrls = [s.replace(sRootDir, sSrvUrl).replace(os.sep, '/') for s in lDirs]
+	sSrvUrl = "%s/source"%dConf['SERVER_URL']
+	lUrls = [s.replace(sTopSrcDir, sSrvUrl).replace(os.sep, '/') for s in lDirs]
+
+	#lUrls[-1] = "%s/%s"%(dConf['SERVER_URL'], bname(sTopSrc))
 	
 	lTitles = [None]*(len(lLbls)-1) + ['Local Root Catalog']
 	
@@ -446,14 +449,14 @@ def _gatherDas2List(dCatalog, sCatPath, sId):
 				if 'title' in dSubCat:
 					lEntries.append( "%s|%s"%(sSubId, dSubCat['title']))
 				else:
-					lEntries.append("%s"%sSubId)
+					lEntries.append("%s|"%sSubId)
 
 				break  # ... because Highlander (there can be only one)
 
 	# Third job: Only add my name if I had some entries and I am not the empty ID
 	if (len(sId) > 0) and (len(lEntries) > 0):
-		sEnt = "%s/"%sId
-		if 'title' in dCatalog: sEnt = "%s|%s"%(sEnt, dCatalog['title'])
+		sEnt = "%s/|"%sId
+		if 'title' in dCatalog: sEnt = "%s%s"%(sEnt, dCatalog['title'])
 		lEntries.insert(0, sEnt)
 
 	return lEntries
@@ -507,18 +510,41 @@ def _gatherFullList(dCatalog, sCatPath, sId, sUrl):
 			else: sTitle = '%s, %s'%(dCatalog['label'], dSub['label'])
 
 			# LocalID, Type, Title, Url, TargMime, Provides
-			lEntries.append([
+			lEntry = [
 				"%s/%s"%(sId, sSub), dSub['type'], sTitle, dSub['urls'][0], 
-				dSub['mime'], "|".join(dSub['provides'])
-			])
+				dSub['mime']
+			]
+			if len(dSub['provides']) > 0: lEntry += dSub['provides']
+			lEntries.append(lEntry)
 
 	# Third job: If I have any entries, add my entry first
 	if len(lEntries) > 0:
-		lEntry = [sId, dCatalog['type'], "", sUrl, "application/json",""]
-		if 'title' in dCatalog: lEntry[3] = dCatalog['title']
+		lEntry = [sId, dCatalog['type'], "", sUrl, "application/json"]
+		if 'title' in dCatalog: lEntry[2] = dCatalog['title']
 		lEntries.insert(0, lEntry)
 
 	return lEntries
+
+# ########################################################################### #
+def _expandToSource(dCat, sPath):
+	"""Get a nested catalog by filling in all sub-items down to the source 
+	level for a single catalog
+	"""
+
+	if 'catalog' not in dCat: return
+
+	for sSub in dCat['catalog']:
+
+		# If the sub is a catalog type, expand it 
+		if dCat['catalog'][sSub]['type'] not in ('Catalog','SourceSet'):
+			continue
+
+		sSubPath = pjoin(sPath.replace('.json',''), "%s.json"%sSub)
+		dSub = _loadJson(sSubPath)
+		dCat['catalog'][sSub] = dSub
+
+		_expandToSource(dSub, sSubPath)
+
 
 # ########################################################################### #
 
@@ -532,7 +558,7 @@ def updateLists(dConf, sRoot=None):
 	   $DATASRC_ROOT/hcat.json     (hapi compat)
 	   ???                         (IVOA compat)
 
-	By reading sources.json and assuming that collections of sub objects are
+	By reading root.json and assuming that collections of sub objects are
 	always in an adjacent sub-directory with the same name of a catalog, but
 	with *.json stripped off.  For example for the catalog object:
 
@@ -555,28 +581,50 @@ def updateLists(dConf, sRoot=None):
 
 	dTopCat = _loadJson(sTopPath)
 
+	# Das2 list
 	lDas2Items = _gatherDas2List(dTopCat, sTopPath, "") 
 
 	lWrote.append( pjoin(sRoot, 'das2list.txt') )
 	fOut = open(lWrote[-1], 'w')
-	fOut.write("\n".join(lWrote))
+	fOut.write("\n".join(lDas2Items))
 	fOut.close()
 
-	sTopUrl = "%s/sources.json"%(dConf['SERVER_URL'])
+	# Flat all-sources list
+	sTopUrl = "%s/%s"%(dConf['SERVER_URL'], bname(sTopPath))
 	llCsvItems  = _gatherFullList(dTopCat, sTopPath, "", sTopUrl)
 
-	lWrote.append( pjoin(sRoot, 'catalog.csv'))
+	# Get number of "provides" columns
+	nMax = 0
+	for lRow in llCsvItems:
+		if len(lRow) > nMax: nMax = len(lRow)
+
+	nProvides = nMax - 5
+
+	lWrote.append( pjoin(sRoot, 'nodes.csv'))
 	fOut = open(lWrote[-1], 'w')
-	fOut.write('"LocalID","Type","Title","URL","MIME","Provides"\r\n')
+	fOut.write('"LocalID","Type","Title","URL","MIME"')
+	for i in range(nProvides):
+		fOut.write(',"Provides"')
+	fOut.write('\r\n')
+
 	for lItem in llCsvItems:
 		# CSV Rule: Double quotes if " appears in an item
 		lItem = [s.replace('"','""') for s in lItem]
 		sRow = ','.join(['"%s"'%s if len(s) > 0 else "" for s in lItem])
+
+		if len(lItem) < nMax:
+			sRow += ","*(nMax - len(lItem))
+
 		fOut.write(sRow)
 		fOut.write('\r\n')
 	fOut.close()
 
+	# Nested catalogs
+	_expandToSource(dTopCat, sTopPath)
+	dTopCat['title'] = 'Combined %s Server Catalog'%dConf['SERVER_NAME']
 
+	lWrote.append( pjoin(sRoot, 'catalog.json'))
+	_writeJsonFile(lWrote[-1], dTopCat)
 
 	return lWrote
 	

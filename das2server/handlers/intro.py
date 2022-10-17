@@ -166,7 +166,7 @@ or <a href="%(script)s/sources.csv">sources.csv</a> is sufficent.</p>
   |
   |- <a href="%(script)s/static/">static/</a> - static files such as logos, etc
   |
-  |- <a href="%(script)s/sources/">sources/</a> - root directory for all data sources 
+  |- <a href="%(script)s/source/">source/</a> - root directory for all data sources 
   |    |
   |    |- <i>category</i>/ - A top level category directory
   |         |         <i>(typically named after missions)</i>
@@ -188,13 +188,18 @@ or <a href="%(script)s/sources.csv">sources.csv</a> is sufficent.</p>
   |                  |
   |                  |- data - form action handler (hidden)
   |
-  |- <a href="%(script)s/catalog.json">catalog.json</a> - A das federated catalog head node for data 
-  |     source sets that are local to this server.  This format is suitable for merging into 
-  |     multi-server catalogs.  Providing this URL to <b>new_RootNode_url()</b> in das2C or
-  |     <b>das2.get_node()</b> in das2py will provide access only to this server's data sources.
+  |- <a href="%(script)s/catalog.json">catalog.json</a> - A combined catalog of all data sources
+  |     local to this server.  May be provided to <b>new_RootNode_url()</b> in das2C or
+  |     <b>das2.get_node()</b> in das2py.  When preforming multiple requests from the same
+  |     server, this format is more efficent than <a herf="%(script)s/root.json">root.json</a>
+  |     below but is not suitable for building distributed server catalogs.
   |
-  |- <a href="%(script)s/catalog.csv">catalog.csv</a> - An alternate flat listing of all data sources
-  |     defined for this server.
+  |- <a href="%(script)s/nodes.csv">nodes.csv</a> - A flat listing of individual data
+  |     source catalog nodes for this server.  Any one of the URLs in this file can be 
+  |     used as a data query point.
+  |
+  |- <a href="%(script)s/root.json">root.json</a> - The root of all individual catalog
+  |     nodes on this server.  Also happens to be the first node listed in <a href="%(script)s/nodes.csv">nodes.csv</a> above.
   |
   |- <a href="%(script)s/verify">verify/</a> - Included das stream verification tool (if enabled)
   |

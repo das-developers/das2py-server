@@ -133,7 +133,15 @@ class MyOptParse(optparse.OptionParser):
 	def print_help(self, file=None):
 		if file == None:
 			file = sys.stdout
-	
+
+
+		# Help pops before the utility module is loaded, hand code these but be
+		# on the lookout for changes.  
+		dRep = {
+			'das2':'das2.d2t', 'das3':'das3.json', 'das3ws':'das3rt.json', 
+			'intern':'internal.json', 'conf':g_sConfPath
+		}
+
 		file.write("""
 NAME:
    das_srv_sdef - Create a sets of related data source definitions
@@ -142,30 +150,32 @@ SYNOPSIS:
    das_srv_sdef [options] FILE1 [FILE2 FILE3 ...]
 
 DESCRIPTION:
-   das_srv_sdef defines a data source collection for a server.  A single
-   input FILE in either *.dsdf or *.json syntax is parsed to produced the
-   output.  The output consists of at least four files:
+   das_srv_sdef defines a data source collection for a server.  A single input
+   FILE in either *.dsdf or *.json syntax is parsed to produced the output. The
+   output consists of at least four files:
 
-      $LOCAL_ID.json          - An SourceSet object grouping the output methods
-      $LOCAL_ID/%(das2)s      - A das v2.2 source description 
-      $LOCAL_ID/%(das3)s     - An HttpStreamSrc das federated catalog object
-      $LOCAL_ID/%(intern)s - Internal processing instructions for the server.
+      root/$LOCAL_ID.json          - An grouping of related data sources
+      root/$LOCAL_ID/%(das2)s      - A das v2.2 source description 
+      root/$LOCAL_ID/%(das3)s     - An HttpStreamSrc catalog object
+      root/$LOCAL_ID/%(intern)s - Internal processing instructions
 
    Other outputs may be added to the basic forms above for real-time support
    and external system compatability.
 
-   The LOCAL_ID value is critical to properly organizing data sources.  It 
-   can be provide inside the files via:
+   The LOCAL_ID value is critical to properly organizing data sources.  It can
+   be provided inside source definition files and on the command line:
 
-      localId = Value      DSDF
-      "localId":"Value"    JSON
-      -l ID                Command Line
+      localId = Value      DSDF file
+      "localId":"Value"    JSON file
 
-   or via the -l argument.  No matter the source, the LOCAL_ID must be 
-   usable as a legal relative directory name as it defines the relative path
-   of the data source from the server root.  Typically LOCAL_IDs from a 3-level
-   hierachy that organize sources by mission name, then by instrument name
-   and finially by specific data source, but this is merely a convention.
+      -l ID                Command Line, single item
+      -d ROOT_DIR          Command Line, relative to some root directory
+
+   No matter the source, the LOCAL_ID must be usable as a legal relative
+   directory name as it defines the path to the data source files from the
+   server root.  Typically LOCAL_IDs from a 3-level hierachy that organizes
+   sources by mission name, then by instrument name and finally by specific
+   data source, but this is merely a convention.
 
 OPTIONS:
    -h, --help  Print this help message and exit
@@ -176,19 +186,25 @@ OPTIONS:
 
    -i, --install
                Install the source definition under the datasources directory
-               for the server defined by the configuration file.
+               for the server defined by the configuration file.  This is
+               not compatable with -o.
+
+   -o DIR, --out-dir=DIR
+               Unless source definitions are to be installed (-i), they are
+               normally written to the current directory.  Use this option
+               to select an alternate, non-install, output directory.
 
    -d DIR, --dir-to-id DIR
-               Useful for importing DSDFs from an existing das2 server.  Do
-               not look in DSDFs for a 'localId' property.  Instead assume 
-               that the ID is defined by the relative path from the directory
-               DIR.  Also assume that the filename provides the last component
-               of the local ID.
+               Useful for importing DSDFs from an existing das2 server.  Do not
+               look in DSDFs for a 'localId' property.  Instead assume that the
+               ID is defined by the relative path from the directory DIR.  Also
+               assume that the filename provides the last component of the
+               local ID.
 
    -l ID, --local-id=ID
                Provide the local ID of the data source via the command line.
-               This over-rides any value provided by '-d' or in the source
-               file itself.
+               This over-rides any value provided by '-d' or in the source file
+               itself.
 
    -n, --no-catalog
                Don't try to creat or update any catalog files that would lead
@@ -211,10 +227,10 @@ OPTIONS:
                This is incompatable with --install
 
 FILES:
-   Each das2py-server is defined by a single top-level configuration file.
-   By default, configuration data for this program are taken from:
+   Each das2py-server is defined by a single top-level configuration file. By
+   default, configuration data for this program are taken from:
 	
-      %s
+      %(conf)s
 
 EXAMPLES:
    1. Processing a das2 DSDF file that has localId keyword defined as 
@@ -222,18 +238,18 @@ EXAMPLES:
 
          das_srv_sdef survey.dsdf
 
-      will creates at least the following files:
+      will create at least the following files:
 
-         ./juno/wav/survey.json 
-         ./juno/wav/survey/%(das2)s    # If source is das v2.2 compatable
-         ./juno/wav/survey/%(das3)s  
-         ./juno/wav/survey/%(das3ws)s # If source supports real-time operation
+         ./root/juno/wav/survey.json 
+         ./root/juno/wav/survey/%(das2)s    # If source is das v2.2 compatable
+         ./root/juno/wav/survey/%(das3)s  
+         ./root/juno/wav/survey/%(das3ws)s # If real-time operations supported
 
       Other source definitions files may be created for compatability with
       other APIs, depending on the server configuration.
 
-   2. Process a JSON template for the dataset that does not define a local
-      ID and install it for use by the server:
+   2. Process a JSON template for the dataset that does not define a local ID
+      and install it for use by the server:
 
          das_srv_sdef -i -l Voyager/1/PWS/Waveform waveform.json
 
@@ -247,14 +263,11 @@ EXAMPLES:
 
       In the paths above, $SERVER_URL is defined in das2server.conf.
 
-   3. Import all DSDFs for a server in one command using the file path
-      as the Local ID:
+   3. Import all DSDFs for a server in one command using relative file paths to
+      define the Local ID:
 
          ROOT=/var/www/das2srv/datasets
          das_srv_sdef -d $ROOT $(find $ROOT -name "*.dsdf")
-
-      Note: To get the directory comments, you'll have to run the 
-      companion program das_srv_cdef.
 
 SEE ALSO:
    The dsdf format is defined by das2 ICD at DOI: 10.5281/zenodo.3588534
@@ -262,7 +275,7 @@ SEE ALSO:
    The json template format is yet to be codified, see examples distributed
    with das2py-server.
 
-"""%{'das2':g_sStdDas2, 'das3':g_sStdDas3, 'das3ws':g_sStdRt, 'conf':g_sConfPath})
+"""%dRep)
 
 # ########################################################################## #
 def main(argv):
@@ -275,6 +288,8 @@ def main(argv):
 	psr.add_option(
 		'-i', '--install', action="store_true", dest="bInstall", default=False
 	)
+	sDefRoot = '.'
+	psr.add_option('-o', '--out-dir', dest="sRoot", default=sDefRoot)
 	psr.add_option(
 		'-W', '--no-web-sock', action="store_false", dest='bSocSrc', default=True
 	)
@@ -284,12 +299,8 @@ def main(argv):
 	psr.add_option(
 		'', '--no-cat', action="store_false", dest="bNewCat", default=True
 	)
-	psr.add_option(
-		'-l','--local-id', dest="sLocalId", default=None
-	)
-	psr.add_option(
-		'-d','--dir-to-id', dest="sLocalRoot", default=None
-	)
+	psr.add_option('-l','--local-id', dest="sLocalId", default=None)
+	psr.add_option('-d','--dir-to-id', dest="sLocalRoot", default=None)
 
 	(opts,lPaths) = psr.parse_args()
 
@@ -339,8 +350,15 @@ def main(argv):
 
 	lLocalSrcIds = [] # Save list of source IDs for second pass work
 
-	sRoot = '.'
-	if opts.bInstall: sRoot = dConf['DATASRC_ROOT']
+	sRoot = opts.sRoot
+	if opts.bInstall: 
+		if sRoot != sDefRoot:
+			perr(
+				"The install option (-i) and output directory option (-o) "+\
+				"conflict.  Use -h for help."
+			)
+			return 21
+		sRoot = dConf['DATASRC_ROOT']
 
 	for sPath in lPaths:
 
@@ -428,7 +446,7 @@ def main(argv):
 			lOutput.append(dPaths['set'])
 			U.catalog.makeCollection(dConf, sLocalId, lOutput, lOutput[-1])
 	
-			perr("Output: %s"%("\n        ".join(lOutput)))
+			perr("Source Def: %s"%("\n            ".join(lOutput)))
 	
 		except U.errors.ServerError as e:
 			perr('%s'%fLog.getvalue())
@@ -445,6 +463,8 @@ def main(argv):
 	for sPath in lPaths:
 
 		if bname(sPath) != '_dirinfo_.dsdf': continue
+
+		perr("Input:  %s %s"%(opts.sConfig, sPath))
 
 		# If sLocalId defined, use it.  Otherwise get it from the source
 		if not opts.sLocalId:
@@ -476,13 +496,13 @@ def main(argv):
 		lUpdates = U.catalog.updateFromSrc(dConf, sRoot, sLocalId)
 		if not lUpdates:
 			return 7
-		perr("Update: %s"%("\n        ".join(lUpdates)))
+		perr("Node Update: %s"%("\n             ".join(lUpdates)))
 
 	# Recreate the summary listings
 	lWrote = U.catalog.updateLists(dConf, sRoot)
 	if not lWrote:
 		return 8
-	perr("Output: %s"%("\n        ".join(lUpdates)))
+	perr("List Update: %s"%("\n             ".join(lWrote)))
 		
 	return 0
 
