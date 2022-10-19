@@ -13,15 +13,14 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	interface
 	"""
 	
-	#TODO: Handle directory listings as long as they are not in the root
-	# of resource
-	
-	sResource = sPathInfo.replace('/static/', '')
-		
-	sFile = pjoin(dConf['RESOURCE_PATH'], sResource)
-	
-	#fLog.write("\nResource Handler\n   Sending: %s"%sFile)
-	
+	# Get files from either the static or catalog areas
+	if sPathInfo.startswith('/static/'):
+		sResource = sPathInfo.replace('/static/', '')
+		sFile = pjoin(dConf['RESOURCE_PATH'], sResource)
+	elif sPathInfo.startswith('/source/'):
+		sResource = sPathInfo.replace('/source/', 'root/')
+		sFile = pjoin(dConf['DATASRC_ROOT'], sResource)
+
 	if not os.path.isfile(sFile):
 		U.webio.serverError(fLog, u"Resource '%s' doesn't exist"%sResource)
 		return 17
@@ -29,21 +28,21 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	# Handle our own mime types...
 	tRet = U.webio.getMimeByExt(sFile)
 	
+	U.webio.pout("Expires: %s\r\n"%U.webio.httpNextYear())
+
 	if tRet != None:
 		#fLog.write("tuple->'%s'"%str(tRet))
 		(sType, sContentDis, sFileExt) = tRet
 		
-		sOutFile = bname(sFile)
-		
+		sOutFile = bname(sFile)	
 		U.webio.pout("Content-Type: %s\r\n"%sType)
 		U.webio.pout('Content-Disposition: %s; filename="%s"\r\n\r\n'%(sContentDis, sOutFile))
-		
 	else:
 		(sType, sEncode) = mimetypes.guess_type(sFile)
 		if sType == None:
 			U.webio.serverError(fLog, u"Unrecognized mime type for %s"%sFile)
 			return 17
-		
+
 		U.webio.pout("Content-Type: %s\r\n\r\n"%sType)
 		
 	fIn = open(sFile, 'rb')

@@ -44,25 +44,24 @@ _g_BrowserAgent = ['firefox','explorer','chrome','safari','edge']
 #   |
 #   |- hapi/  - Heliophysics API subsystem (if enabled)
 #   |
-#   |- static/ - An html directory listing
+#   |- static/ - A blind directory (no output)
 #   |    |
 #   |    |- static files such as logos, etc
 #   |
-#   |- source/ - An html directory listing
+#   |- source/ - An html directory listing, useful for wget
 #   |    |
-#   |    |- info.html - A fancy sub page for humans, overrideable
-#   |    |
-#   |    |- juno/ - An html directory listing
+#   |    |- juno.html - A display page for humans
+#   |    |- juno.json - Top-level catalog node for Juno stuff
+#   |    |- juno/ - An html directory listing for wget
 #   |         |
-#   |         |- info.html - A fance sub page for humans,overridable
-#   |         |
-#   |         |- wav/ - An html directory listing with category blurb
+#   |         |- wav.html  - A sub page for fumans
+#   |         |- wav.json  - A sub level catalog node for Waves stuff
+#   |         |- wav/ - An html directory listing for wget
 #   |             |
-#   |             |- info.html - A fance sub page for humans,overridable
-#   |             |
-#   |             |- survey/ - An html directory with listing an blurb
+#   |             |- survey.html - A query from for survey stuff
+#   |             |- survey.json - A sub catalog node for Survey data sources
+#   |             |- survey/ - An html directory listing, useful for wget
 #   |                  |
-#   |                  |- form.html - a web form for humans to get data
 #   |                  |- das2.d2t - the old dsdf as das2 stream trick
 #   |                  |- das3.json - a fed cat HttpStreamSource object
 #   |                  |- voservice.xml 
@@ -496,21 +495,17 @@ def main(form):
 		elif sPathInfo.startswith('/verify'):
 			sReqType = 'HANDLE_VERIFY'
 
-		elif sPathInfo.startswith('/source'):
+		elif sPathInfo.startswith('/source/'):
 			if sPathInfo.endswith('/') or sPathInfo.endswith('index.html'):
 				sReqType = 'HANDLE_DIR'
-			elif sPathInfo.endswith('info.html'):
-				sReqType = 'HANDLE_INFO'
-			elif sPathInfo.endswith('form.html'):
-				sReqType = 'HANDLE_FORM'  
-			elif sPathInfo.endswith('das2-api.d2t'):
-				sReqType = 'HANDLE_DSDF'
-			elif sPathInfo.endswith('das3-api.json'):
-				sReqType = 'HANDLE_SOURCE'
-			elif sPathInfo.endswith('vo-api.xml'):
+			elif sPathInfo.endswith('.html'):
+				sReqType = 'HANDLE_FORM'
+			elif sPathInfo.endswith('vodata'):
 				sReqType = 'HANDLE_VOSERVICE'
 			elif sPathInfo.endswith('data'):
 				sReqType = 'HANDLE_DATA'
+			else:
+				sReqType = 'HANDLE_RESOURCE'
 
 		#elif sPathInfo.startswith('/coverage'):
 		#	sReqType = 'HANDLE_COVERAGE'

@@ -102,13 +102,7 @@ def getWebTargets(dConf, fLog, sRelPath):
 	for sItem in lItems:
 
 		dItem = dCat['catalog'][sItem]
-
-		if dItem['type'] == 'SourceSet':
-			sItemUrl = "%s/source%s%s/form.html"%(sScriptUrl, sRelPath, sItem)
-		elif dItem['type'] == 'Catalog':
-			sItemUrl = "%s/source%s%s/info.html"%(sScriptUrl, sRelPath, sItem)
-		else:
-			continue
+		sItemUrl = "%s/source%s%s.html"%(sScriptUrl, sRelPath, sItem)
 	
 		lOut.append( (dItem['label'], "%s%s"%(sRelPath, sItem), sItemUrl) )
 	

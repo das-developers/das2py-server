@@ -101,7 +101,7 @@ via an HTTP GET query protocol.</p>
 <img src="%(script)s/static/flowdiagram.svg"
   alt="das2-pyserver data flow diagram" class="flowdiagram"
 />
-<center><i><span style="font-size: 80%%">Das Stream Processing</span></i></center>
+<center><i><span style="font-size: 80%%">Stream Processing</span></i></center>
 </div>
 
 <p>This server runs full-resolution data stream generators, processes the
@@ -109,7 +109,7 @@ flow, and optionally caches the results.  Almost all processing steps are
 optional.
 </p>
 
-<h4><span style="color: #993300"><i>This is an <b>alpha version</b> of the server and not all
+<h4><span style="color: #993300"><i>This is an <b>beta version</b> of the server and not all
 functionality is complete.</i></span></h4>
 
 <h2>Clients</h2>
@@ -167,23 +167,25 @@ or <a href="%(script)s/sources.csv">sources.csv</a> is sufficent.</p>
   |
   |- <a href="%(script)s/source/">source/</a> - root directory for all data sources 
   |    |
-  |    |- <i>category</i>/ - A top level category directory
+  |    |- <i>category</i>.html - A top level category user interface
+  |    |- <i>category</i>.json - A top level category catalog
+  |    |- <i>category</i>/     - A top level category contents directory
   |         |         <i>(typically named after missions)</i>
   |         |
-  |         |- info.html - Describes this category
-  |         |
-  |         |- <i>sub-category</i>/ - A sub-category directory
+  |         |- <i>sub-category</i>.html - A sub-category user interface
+  |         |- <i>sub-category</i>.json - A sub-category catalog
+  |         |- <i>sub-category</i>/     - A sub-category contents directory
   |             |              <i>(typically named after instruments)</i>
   |             |
-  |             |- info.html - Describes this sub-category
-  |             |
-  |             |- <i>data-source</i>/ - A data source directory
+  |             |- <i>source-set</i>.html - A data source set user interface
+  |             |- <i>source-set</i>.json - A data source set catalog
+  |             |- <i>source-set</i>/     - A data source set directory
   |                  |
-  |                  |- das2.d2t  - A das2 source definition (if source is compatable with das2)
-  |                  |- form.html - A web form for querying the stream source
-  |                  |- das3.json  - An HttpStreamSrc definiton
-  |                  |- voservice.xml - (optional) A VO <a href="https://www.ivoa.net/documents/DataLink/20150617/index.html">DataLink</a> definition
-  |                  |- das3ws.json - (optional) a real-time interface definition
+  |                  |- das2.d2t    - A das2 data source definition (if das2 query compatable)
+  |                  |- das3.json   - An general HttpStreamSrc definiton
+  |                  |- form.html   - A web form for querying the HttpStreamSrc
+  |                  |- vo.xml      - An IVOA <a href="https://www.ivoa.net/documents/DataLink/20150617/index.html">DataLink</a> definition (optional)
+  |                  |- das3rt.json - A real-time source definition (if real-time capable)
   |                  |
   |                  |- data - form action handler (hidden)
   |

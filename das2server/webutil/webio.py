@@ -66,6 +66,37 @@ def getUrl():
 	
 	return "%s%s"%(getScriptUrl(), sUri)
 
+def httpNextYear():
+	"""Return a string representation of a date one year from now according to
+	RFC 1123 (HTTP/1.1).
+
+	This is used to set expires headers for long term items that shouldn't
+	be re-downloaded over and over even though they are sent via script
+	"""
+	import calendar
+	import datetime
+
+	dtNow = datetime.datetime.utcnow()
+	dateNow = dtNow.date()
+
+	delta = datetime.timedelta(
+		days=366 if (
+			(dtNow.month >= 3 and calendar.isleap(dtNow.year+1)) or
+			(dtNow.month < 3 and calendar.isleap(dtNow.year))
+		) else 365
+	)
+
+	dt = dtNow + delta
+
+	weekday = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][dt.weekday()]
+	month = [
+		"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+	][dt.month - 1]
+
+	return "%s, %02d %s %04d %02d:%02d:%02d GMT" % (
+		weekday, dt.day, month, dt.year, dt.hour, dt.minute, dt.second
+	)
+
 ##############################################################################
 # mime type globals 
 
@@ -187,7 +218,7 @@ def getMimeByExt(sPath):
 		
 	if sExt == 'csv':
 		return g_dMime[isBrowser()]['text']['csv']
-	
+
 	return None
 
 ##############################################################################
