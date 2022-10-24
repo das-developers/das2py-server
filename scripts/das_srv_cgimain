@@ -117,9 +117,6 @@ g_dDefHandlers = {
 	# Directory info pages leading to a data source page
 	'HANDLE_INFO':     'das2server.handlers.info',
 
-	# ?server=dsdf&dsdf=/Juno/WAV/Survey  /source/juno/wav/survey/dsdf.d2t
-	'HANDLE_DSDF':     'das2server.handlers.src_d2t',
-	
 	# /source/juno/wav/survey.json
 	'HANDLE_SOURCE':  'das2server.handlers.src_fedcat',
 
@@ -423,7 +420,10 @@ def main(form):
 			sReqType = 'HANDLE_LIST'
 			
 		elif sServer == 'dsdf':
-			sReqType = 'HANDLE_DSDF'
+			# For this one just re-write as a file request
+			sLocalId = form.getfirst('dataset', 'nosuchset')
+			sPathInfo = '/source/%s/das2.d2t'%(sLocalId.lower())
+			sReqType = 'HANDLE_RESOURCE'
 						
 		elif sServer == 'logo':
 			sReqType = 'HANDLE_LOGO'

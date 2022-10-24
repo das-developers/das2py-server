@@ -106,7 +106,7 @@ def getWebTargets(dConf, fLog, sRelPath):
 	
 		lOut.append( (dItem['label'], "%s%s"%(sRelPath, sItem), sItemUrl) )
 	
-	fLog.write("TARGETS: %s"%str(lOut))
+	#fLog.write("TARGETS: %s"%str(lOut))
 	return lOut
 
 # ########################################################################## #
@@ -137,7 +137,7 @@ def header(dConf, fLog, sTitle=None):
 <div class="header">
 	<div class="hdr_left">
 		<a href="%(script)s/">
-		<img src="%(script)s/static/logo.png" alt="%(SERVER_ID)s" width="70" height="70" >
+		<img src="%(script)s/static/logo.png" alt="%(SERVER_ID)s" >
 		</a>
 	</div> 
 	<div class="hdr_center">
@@ -162,11 +162,17 @@ def allowViewLog(dConf, fLog, sIP):
 
 # ########################################################################## #
 
-def sidenav(dConf, fLog):
+def sidenav(dConf, fLog, bAddExtra=False):
 	"""Write a div with CSS class 'nav' that includes the upper two levels
 	of the data source hierarchy.
 
-	This div should be written inside your "main" div, before the certral 
+	Args:
+		dConf - The server configuration file
+		fLog  - A file-like object
+		bAddExtra - If true extra logo's etc. are added.  This is useful when
+		   a page header is not output.
+
+	This div should be written inside your "main" div, before the central 
 	'article' div is written
 	"""
 	
@@ -183,8 +189,35 @@ def sidenav(dConf, fLog):
 		if len(dConf['VIEW_LOG_URL']) > 0:
 			sViewLogNav = '<a href="%s">Activity Log</a>'%dConf['VIEW_LOG_URL']
 
-	pout('<div class="nav"><i>Data Sources</i><hr>')
-	pout('  <ul>')
+	pout('<div class="nav">')
+
+	if bAddExtra:
+		if 'SITE_TITLE' in dConf:
+			sSite = dConf['SITE_TITLE']
+		else:
+			sSite = "Set SITE_TITLE in %s"%dConf['__file__']
+
+		if 'SITE_URL' in dConf:
+			sSite = '<a href="%s">%s</a>'%(dConf['SITE_URL'], sSite)
+
+		if 'SERVER_NAME' in dConf:
+			sServer = dConf['SERVER_NAME']
+		elif 'SERVER_ID' in dConf:
+			sServer = dConf['SERVER_ID'].upper()
+		else:
+			sServer = "{Set SERVER_NAME in %s}"%dConf['__file__']
+			
+		pout('''<b>%s</b></br>
+<a href="%s/">
+<img src="%s/static/logo.png" alt="%s" height="64" ></a>
+<br>
+'''%(sSite, sScriptUrl, sScriptUrl, sServer))
+
+		#pout('<hr>\n<i>%s</i>'%sServer)
+	#else:
+	pout('<hr>\n<i>Data Sources</i>')
+
+	pout('<ul>')
 	
 	lTop = getWebTargets(dConf, fLog, '/')
 	if lTop != None:
@@ -204,26 +237,30 @@ def sidenav(dConf, fLog):
 	pout('''%s<br><br>
   %s<br><br>
   <a href="%s/peers.xml">Peer Servers</a>
-</div>'''%(sValidationNav, sViewLogNav, sScriptUrl))
+'''%(sValidationNav, sViewLogNav, sScriptUrl))
+
+	# If no top header, then add das2-logo below with info link
+	if bAddExtra:
+		pout('''<hr>
+<a href="http://das2.org">
+<img src="%s/static/das2logo_rv.png" alt="das2" width="65" height="65">
+</a>'''%sScriptUrl)
+
+	pout('</div>')
 
 # ########################################################################## #
 
-def navheader(dConf, fLog, dsdf):
+def navheader(dConf, fLog, sPathInfo):
 	"""Write an unordered list of the current source path as CSS style 'navlist'"""
 	
 	sScriptUrl = webio.getScriptUrl()
 	
-	sPathInfo = os.getenv("PATH_INFO")
-
-	sDataSet = sPathInfo.replace('/source/', '')
-
+	sDataSet = sPathInfo.replace('/source/', '').replace('.html','')
+	
 	# Split the path up into parts that retain the trailing '/'
-	lParts = [ '%s/'%s for s in sDataSet.split('/')]
+	lParts = sDataSet.split('/')
 	
 	if lParts[-1] == '/':
-		lParts[-2] = "%s/"%(lParts[-2])
-		lParts = lParts[:-1]
-	else:
 		lParts = lParts[:-1]
 	
 	if len(lParts) < 1:
@@ -233,17 +270,26 @@ def navheader(dConf, fLog, dsdf):
 	#       from there.
 	
 	pout('  <ul id="navlist">')
-	pout('    <li> <a href="%s">%s</a>'%(sScriptUrl, dConf['SERVER_ID']))
+	if 'SERVER_NAME' in dConf:
+		sTmp = dConf['SERVER_NAME']
+		sTmp = sTmp[0].upper() + sTmp[1:]
+		pout('    <li> <a href="%s">%s</a>'%(sScriptUrl, sTmp))
+	else:
+		pout('    <li> <a href="%s">This Server</a>'%sScriptUrl)
 	
+	nParts = len(lParts)
 	for i in range(0, len(lParts)):
 		sPart = lParts[i]
-		sName = 	lParts[i].rstrip('/').replace('_',' ')
+		sName = 	lParts[i].replace('_',' ')
+		sName = sName[0].upper() + sName[1:]
 		
-		sUrl = '%s/source/%s'%(sScriptUrl, ''.join(lParts[:i+1]))
-			
-		pout('    <li> &gt <a href="%s">%s</a></li>'%(sUrl, sName))
+		if i < (nParts - 1):
+			sUrl = '%s/source/%s.html'%(sScriptUrl, ''.join(lParts[:i+1]))
+			pout('    <li> &gt; <a href="%s">%s</a></li>'%(sUrl, sName))
+		else:
+			pout('    <li> &gt; &nbsp; <i>%s</i></li>'%sName)
 	
-	pout(' </ul></center>')
+	pout('  </ul>')
 
 
 # ########################################################################## #

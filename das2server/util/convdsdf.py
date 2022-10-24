@@ -4,7 +4,6 @@ things
 
 from os.path import dirname as dname
 from os.path import basename as bname
-from urllib.parse import quote_plus
 from io import StringIO
 
 from . import formats
@@ -24,14 +23,14 @@ g_dStdKeys = {
 	'das2':{
 		"read.time.min":"start_time",
 		"read.time.max":"stop_time",
-		'read.time.intr':'interval',
+		'read.time.inter':'interval',
 		'bin.time.max':'resolution',
 		'read.opts':'params'
 	},
 	'hapi':{
 		'read.time.min':'time.min',
 		'read.time.max':'time.max',
-		'read.time.intr':None,
+		'read.time.inter':None,
 		'bin.time.max':None,
 		'read.opts':'parameters'
 	}
@@ -183,9 +182,9 @@ def loadDsdf(dConf, sName, sPath, fLog):
 		dDsdf['__name__'] = bname(sName)
 
 		# The case sensitive path portion that leads to this dsdf, without ".dsdf"
-		dDsdf['__caseid__'] = sPath.replace(dConf['DATASRC_ROOT'],'')
-		dDsdf['__caseid__'] = dDsdf['__caseid__'].rstrip('.dsdf')
-		dDsdf['__caseid__'] = dDsdf['__caseid__'].strip('/')
+		#dDsdf['__caseid__'] = sPath.replace(dConf['DATASRC_ROOT'],'')
+		#dDsdf['__caseid__'] = dDsdf['__caseid__'].rstrip('.dsdf')
+		#dDsdf['__caseid__'] = dDsdf['__caseid__'].strip('/')
 
 		return dDsdf
 
@@ -348,7 +347,7 @@ def _mergeContacts(dOut, dProps, fLog):
 		
 			if dContact not in lOut: lOut.append( dContact )
 
-def _mergeProto(dOut, dConf, dProps, fLog):
+def _mergeProto(dOut, dConf, dProps, fLog, sLocalId):
 	# Drop remote server information.  The catalog will take care of 
 	# remote servers.  No need to encourage fixed URLs
 
@@ -358,7 +357,7 @@ def _mergeProto(dOut, dConf, dProps, fLog):
 	sServer = dConf['SERVER_URL']
 	
 	dProto['convention']	= 'HTTP/1.1'
-	sBaseUrl = "%s/source/%s/data"%(sServer, dProps["__caseid__"].lower())
+	sBaseUrl = "%s/source/%s/data"%(sServer, sLocalId.lower())
 
 	dProto['baseUrls'] = [sBaseUrl]
 
@@ -380,15 +379,15 @@ def _mergeSrcCoordInfo(dOut, dProps, fLog):
 	if 'label' not in dTime: dTime['label']  = 'Time'
 
 	# Use the lowest numbered example for the default range, interval
-	dTime['properties'] = {
+	dTime['props'] = {
 		'min':{'label':'Minimum', sV:None},'max':{'label':'Maximum', sV:None},
 		'units':{'value':'UTC'}
 	}
 		
 	if 'requiresInterval' in dProps:
-		dTime['properties']['intr'] = {sV:None}
+		dTime['props']['inter'] = {'label':'Interval', sV:None}
 	else:
-		dTime['properties']['res'] = {sV:None, "units":"s"}
+		dTime['props']['res'] = {'label':'Resolution', sV:None, "units":"s"}
 	
 	sNum = None
 	if 'exampleRange' in dProps:
@@ -398,9 +397,9 @@ def _mergeSrcCoordInfo(dOut, dProps, fLog):
 	
 		lTmp = [s.strip() for s in dProps['exampleRange'][sNum].split('|')]
 		lTmp = [s.strip() for s in lTmp[0].split('to')]
-		dTime['properties']['min'][sV] = lTmp[0]		
+		dTime['props']['min'][sV] = lTmp[0]		
 		if len(lTmp) > 1:
-			dTime['properties']['max'][sV] = lTmp[1].replace('UTC','').strip()
+			dTime['props']['max'][sV] = lTmp[1].replace('UTC','').strip()
 	
 	if 'exampleInterval' in dProps:
 		lNums = list(dProps['exampleRange'].keys())
@@ -410,18 +409,18 @@ def _mergeSrcCoordInfo(dOut, dProps, fLog):
 		if 'interval' not in dTime:
 			fLog.write("ERROR: Updating from %s\n"%dOut['path'])
 			
-		dTime['properties']['intr'][sV] = dProps['exampleInterval'][sNum]
+		dTime['props']['inter'][sV] = dProps['exampleInterval'][sNum]
 	else:	
 		# Default to 1/2000th of the range, here's where we need the
 		# das2 module.
-		if dTime['properties']['min'][sV] and dTime['properties']['max'][sV]:
-			dtBeg = das2.DasTime(dTime['properties']['min'][sV])
-			dtEnd = das2.DasTime(dTime['properties']['max'][sV])
-			dTime['properties']['res'][sV] = (dtEnd - dtBeg) / 2000.0
+		if dTime['props']['min'][sV] and dTime['props']['max'][sV]:
+			dtBeg = das2.DasTime(dTime['props']['min'][sV])
+			dtEnd = das2.DasTime(dTime['props']['max'][sV])
+			dTime['props']['res'][sV] = (dtEnd - dtBeg) / 2000.0
 				
 	# Set up the alteration rules
-	dTime['properties']['min']['set'] = {'param':sBegKey, 'required':True}
-	dTime['properties']['max']['set'] = {'param':sEndKey, 'required':True}
+	dTime['props']['min']['set'] = {'param':sBegKey, 'required':True}
+	dTime['props']['max']['set'] = {'param':sEndKey, 'required':True}
 	
 	if 'validRange' in dProps:
 		lTimeRng = [ s.strip() for s in dProps['validRange']['00'].split('to') ]
@@ -429,9 +428,9 @@ def _mergeSrcCoordInfo(dOut, dProps, fLog):
 			dTime['validRange'] = lTimeRng
 	
 	if 'interval' in dTime:
-		dTime['properties']['intr']['set'] = {'param':sIntKey, 'required':True}
+		dTime['props']['inter']['set'] = {'param':sIntKey, 'required':True}
 	else:
-		dTime['properties']['res']['set'] = {'param':sResKey, 'required':False}
+		dTime['props']['res']['set'] = {'param':sResKey, 'required':False}
 
 
 	if 'coord' in dProps:
@@ -443,7 +442,7 @@ def _mergeSrcCoordInfo(dOut, dProps, fLog):
 				dVar = _getDict(dCoords, lItem[0])
 				dVar['label'] = lItem[0][0].upper() + lItem[0][1:]
 				if len(lItem) > 1: dVar['title'] = lItem[1]
-				if len(lItem) > 2: dVar['properties'] = {'units':{'value':lItem[2]}}
+				if len(lItem) > 2: dVar['props'] = {'units':{'value':lItem[2]}}
 	
 
 def _mergeSrcDataInfo(dOut, dProps, fLog):
@@ -466,7 +465,7 @@ def _mergeSrcDataInfo(dOut, dProps, fLog):
 			dVar = _getDict(dData, lItem[0])
 			dVar['label'] = lItem[0][0].upper() + lItem[0][1:]
 			if len(lItem) > 1: dVar['title'] = lItem[1]
-			if len(lItem) > 2: dVar['properties'] = {'units': {'value':lItem[2]}}
+			if len(lItem) > 2: dVar['props'] = {'units': {'value':lItem[2]}}
 		
 	if 'data' in dProps:
 		for sNum in dProps['data']:
@@ -475,7 +474,7 @@ def _mergeSrcDataInfo(dOut, dProps, fLog):
 			dVar = _getDict(dData, lItem[0])
 			dVar['label'] = lItem[0][0].upper() + lItem[0][1:]
 			if len(lItem) > 1: dVar['title'] = lItem[1]
-			if len(lItem) > 2: dVar['properties'] = {'units': {'value':lItem[2]}}
+			if len(lItem) > 2: dVar['props'] = {'units': {'value':lItem[2]}}
 
 def _mergeDas2Params(dOut, dProps, fLog):
 	"""Merge in params.  This is a das 2.2 thing.  Any option that is needs
@@ -495,7 +494,7 @@ def _mergeDas2Params(dOut, dProps, fLog):
 	  
 	Then set this up as a flagset, otherwise use a generic string option.
 	
-	Though the final file will likely be hand edited make an Reader Options
+	Though the final file will likely be hand edited, make a Reader Options
 	entry as a courtesy.
 	"""
 
@@ -504,17 +503,14 @@ def _mergeDas2Params(dOut, dProps, fLog):
 	dProto = _getDict(dOut, 'protocol')
 	dGet = dProto['httpParams']
 	
+	# If we have more then one param statement, make a flagset
 	bAnyParams = False
 	bFlagSet = False
 	if 'param' in dProps:
 		bAnyParams = True
-		bFlagSet = True
-		for sNum in dProps['param']:
-			lParam = [s.strip() for s in dProps['param'][sNum].split('|') ]
-			if len(lParam) != 2:
-				bFlagSet = False
-				break
-	
+		if len(dProps['param']) > 1:
+			bFlagSet = True
+		
 	# Some readers have no options at all
 	if not bAnyParams: return
 	
@@ -534,35 +530,49 @@ def _mergeDas2Params(dOut, dProps, fLog):
 		for sNum in lNums:
 			lParam = [s.strip() for s in dProps['param'][sNum].split('|') ]
 			sFlag = lParam[0].lower()
-			if lParam[0].lower() == 'integer':
-				dFlags[sFlag] = {'type':'integer', 'title':lParam[1] }
-			elif lParam[0].lower() == 'real':
-				dFlags[sFlag] = {'type':'real', 'title':lParam[1] }
+			dFlags[sFlag] = {}
+
+			if len(lParam) > 1:
+				dFlags[sFlag]['title'] = lParam[1]
+
+			if len(lParam) > 2:
+				sType = lParam[2]
+				if sType == 'int': sType = 'integer'
+				dFlags[sFlag]['type'] = sType
 			else:
-				dFlags[sFlag] = {'value':lParam[0], 'title':lParam[1] }
+				dFlags[sFlag]['value'] = lParam[0]
 	
 	else:
 		# For readers that don't have FLAGSET make a description that preserves
 		# new lines
-		lLines = [ dProps['param'][sNum] for sNum in lNums]
+		lParam = [s.strip() for s in dProps['param'][lNums[0]].split('|') ]
+		sLabel = lParam[0].lower()
 
 		dGet[sOptKey] = {
-			'type':'string', 
+			'type':'string',
 			'required':False, 
 			'title':'Optional reader arguments',
-			'description' : '\n'.join(lLines), 		
-			'name':'Reader Parameters'
+			'label':sLabel
 		}
+		if len(lParam) > 1:
+			dGet[sOptKey]['title'] = lParam[1]
+		if len(lParam) > 2:
+			sType = lParam[2]
+			if sType == 'int': sType = 'integer'
+			dGet[sOptKey]['type'] = sType
 	
 	
 	dIface = _getDict(dOut, 'interface')
 	dOpts = _getDict(dIface, 'options')
+	dOpts['label'] = 'Options'
+	dOpts['title'] = 'Optional properties for this data source'
+	dOptProps = _getDict(dOpts, 'props')
 	
 	# If the params element is handled as a string then just output a single
 	# text option.
 	
 	if dGet[sOptKey]['type'] == 'string':
-		dOpt = _getDict(dOpts, 'extra')
+		dOpt = _getDict(dOptProps, 'extra')
 		dOpt['value'] = ''
 		
 		if 'exampleParams' in dProps:
@@ -584,7 +594,7 @@ def _mergeDas2Params(dOut, dProps, fLog):
 		for sFlag in dFlags:
 			dFlag = dFlags[sFlag]
 			sOptName = sFlag.strip('-').strip().lower()
-			dOpt = _getDict(dOpts, sOptName)
+			dOpt = _getDict(dOptProps, sOptName)
 			dOpt['title'] = dFlag['title']
 			
 			if ('type' in dFlag) and (dFlag['type'] in ('real','integer')):
@@ -675,17 +685,17 @@ def _mergeExamples(dOut, dProps, sBaseUrl, fLog):
 			
 		sBeg = lTmp[0]
 		sEnd = lTmp[1].replace('UTC','').strip()
-		dQuery["coord.time.max"] = sBeg
-		dQuery["coord.time.min"] = sEnd
+		dQuery["coords/time/props/max"] = sBeg
+		dQuery["coords/time/props/min"] = sEnd
 			
 		# See if we need resolution or interval
 		if sNum in lInterval:
-			dQuery['coord.time.res'] = dProps['exampleInterval'][sNum]
+			dQuery['coords/time/props/inter'] = dProps['exampleInterval'][sNum]
 		else:
 			# Default to 1/2000th of the range, here's where we need the das2 module.
 			dtBeg = das2.DasTime(sBeg)
 			dtEnd = das2.DasTime(sEnd)
-			dQuery["coord.time.res"] = (dtEnd - dtBeg) / 2000.0
+			dQuery["coords/time/props/res"] = (dtEnd - dtBeg) / 2000.0
 		
 		# By default flags are coverted to individual options by value.  This
 		# means there is a translation from:
@@ -712,18 +722,12 @@ def _mergeExamples(dOut, dProps, sBaseUrl, fLog):
 				# Assume no 'param_' items in the DSDF so all options must just
 				# be crammed into a string.  Same thing is true if the interface
 				# parser just gave up on made an 'extra' item.
-				dQuery['options.extra'] = sOpts
+				dQuery['options/props/extra'] = sOpts
 			else:
 				# Okay, param_00 and friends were defined, so set each one
 				lFlags = sOpts.split()
 				for sFlag in lFlags:
-					dQuery['option.%s'%sFlag.lower()] = True
-				
-		
-		lQuery = [
-			"%s=%s"%(sKey, quote_plus(str(dQuery[sKey])))
-			for sKey in dQuery
-		]
+					dQuery['options/%s'%sFlag.lower()] = True
 
 		#if sBaseUrl[-1] in ('?','&'): sSep = ""
 		#elif '?' in sBaseUrl: sSep = '&'
@@ -778,7 +782,7 @@ def _mergeFormat(dConf, dOut, dProps, fLog):
 
 # ########################################################################## #
 
-def makeGetSrc(fLog, dConf, sPath):
+def makeGetSrc(fLog, dConf, sPath, sLocalId = None):
 	"""Create an HttpStreamSrc object from a DSDF file and the given server
 	configuration information.
 
@@ -817,7 +821,13 @@ def makeGetSrc(fLog, dConf, sPath):
 	dOut['version'] = "0.7"
 
 	# potentially override the base url and set the protocol convention
-	sBaseUrl = _mergeProto(dOut, dConf, dDsdf, fLog)
+	if not sLocalId:
+		if ('localId' in dProps) and ('00' in dProps['localId']):
+			sLocalId == dProps['localId']['00']
+		else:
+			raise errors.ServerError("localId not supplied and not in %s"%sPath)
+
+	sBaseUrl = _mergeProto(dOut, dConf, dDsdf, fLog, sLocalId)
 	
 	# make an ID for the datasource if requested
 	#if sIdRoot:
@@ -903,7 +913,7 @@ def makeGetSrc(fLog, dConf, sPath):
 
 # ########################################################################## #
 
-def _mergeWsProto(dOut, dConf, dProps, fLog):
+def _mergeWsProto(dOut, dConf, dProps, fLog, sLocalId):
 	# Drop remote server information.  The catalog will take care of 
 	# remote servers.  No need to encourage fixed URLs
 
@@ -912,7 +922,7 @@ def _mergeWsProto(dOut, dConf, dProps, fLog):
 	sServer = dConf['SERVER_URL']
 	
 	dProto['subprotocols'] = ['forward-stream-v1.das2.org']
-	sBaseUrl = "%s/%s/data"%(dConf['WEBSOCKET_URI'], dProps["__caseid__"].lower())
+	sBaseUrl = "%s/%s/data"%(dConf['WEBSOCKET_URI'], sLocalId.lower())
 
 	dProto['baseUrls'] = [sBaseUrl]
 
@@ -986,7 +996,7 @@ def getDescription(fLog, dConf, sPath):
 		return None
 
 # ########################################################################## #
-def makeSockSrc(fLog, dConf, sPath):
+def makeSockSrc(fLog, dConf, sPath, sLocalId=None):
 	"""Create an WebSockSrc object from a DSDF file and the given server
 	configuration information.  
 
@@ -1038,7 +1048,13 @@ def makeSockSrc(fLog, dConf, sPath):
 	dOut['version'] = "0.1"
 
 	# potentially override the base url and set the protocol convention
-	sBaseUrl = _mergeWsProto(dOut, dConf, dDsdf, fLog)
+	if not sLocalId:
+		if ('localId' in dProps) and ('00' in dProps['localId']):
+			sLocalId == dProps['localId']['00']
+		else:
+			raise errors.ServerError("localId not supplied and not in %s"%sPath)
+					
+	sBaseUrl = _mergeWsProto(dOut, dConf, dDsdf, fLog, sLocalId)
 	
 	# make an ID for the datasource if requested
 	#if sIdRoot:

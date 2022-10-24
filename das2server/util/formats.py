@@ -3,7 +3,7 @@
 # This is just a convetion used by this server, federated catalog items
 # advertise thier keys in an API file.
 g_tKeyConvention = (
-	"read.time.min", "read.time.max", "bin.time.max", "read.time.intr",
+	"read.time.min", "read.time.max", "bin.time.max", "read.time.inter",
 	"read.opts"
 )
 
@@ -197,17 +197,18 @@ def getFormatSelection(dConf, lRdrOut, bWebSockConn=False):
 	dTextOpts = {
 		"fracSecs":{
 			"label":  "Factional Seconds",
-			"title": "How many digits to include for fractional seconds, minimum is 0",
+			"title": "Number of fractional seconds digits in text streams, (minimum 0)",
 			"value": 3,
 			"set":{"param":g_sParamSecFrac}
 		},
 		"sigDigits":{
 			"label":"Significant Digits",
-			"title":"Number of significant digits for general values (not time strings)",
+			"title":"General significant digits for text stream values (minimum 2)",
 			"value":5,					
 			"set":{"param":g_sParamSigDigit}
 		}
 	}
+	lTextOptOrder = ['sigDigits','fracSecs']
 
 	# Stream formats.....
 
@@ -222,7 +223,7 @@ def getFormatSelection(dConf, lRdrOut, bWebSockConn=False):
 			"label":"QStream",
 			"title":"Native Autoplot data format",
 			"mimeTypes":[getMime('qstream', None, 'binary')[0]],
-			'properties':dSettings
+			'props':dSettings
 		}
 
 		if 'QDS_TO_UTF8' in dConf:
@@ -241,12 +242,13 @@ def getFormatSelection(dConf, lRdrOut, bWebSockConn=False):
 	
 	elif sRdr == 'das':
 		lMimes = []
+		lPropOrder = ['enabled']
 		dFmts['das'] = {
 			"label":"Das Stream",
 			"title":"Streaming format for plots",
 			"mimeTypes":lMimes,
-			'properties':{
-				"enabled":{"radioGroup":"format", "value":True, "set":{
+			'props':{
+				"enabled":{"xorGroup":"format", "value":True, "set":{
 					"value":True, "param":"format.type", 'pval':'das'
 				}}
 			}
@@ -277,13 +279,14 @@ def getFormatSelection(dConf, lRdrOut, bWebSockConn=False):
 
 		dFmts['das']['mimeTypes'] = lMimes
 
-		dFmts['das']['properties']['version'] = { "label":"Stream Version", "value": sVer}
+		dFmts['das']['props']['version'] = { "label":"Stream Version", "value": sVer}
 
 		if len(lVers) > 1:
 			lVers = [ {"value":s} for s in lVers ]
-			dFmts['das']['properties']['version']['set'] = { 
+			dFmts['das']['props']['version']['set'] = { 
 				"param":"format.version", "enum":lVers 
 			}
+			lPropOrder.append('version')
 
 		# Can always convert das streams to text, sometimes to XML!
 		
@@ -294,26 +297,33 @@ def getFormatSelection(dConf, lRdrOut, bWebSockConn=False):
 		#	lSerials.append( {"value":"xml"} )
 		
 		if sVer == '2.2':
-			dFmts['das']['properties']['serial'] = {
+			dFmts['das']['props']['serial'] = {
 				"label":"Serialization",
 				"value":"binary",
-			"set":{"param":"format.serial", "enum":lSerials }
-			}	
+				"set":{"param":"format.serial", "enum":lSerials }
+			}
+			lPropOrder.append('serial')
 		
 			# Add in general purpose text formating information:
 			for sOpt in dTextOpts:
-				dFmts['das']['properties'][sOpt] = dTextOpts[sOpt]
+				dFmts['das']['props'][sOpt] = dTextOpts[sOpt]
+			lPropOrder += lTextOptOrder
+
+		if len(lPropOrder) > 1:
+			dFmts['das']['order'] = lPropOrder
 
 
 	# Generic translation formats, depending on installed converters
 	if ('D2S_CSV_CONVERTER' in dConf) and (sRdr == 'das') and (sVer != '3.0'):
+		lPropOrder = ['enabled']
+		lPropOrder += lTextOptOrder
 		dFmts['csv'] = {
 			"label":"Delimited Text",
 			"title":"Delimited Text (CSV, TSV, etc.)",
 			"mimeTypes":["text/csv"],
 			#"extension":".csv",
-			'properties':{
-				"enabled":{"radioGroup":"format", "value":False,
+			'props':{
+				"enabled":{"xorGroup":"format", "value":False,
 					"set":{"value":True, "param":"format.type", "pval":"csv"},
 				},
 				"delim":{
@@ -325,12 +335,13 @@ def getFormatSelection(dConf, lRdrOut, bWebSockConn=False):
 						"enum":[{"value":"comma"},{"value":"semicolon"},{"value":"tab"}]
 					}
 				}	
-			}
+			},
+			'order':lPropOrder
 		}
 		
 		# Add in general purpose text formating information:
 		for sOpt in dTextOpts:
-			dFmts['csv']['properties'][sOpt] = dTextOpts[sOpt]
+			dFmts['csv']['props'][sOpt] = dTextOpts[sOpt]
 
 
 	if ('DAS_TO_PNG' in dConf) and (sRdr == 'das') and (sVer != '3.0'):
@@ -339,7 +350,7 @@ def getFormatSelection(dConf, lRdrOut, bWebSockConn=False):
 			"title":"Output a plot image instead of data",
 			#"mime":"image/png",
 			#"extension":".png",
-			'properties':{
+			'props':{
 				"enabled":{"value":False,
 					"set":{"param":"format.mime","value":"image/png"}
 				},
@@ -393,8 +404,7 @@ def addFormatHttpParams(dConf, dParams, lRdrOut, bWebSockConn=False):
 	sVar = lRdrOut[2]
 
 	dParams["format.type"]     = {
-		"required":False, "name":"Format",
-		"enum":["das","csv","png","votable","qstream"]
+		"required":False, 'type':'enum',	"enum":["das","csv","png","votable","qstream"]
 	}
 	dParams["format.secfrac"]  = {"required":False, "type":"integer", "range":[0,9]}
 	dParams["format.sigdigit"] = {"required":False, "type":"integer", "range":[2,17]}

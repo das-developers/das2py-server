@@ -89,7 +89,7 @@ div.nav {
 	flex: 1;
 }
 
-div.nav hr { border-top: 1px solid #0645e0;} 	
+div.nav hr { border-top: 1px solid #0645e0;}
 
 div.nav ul{
 	list-style-type: none;
@@ -117,7 +117,7 @@ div.nav a:hover, div.nav a:active
 #navlist
 {
 	margin: 0;
-	font-size: 125%;
+	font-size: 115%;
 	/* background-color: #000055; */
 	padding: 2px 0;
 	color: #000;
@@ -209,6 +209,19 @@ div.article input[type="text"][required] {
 	border: 2px solid #a1fbff;
 	margin: 0.2em;
 }
+
+div.article h2 {
+	font-weight: normal;
+	font-size: 1.3em;
+}
+
+div.article h1 {
+	font-weight: normal;
+	font-size: 1.6em;
+	text-align:  center;
+}
+
+span.minor{ color: #777; font-style: italic; font-size: 75%}
 
 /* Style by class and attributes ******************************************* */
 

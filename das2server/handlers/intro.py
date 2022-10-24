@@ -83,19 +83,26 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	pout('<body>')
 
-	U.page.header(dConf, fLog)
+	#U.page.header(dConf, fLog)
 	
 	# Add side navigation bar to top level categories, need to put this in a
 	# libray call
 	pout('<div class="main">')
 	
-	U.page.sidenav(dConf, fLog)
+	U.page.sidenav(dConf, fLog, True)
 	
 	pout('<div class="article">')
 			
-	pout("""<p>
-This is a <b>das2/3 (prototype) server</b>.  It provides data streams
-via an HTTP GET query protocol.</p>
+	pout("""
+<h1><i>das</i> Flexible Server</i></h1>
+<p>
+This server provids data streams in a variety of formats using a variety of 
+Application Programming Interfaces (APIs).  In addition to fixed APIs such
+as <i>das2</i>, interface definition files are provided to allow for arbitrary
+query parameters linked to physical coordinates.  Internally the server runs
+full-resolution data stream generators, processes the flow, and optionally
+caches the results.  Almost all processing steps are optional.
+</p>
 
 <div class="flowdiagram_parent">
 <img src="%(script)s/static/flowdiagram.svg"
@@ -103,25 +110,29 @@ via an HTTP GET query protocol.</p>
 />
 <center><i><span style="font-size: 80%%">Stream Processing</span></i></center>
 </div>
-
-<p>This server runs full-resolution data stream generators, processes the
-flow, and optionally caches the results.  Almost all processing steps are
-optional.
+<p>
+The core server itself generates no primary data.  That tasks falls to readers
+which may output:
+<ul>
+<li> CSV Text streams </li>
+<li> CCSDS packet streams</li>
+<li> <i>das3</i> display streams</li>
+</ul>
+or any other format so long as some set of HTTP query parameters can be mapped
+to some data supply by a reader program.
 </p>
-
+<!-- 
 <h4><span style="color: #993300"><i>This is an <b>beta version</b> of the server and not all
 functionality is complete.</i></span></h4>
+-->
 
 <h2>Clients</h2>
 
 <p>Forms are provided to download data from this server as das streams,
 text delimited value streams (CSV), PNG images, hapi streams, and eventually
-as VOTables (in work) via the navigation bar to the right.
-</p>
-
-<p>Full use of this server requires a client program capable of reading
-data in one of the provided formats and producing plots.  Programs which
-can parse das2 streams include:</p>
+as VOTables (in work) via the navigation bar to the right.  Full use of this
+server requires a client program capable of reading data in one of the provided
+formats and producing plots.  Programs which can parse <i>das2</i> streams include:</p>
 <ul>
 <li> <a href="http://das2.org/autoplot">Autoplot</a> via the
 <a href="https://github.com/das-developers/das2java">das2java</a> library.  
@@ -131,7 +142,7 @@ via the <a href="https://github.com/das-developers/das2dlm">das2dlm</a> module.<
 <li><a href="http://www.sddas.org/">SDDAS (Southwest Data Display and Analysis System)</a>
     via the <a href="https://github.com/das-developers/das2C">das2C</a> library</li>
 </ul>
-<p>Programs which can parse das3 real-time streams include:</p>
+<p>Programs which can parse <i>das3</i> real-time streams include:</p>
 <ul>
 <li> <a href="https://research-git.uiowa.edu/space-physics/tracers/soc/dasoc">DASOC</a>
 </li>
@@ -155,8 +166,8 @@ However, streams may be reformatted if requested.</p>
 <p>This server provides the following "filesytem" style interface which is accessed
 via HTTP GET messages.</p>
 <p>Note that clients do <i>not</i> need to understand this layout. 
-Merely reading one of the catalog files: <a href="%(script)s/sources.json">sources.json</a>
-or <a href="%(script)s/sources.csv">sources.csv</a> is sufficent.</p>
+Merely reading one of the catalog files: <a href="%(script)s/catalog.json">catalog.json</a>
+or <a href="%(script)s/nodes.csv">nodes.csv</a> is sufficent.</p>
 
 <pre>
 <a href="%(script)s">server/</a>  This introductory page, at %(script)s
@@ -313,7 +324,7 @@ https://github.com/hapi-server/data-specification</p>
 	# END Article Div, and Main DIV ######################################### #
 	pout('  </div>\n</div>\n') 
 	
-	U.page.footer(dConf, fLog)
+	#U.page.footer(dConf, fLog)
 
 	pout('''</body>
 </html>''')

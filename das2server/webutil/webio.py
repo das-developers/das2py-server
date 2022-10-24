@@ -268,6 +268,7 @@ def dasExcept(sType, uOut, fLog=None, bHdrSent=False):
 		pout(sOut)
 	
 	sys.stdout.flush()
+	return 3
 
 ##############################################################################
 # Error types
@@ -275,26 +276,26 @@ def dasExcept(sType, uOut, fLog=None, bHdrSent=False):
 def serverError(fLog, uOut, bHdrSent=False):
 	if not bHdrSent:
 		pout("Status: 500 Internal Server Error\r\n")
-	dasExcept('InternalServerError', uOut, fLog, bHdrSent)
+	return dasExcept('InternalServerError', uOut, fLog, bHdrSent)
 
 def todoError(fLog, uOut, bHdrSent=False):
 	if not bHdrSent:
 		pout("Status: 501 Not Implemented\r\n")
-	dasExcept('NotImplemented', uOut, fLog, bHdrSent)
+	return dasExcept('NotImplemented', uOut, fLog, bHdrSent)
 
 def queryError(fLog, uOut, bHdrSent=False):
 	if not bHdrSent:
 		pout("Status: 400 Bad Request\r\n")
-	dasExcept('BadRequest', uOut, fLog, bHdrSent)
+	return dasExcept('BadRequest', uOut, fLog, bHdrSent)
 	
 def forbidError(fLog, uOut, bHdrSent=False):
 	if not bHdrSent:
 		pout("Status: 403 Forbidden\r\n")
-	dasExcept('Forbidden', uOut, fLog, bHdrSent)
+	return dasExcept('Forbidden', uOut, fLog, bHdrSent)
 
 def notFoundError(fLog, uOut, bHdrSent=False):
 	pout("Status: 404 Not Found\r\n")
-	dasExcept('NoSuchDataSource', uOut, fLog, bHdrSent)
+	return dasExcept('NoSuchDataSource', uOut, fLog, bHdrSent)
 	
 	
 # Taking any DasError exception and outputting the proper HTTP codes

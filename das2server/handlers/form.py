@@ -1,17 +1,53 @@
-"""Intermediate navigation pages in the data source tree"""
+"""
+This is one of the two major endpoint handlers for the server, it provides
+user interfaces for native das3 data sources.  The other is the data request
+handler that provides the actual data for all data source types.
+
+The handler assumes that:
+
+  1. The end point ends in *.html
+
+  2. That there is a *.json file that corresponds to the *.html file
+	
+  3. That the json file defines one of:
+    a. A Catalog object
+    b. A SourceSet object (a specalization of Catalog)
+    c. An HttpStreamSrc object
+
+"""
 
 import os
 import sys
 import json
 import traceback
 from io import StringIO
+from urllib.parse import quote_plus
 
+from os.path import join as pjoin
 from os.path import basename as bname
 
 # ########################################################################## #
-# Functions pulled up from the util module, see 'global' in handleReq        #
+# Placeholder for the Formats module #
 
-getMime = None
+F = None
+
+def loadFormats(dConf):
+	global F
+
+	# Load the webutil module
+	try:
+		mTmp = __import__('das2server.util', globals(), locals(), ['formats'], 0)
+	except ImportError as e:
+		preLoadError(
+			"Error importing module 'das2server': %s\r\nsys.path is:\r\n%s\r\n"%(
+			str(e), sys.path
+		))
+		return 19
+	try:
+		F = mTmp.formats
+	except AttributeError:
+		preLoadError('No module named das2server.util under %s'%dConf['MODULE_PATH'])
+		return 20
 
 ##############################################################################
 def pout(sOut):
@@ -41,6 +77,204 @@ def _isTrue(d, key):
 	if d[key].lower() in ('true','1','yes'):
 		return True
 	return False
+
+def _hasElement(d, l):
+	"""Return true if a nested set of dictionaries has the given key
+	"""
+	for i in range(len(l)):
+		if l[i] not in d:
+			return False
+
+		d = d[l[i]]
+
+	return True
+
+def _isElTrue(d, l):
+	"""Return true if a nested set of dictionaries has the given key
+	and the key evaluates to true
+	"""
+	for i in range(len(l)):
+		if l[i] not in d:
+			return False
+
+		d = d[l[i]]
+
+	if d: return True
+	else: return False
+
+
+def _getElement(fLog, d, l):
+	if not _hasElement(d, l):
+		fLog.write("   ERROR: Could not locate dictionary element: %s"%str(l))
+		return None
+
+	for i in range(len(l)):
+		if l[i] not in d:
+			return False
+
+		d = d[l[i]]
+
+	return d
+
+# ######################################################################### #
+
+class UrlBldr:
+	"""Given 1-N interface parameters to set, build up a set of suitable
+	URLs for the get request.
+	"""
+	def __init__(self, fLog, dNode):
+		"""
+		Args:
+			fLog - A file-like object for error messages
+			dProto - The 'protocol' section of a catalog object
+		"""
+		self.dNode = None
+		self.dQuery = {}
+		self.fLog = fLog
+
+		if 'interface' not in dNode:
+			fLog.write("   ERROR: Source node is missing the 'interface' element")
+		if 'protocol' not in dNode:
+			fLog.write("   ERROR: Source node is missing the 'protocol' element")
+		elif 'httpParams' not in dNode['protocol']:
+			fLog.write("   ERROR: Node protocol definition is missing the 'httpParams' element.")
+		elif 'baseUrls' not in dNode['protocol']:
+			fLog.write("   ERROR: Node protocol definition is missing the 'baseUrls' element.")
+		else:
+			self.dNode = dNode
+
+	def setProperty(self, sProperty, value):
+		"""Set a single interface property
+
+		Args:
+			sProperty (string) - The path to a property item within the node's 
+			   interface definition.
+
+			value (bool|int|float|string) - The value to be set
+		Returns (bool):
+			true if the param value could be set
+		"""
+		if not self.dNode: return False
+		if not sProperty or not isinstance(sProperty, str):
+			fLog.write("   ERROR: Invalid property path %s"%sProperty)
+			return False
+
+		lPath = sProperty.strip('/').split('/')
+		dProp = _getElement(self.fLog, self.dNode['interface'], lPath)
+		if not dProp: return False
+
+		if 'set' not in dProp:
+			fLog.write("%s is not a settable interface property"%sProperty)
+			return False
+		
+		dSet = dProp['set'] # The translation interface
+
+		dParams = self.dNode['protocol']['httpParams']
+
+		if 'param' not in dSet:
+			fLog.write("   ERROR: key 'param' missing in settable property.")
+			return False
+		sParam = dSet['param']
+
+		# Check to see that referenced param actually exists
+		if sParam not in dParams:
+			fLog.write("   ERROR: Invalid httpParam reference from interface '%s' "%sParam)
+			return False
+
+		# If the settable thing is an enumeration, make sure the value
+		# is in the enum.
+		if 'enum' in dSet:
+			lAccept = []
+			for dEnum in dSet['enum']:  # Enumeration is list of objects
+				if 'value' not in dEnum:
+					fLog.write("   ERROR: enum missing value in settable property")
+					return False
+				lAccept.append(dEnum['value'])
+				if dEnum['value'] == value:
+					break                 # Hold on to this enum
+				
+			if value not in lAccept:
+				fLog.value("   ERROR: Value '%s' is not a member of %s"%value, lAccept)
+
+			# Enum items can set a flag on it's own
+			if 'flag' in dEnum: value = dEnum['flag']
+
+			# Enum items can alter the pass through value
+			if 'pval' in dEnum: value = dEnum['pval']
+		
+		else:
+			sFlag = None
+			if 'flag' in dSet: sFlag = dSet['flag']  # Am I setting a flag
+			if 'pval' in dSet: value = dSet['pval']  # will alter the pass through value
+
+		
+		# Now I know the value and if I'm a flag or not, if regular param set it
+		if sFlag == None:
+			self.dQuery[sParam] = str(value)
+			return True
+		
+		# Handle flag params
+		if 'flags' not in dParams[sParam]:
+			fLog.write("   ERROR: HTTP parameter '%s' has no flags to set."%sParam)
+			return False
+		if sFlag not in dParams[sParam]['flags']:
+			fLog.write("   ERROR: Invalid flag '%s' for HTTP parameter '%s'"%(sFlag, sParam))
+			return False
+
+		dFlag = dParams[sParam]['flags'][sFlag]
+
+		if 'prefix' in dFlag:
+			sFlagVal = "%s%s"%(dFlag['prefix'], dFlag['value'])
+		else:
+			sFlagVal = dFlag['value']
+		
+		if sParam not in self.dQuery:
+			self.dQuery[sParam] = sFlagVal
+		else:
+			sSep = " "
+			if 'flagSep' in dHParam: sSep = 'flagSep'
+			self.dQuery[sParam] += "%s%s"%(sSep, sFlagVal)
+		
+		return True
+
+
+	def getUrls(self):
+		if not self.dNode: return None
+
+		lOut = []
+		for sBase in self.dNode['protocol']['baseUrls']:
+
+			if len(self.dQuery) > 0:
+				if '?' in sBase: sPre = '&'
+				else: sPre = '?'
+
+				lQuery = [
+					"%s=%s"%(sKey, quote_plus(str(self.dQuery[sKey])))
+					for sKey in self.dQuery
+				]
+
+				lOut.append("%s%s%s"%(sBase, sPre, "&".join(lQuery)))
+			else:
+				lOut.append(sBase)
+
+		return lOut
+
+
+def _translateSettings(fLog, dNode, dSettings):
+	"""Given a list of interface settings, generate a set of URLs
+
+	Args:
+		fLog - A file-like object for errors
+		dNode - An HttpStreamSrc or WebSocSrc catalog object
+		dSettings - A dictionary of interface settings to translate
+	"""
+
+	bldr = UrlBldr(fLog, dNode)
+
+	for sSetting in dSettings:
+		bldr.setProperty(sSetting, dSettings[sSetting])
+
+	return bldr.getUrls()
 
 #############################################################################
 
@@ -79,25 +313,38 @@ def _setHidden(fOut, dBaseUrls):
 	for sKey in dHidden:
 		sout(fOut, '<input type="hidden" name="%s" value="%s">'%(sKey, dHidden[sKey]))
 
+def _addInCtrlId(dParam, sId):
+	"""Append and input control ID to an HTTP param"""
+	if not '_inCtrlId' in dParam:
+		dParam['_inCtrlId'] = [sId]
+	elif sId not in dParam['_inCtrlId']:
+		dParam['_inCtrlId'].append(sId)
 
-def _inputVarTextAspect(fOut, dParams, dVar, sAspect, sCtrlId):
-	"""Create a text entry field for a variable aspect such as 'minimum' or 
-	'resolution'.  In addition to the given aspect the 'units' aspect is 
+def _addInIfCtrlVal(dParam, sVal):
+	if not '_inIfCtrlVal' in dParam:
+		dParam['_inIfCtrlVal'] = [sVal ]
+	elif sVal not in dParam['_inIfCtrlVal']:
+		dParam['_inIfCtrlVal'].append(sVal)
+
+
+def _inputVarTextAspect(fOut, dParams, dVar, sProp, sCtrlId):
+	"""Create a text entry field for a variable property such as 'minimum' or 
+	'resolution'.  In addition to the given property the 'units' property is 
 	inspected so this function isn't unsable for general options.
 
 	Args:
-		dParams: The http_params dictionary.  The control ID will be listed here
+		dParams: The httpParams dictionary.  The control ID will be listed here
 			if a control is generated.
 		dVar: The dictionary for the overall variable
-		sAspect: The dictionary key for the aspect, ex: 'maximum'
+		sProp: The dictionary key for the aspect, ex: 'maximum'
 		sCtrlId: The id to use for the generated control, if any.
 
 	Returns:
 		0 if no control was created, 1 otherwise
 	"""
 			
-	if sAspect not in dVar: return 0
-	dAspect = dVar[sAspect]
+	if sProp not in dVar: return 0
+	dAspect = dVar[sProp]
 	
 	if 'set' not in dAspect: return 0
 	
@@ -106,9 +353,9 @@ def _inputVarTextAspect(fOut, dParams, dVar, sAspect, sCtrlId):
 	if 'units' in dAspect:  sUnits = dAspect['units']
 	elif 'units' in dVar:   sUnits = dVar['units']['value']
 	sUnitLbl = " (%s)"%sUnits
-	sAspectLbl = sAspect[0].upper() + sAspect[1:]
+	sPropLbl = sProp[0].upper() + sProp[1:]
 
-	sout(fOut, '<label for="%s">%s%s</label>'%(sCtrlId, sAspectLbl, sUnitLbl))
+	sout(fOut, '<label for="%s">%s%s</label>'%(sCtrlId, sPropLbl, sUnitLbl))
 	sReq = ""
 	if ('required' in dSet) and dSet['required']: sReq = 'required'
 	sValue = ""
@@ -123,9 +370,9 @@ def _inputVarTextAspect(fOut, dParams, dVar, sAspect, sCtrlId):
 	)
 	
 	if 'flag' in dSet:
-		dParams[ dSet['param'] ]['flags'][ dSet['flag'] ]['_inCtrlId'] = sCtrlId
+		_addInCtrlId(dParams[ dSet['param'] ]['flags'][ dSet['flag'] ], sCtrlId)
 	else:
-		dParams[ dSet['param'] ]['_inCtrlId'] = sCtrlId
+		_addInCtrlId(dParams[ dSet['param'] ], sCtrlId)
 	
 	return 1 
 	
@@ -138,7 +385,7 @@ def _inputItemBoolean(fOut, dParams, dItem, sMsg, sCtrlId):
 	variable 'enable' aspect or for boolean options.
 
 	Args:
-		dParams: The 'http_params' dictionary
+		dParams: The 'httpParams' dictionary
 		dItem: The dictionary describing the boolean property to set
 		sMsg: The message to use to lable the check box
 		sCtrlId: The control ID to assign if a control is made
@@ -159,15 +406,15 @@ def _inputItemBoolean(fOut, dParams, dItem, sMsg, sCtrlId):
 	
 	dSet = dItem['set']
 	if 'flag' in dSet:
-		dParams[ dSet['param'] ]['flags'][ dSet['flag'] ]['_inCtrlId'] = sCtrlId
-		dParams[ dSet['param'] ]['flags'][ dSet['flag'] ]['_inIfCtrlVal'] = dSet['value']
+		_addInCtrlId(dParams[ dSet['param'] ]['flags'][ dSet['flag'] ], sCtrlId)
+		_addInIfCtrlVal(dParams[ dSet['param'] ]['flags'][ dSet['flag'] ], dSet['value'])
 	else:
-		dParams[ dSet['param'] ]['_inCtrlId'] = sCtrlId	
-		dParams[ dSet['param'] ]['_inIfCtrlVal'] = dSet['value']
+		_addInCtrlId( dParams[ dSet['param'] ], sCtrlId	)
+		_addInIfCtrVal( dParams[ dSet['param'] ], dSet['value'])
 	return 1
 
 		
-def _inputItemEnum(fOut, dParams, dItem, sMsg, sCtrlId):
+def _inputItemEnum(fOut, dParams, dItem, sMsg, sCtrlId, sDisabled):
 	"""Create a select list control for an enum item with a 'set' member.
 	
 	This control generator is useful for both variables and options as it does
@@ -175,7 +422,7 @@ def _inputItemEnum(fOut, dParams, dItem, sMsg, sCtrlId):
 	selecting the output units for the Voyager Spectrum Analyzer data.
 
 	Args:
-		dParms: The 'http_params' dictionary
+		dParms: The 'httpParams' dictionary
 		dItem: The dictionary describing the item to set.  The set method for
 			this item must have an 'enum' sub-member.
 	
@@ -238,13 +485,7 @@ def _inputItemEnum(fOut, dParams, dItem, sMsg, sCtrlId):
    #   }
 	
 	sout(fOut, sMsg)
-	sout(fOut, '<select id=%s>'%sCtrlId)
-
-
-	#program begin end other_stuff
-
-   #program #[key/flag |  @ | stuff if don't   ]
-	
+	sout(fOut, '<select id=%s %s>'%(sCtrlId, sDisabled))
 	
 	# If the current value is not in the enum, put it here without mapping 
 	# information so it can't be sent
@@ -256,7 +497,7 @@ def _inputItemEnum(fOut, dParams, dItem, sMsg, sCtrlId):
 	
 	if bAddDefault:
 		sCtrlVal = dItem['value']
-		if 'name' in dItem:  sCtrlVal = dItem['name']
+		if 'label' in dItem:  sCtrlVal = dItem['label']
 		sout(fOut, '   <option value="" selected>%s</option>'%sCtrlVal)
 		
 	for dMap in dSet['enum']:
@@ -268,7 +509,7 @@ def _inputItemEnum(fOut, dParams, dItem, sMsg, sCtrlId):
 		else: sVal = dMap['value']
 
 		sCtrlVal = dMap['value']
-		if 'name' in dMap:  sCtrlVal = dMap['name']
+		if 'label' in dMap:  sCtrlVal = dMap['label']
 
 		sout(fOut, '   <option value="%s" %s>%s</option>'%(sVal, sSelected, sCtrlVal))
 
@@ -278,17 +519,17 @@ def _inputItemEnum(fOut, dParams, dItem, sMsg, sCtrlId):
 		# Save the control id's in the flag_set, but since we are saving the same
 		# control id in multiple members also as an '_ifCtrlVal' item as well.	
 		if 'flag' in dMap:
-			dParams[ dSet['param'] ]['flags'][ dMap['flag'] ]['_inCtrlId'] = sCtrlId
-			dParams[ dSet['param'] ]['flags'][ dMap['flag'] ]['_inIfCtrlVal'] = sVal
+			_addInCtrlId(dParams[ dSet['param'] ]['flags'][ dMap['flag'] ], sCtrlId)
+			_addInIfCtrlVal(dParams[ dSet['param'] ]['flags'][ dMap['flag'] ], sVal)
 		elif 'flag' in dItem:
-			dParams[ dSet['param'] ]['flags'][ dItem['flag'] ]['_inCtrlId'] = sCtrlId
+			_addInCtrlId(dParams[ dSet['param'] ]['flags'][ dItem['flag'] ], sCtrlId)
 		else:
-			dParams[ dSet['param'] ]['_inCtrlId'] = sCtrlId
-			dParams[ dSet['param'] ]['_inIfCtrlVal'] = sVal
+			_addInCtrlId(dParams[ dSet['param'] ], sCtrlId)
+			_addInIfCtrlVal(dParams[ dSet['param'] ], sVal)
 
 	sout(fOut, '</select>')
 	
-	
+
 def _prnVarForm(fOut, sCtrlPre, dParams, sVarId, dVar):
 	"""Output non-submittable HTML form controls for the configurable aspects
 	of a variable and record the control IDs alongside the http get params
@@ -297,7 +538,7 @@ def _prnVarForm(fOut, sCtrlPre, dParams, sVarId, dVar):
 	Args:
 		sCtrlPre: A prefix to add to all generated control IDs
 
-		dParams:  The 'http_params' dictionary from the HttpStreamSrc catalog 
+		dParams:  The 'httpParams' dictionary from the HttpStreamSrc catalog 
 			object.  Control IDs will be inserted into parameter dictionaries
 			under the key 'ctrl_id'.  Note that parameters with the type 'enum'
 			or 'flag_set' will have 'ctrl_id' added into the individual flags
@@ -314,74 +555,119 @@ def _prnVarForm(fOut, sCtrlPre, dParams, sVarId, dVar):
 	nCtrls = 0
 
 	if 'title' in dVar:  sTitle = dVar['title']
-	elif 'name' in dVar: sTitle = dVar['name']
+	elif 'label' in dVar: sTitle = dVar['label']
 	
-	if 'name' in dVar: sName = dVar['name']
+	if 'label' in dVar: sName = dVar['label']
 	else: sName = sVarId[0].upper() + sVarId[1:]
 	
 	# If this variable has text aspects, label them up front
-	lAspects = ('minimum', 'maximum', 'resolution', 'interval')
+	dProps = dVar['props']
+	lProps = ('min', 'max', 'res', 'inter')
 	bLabelRow = False
-	for sAspect in lAspects:
-		if (sAspect in dVar) and ('set' in dVar[sAspect]):
+	for sProp in lProps:
+		if (sProp in dProps) and ('set' in dProps[sProp]):
 			bLabelRow = True
 			break
 
 	if bLabelRow: sout(fOut, "<p><b>%s: &nbsp;</b>"%sName)
 	else: sout(fOut, '<p>')
 	
-	# Right now I'm assuming the type of field for each aspect, should look
+	# Right now I'm assuming the type of field for each property, should look
 	# at the 'set' statement to get this info
 	
 	for i in range(len(lAspects)):
-		sCtrlId = "%s_%s_%s"%(sCtrlPre, sVarId, lAspects[i])
+		sCtrlId = "%s_%s_%s"%(sCtrlPre, sVarId, lProps[i])
 		nCtrls += _inputVarTextAspect(fOut, dParams, dVar, lAspects[i], sCtrlId)
 
-	if 'enabled' in dVar:
+	if 'enabled' in dProps:
 		sCtrlId = "%s_%s_enabled"%(sCtrlPre, sVarId)
 		sMsg = "Enable <b>%s</b>"%sName
 		if 'title' in dVar: sMsg = "%s - %s"%(sMsg, dVar['title'])
-		_inputItemBoolean(fOut, dParams, dVar['enabled'], sMsg, sCtrlId)
+		_inputItemBoolean(fOut, dParams, dProps['enabled'], sMsg, sCtrlId)
 		
-	if 'units' in dVar:
+	if 'units' in dProps:
 		sCtrlId = "%s_%s_units"%(sCtrlPre, sVarId)
-		_inputItemEnum(fOut, dParams, dVar['units'], "Set %s Units"%sName, sCtrlId)
+		_inputItemEnum(fOut, dParams, dProps['units'], "Set %s Units"%sName, sCtrlId)
 	
 	sout(fOut, "</p>")
 
 	return nCtrls
 
-def prnOptGroupForm(fOut, sCtrlPre, dParams, sGroup, dGroup, sSrcUrl, bVar=False):
+
+# Helper for _prnOptGroupForm
+def _startGroupDisabled(dProps):
+	"""Loop through a Group's properties, if:
+	   1. has property named enabled 
+	   2. the enable property is part of an xorGroup
+	   3. The default value of enabled is false
+
+	return the string 'disabled' else return ''
+	"""
+	if 'enabled' in dProps:
+		if 'xorGroup' in dProps['enabled']:
+			if 'value' in dProps['enabled']:
+				if dProps['enabled']['value'] == False:
+					return "disabled"
+	return ""
+
+
+def prnOptGroupForm(
+	fOut, sCtrlPre, dParams, sGroup, dGroup, sSrcUrl, bVar=False,
+	bSingleGroup=False
+):
 	"""Run through all the options in a group making output controls for each
 	settable property
 
 	Args:
+		fOut (file-like): The file-like object receive output
+
 		sCtrlPre (str): The prefix to assign to control IDs
 		
-		dParams (str): The 'http_params' dictionary
+		dParams (str): The 'httpParams' dictionary
 		
-		sGroup (str): The name of the group
+		sGroup (str): The name of the group ('time', 'csv', etc.)
 		
-		dGroup (dict): The group dictionary
+		dGroup (dict): The group dictionary, must containe a sub-dict of settable
+		   properties under the key 'properties'
+
+		sSrcUrl (str): The URL to the resource that provided the input HttpStreamSrc.
+		   Only used for error messages.
 		
 		bVar (bool): This group represents the options for a single coordinate or
 			data variable.  Certian display options are enable for variable 
 			groups, such a putting mix,max,resolution in a single line and looking
 			around for units strings.
+
+	Returns (int): 
+		The number of HTML form controls generated.
+
+	Notes:  If the group has a settable 'enabled' property, then all other
+	   controls for the group will be enabled/disabled based on the enabled
+	   setting.
 	"""
 	nCtrls = 0
 	
-	lProps = list(dGroup.keys())
-	lProps.sort()
+	dProps = dGroup['props']
+	lProps = list(dProps.keys())
+
+	# if the property group has an property order listing, try to respect it
+	if 'order' in dGroup:
+		lProps = dGroup['order']
+	else:
+		lProps.sort()
+
+	# This list of controls to toggle for group enable/disable, order is 
+	# signaler and then signalees
+	lJsToggle = [None, []] 
 
 	# Get the group name
 	sGrpName = sGroup
-	if 'name' in dGroup: sGrpName = dGroup['name']
+	if 'label' in dGroup: sGrpName = dGroup['label']
 	
 	# Any option name can be used, but some are recognized as having particular 
 	# meanings, especially in the context of a variable.  If this is a variable
 	# make sure min,max,res,int are presented in that order.
-	tOneLiner = ('enabled','minimum','maximum','resolution','interval')
+	tOneLiner = ('enabled', 'min','max','res','inter')
 	sGrpUnits = None
 	if bVar:
 		lFirst = []
@@ -391,20 +677,24 @@ def prnOptGroupForm(fOut, sCtrlPre, dParams, sGroup, dGroup, sSrcUrl, bVar=False
 		for sKey in lFirst: lProps.remove(sKey)	
 		lProps = lFirst + lProps
 		
-		if 'units' in lProps: sGrpUnits = dGroup['units']['value']
+		if 'units' in lProps: sGrpUnits = dProps['units']['value']
 	
 	# Weed out all the props that aren't settable
 	lSettable = []
 	for sProp in lProps:
-		if isinstance(dGroup[sProp], dict) and 'set' in dGroup[sProp]: 
+		if isinstance(dProps[sProp], dict) and 'set' in dProps[sProp]: 
 			lSettable.append(sProp)
 	lProps = lSettable
+
+	# First pass, run through controls and see if this group is disabled
+	# to start with:
+	sDisabled = _startGroupDisabled(dProps)
 
 	#sys.stderr.write("Settable props for %s: %s\n"%(sGrpName, lSettable))
 
 	for iProp in range(len(lProps)):
 		sProp = lProps[iProp]
-		dProp = dGroup[sProp]
+		dProp = dProps[sProp]
 		curval = None
 		
 		sPropUnits = None
@@ -417,35 +707,45 @@ def prnOptGroupForm(fOut, sCtrlPre, dParams, sGroup, dGroup, sSrcUrl, bVar=False
 			_missingKeyError(fOut, '%s:%s:value'%(sGroup, sProp), sSrcUrl)
 			return 0
 		
-		if 'set' not in dProp:
+		if ('set' not in dProp) or ('param') not in dProp['set']:
 			#sout(fOut, "%s: %s &nbsp"%(sProp, curval))
 			continue
 			
 		# make a row prefix
-		if not bVar:
-			if iProp == 0: sout(fOut, "<p>")
-			else: sout(fOut, "</p>\n<p>")
+		#if not bVar:
+		#	if iProp == 0: sout(fOut, "<p>")
+		#	else: sout(fOut, "</p>\n<p>")
+		#else:
+		if (bSingleGroup):
+			if (iProp > 0): sout(fOut, "<br>")
 		else:
-			if iProp == 0: sout(fOut, "<p><b>%s: &nbsp;</b>"%sGrpName)
+			if (iProp == 0): sout(fOut, "<p><b>%s: &nbsp;</b>"%sGrpName)
 			
 			# if this isn't a classical one-liner, start a new row 
 			if sProp not in tOneLiner: sout(fOut, "<br> &nbsp; ")
-			
+		
+		# Get the target param (or param flag) to recive a link to the fake 
+		# controls
 		dSet = dProp['set']
+		if 'flag' in dSet:
+			dTargParam = dParams[ dSet['param'] ]['flags'][ dSet['flag'] ]
+		else:
+			dTargParam = dParams[ dSet['param'] ]
+
 			
-		if 'name' in dProp: sName = dProp['name']
+		if 'label' in dProp: sName = dProp['label']
 		else: sName = sProp[0].upper() + sProp[1:]
-			
 
 		sCtrlId = "%s_%s_%s"%(sCtrlPre, sGroup, sProp)
+		lJsToggle[1].append(sCtrlId)
 		
 		if 'flag' in dSet: sCtrlVal = dSet['flag']
 		elif 'pval' in dSet: sCtrlVal = dSet['pval']
 		else: sCtrlVal = "%s"%curval
 		
-		# There are three basic types of controls: 
+		# There are four basic types of controls: 
 		#
-		#     check boxes, text boxes, select boxes.  
+		#  radio buttons, check boxes, text boxes, select boxes.  
 		# 
 		# Determine what kind to make here.  Instances where there are only two
 		# values that can be selected (the initial value, and the set) use
@@ -459,44 +759,56 @@ def prnOptGroupForm(fOut, sCtrlPre, dParams, sGroup, dGroup, sSrcUrl, bVar=False
 		
 		if sType == 'bool':
 			sInfo = sProp
-			if bVar and (sProp == "enabled"):
+			if bVar or (sProp == "enabled"):
 				sName = "Output"
 				if 'title' in dGroup: sInfo = dGroup['title']
-				elif 'name' in dGroup: sInfo = dGroup['name']
+				elif 'label' in dGroup: sInfo = dGroup['label']
 				else: sInfo = sGroup
 			else:
 				if 'title' in dProp: sInfo = dProp['title']
-				elif 'name' in dProp: sInfo = dProp['name']
+				elif 'label' in dProp: sInfo = dProp['label']
 			
 			sChecked = ""
 			if curval == True: sChecked = "checked"
-				
-			sout(fOut, '<input type="checkbox" id="%s" value="%s" %s><b>%s</b> - %s'%(
-			     sCtrlId, sCtrlVal, sChecked, sName, sInfo)
-			)
+			
+			# Some boolean options are part of a radio group	
+			if 'xorGroup' in dProp:
+				# If we're used xor groups, the in control ID must be the xor group
+				# name, not the section or the property.
+				sXorGroup = "%s_%s"%(sCtrlPre, dProp['xorGroup'])
+
+				sout(fOut, 
+					'<input type="radio" name="%s" id="%s" value="%s" %s><b>%s</b> - %s'%(
+			     	sXorGroup, sCtrlId, sCtrlVal, sChecked, sName, sInfo)
+				)
+				lJsToggle[0] = sCtrlId
+
+			else:
+				sout(fOut, '<input type="checkbox" id="%s" value="%s" %s %s><b>%s</b> - %s'%(
+			     	sCtrlId, sCtrlVal, sChecked, sDisabled, sName, sInfo)
+				)
 
 			#print('dParams.keys()  = ', list(dParams.keys()))
 			
 			# Save off the control information
 			if 'flag' in dSet:
-				dParams[ dSet['param'] ]['flags'][ dSet['flag'] ]['_inCtrlId'] = sCtrlId
+				_addInCtrlId(dTargParam, sCtrlId)
 			else:
-				dParams[ dSet['param'] ]['_inCtrlId'] = sCtrlId
-	
-			
+				_addInCtrlId(dTargParam, sCtrlId)
+
 		elif sType == 'select':
 			if 'title'  in dProp: sMsg = dProp['title']
-			elif 'name' in dProp: sMsg = dProp['name']
+			elif 'label' in dProp: sMsg = dProp['label']
 			else:                 sMsg = sProp[0].upper() + sProp[1:]
 			
 			if 'enum' in dSet:  # True enums... 
-				_inputItemEnum(fOut, dParams, dProp, sMsg, sCtrlId)
+				_inputItemEnum(fOut, dParams, dProp, sMsg, sCtrlId, sDisabled)
 				
 			else:
 				# Effective enum, binary choice
 				sout(fOut, sMsg)
-				sout(fOut, '<select id=%s>'%sCtrlId)
-				sout(fOut, '  <option value="" selected>%s</option>'%curval)
+				sout(fOut, '<select id=%s %s>'%(sCtrlId, sDisabled))
+				sout(fOut, '  <option value="%s">%s</option>'%curval)
 				
 				if 'pval' in dSet: sVal = dSet['pval']
 				elif 'flag' in dSet: sVal = dSet['flag']
@@ -508,22 +820,21 @@ def prnOptGroupForm(fOut, sCtrlPre, dParams, sGroup, dGroup, sSrcUrl, bVar=False
 				# Save off the control information, with an if check for the
 				# select value
 				if 'flag' in dSet:
-					dParams[ dSet['param'] ]['flags'][ dSet['flag'] ]['_inCtrlId'] = sCtrlId
-					dParams[ dSet['param'] ]['flags'][ dSet['flag'] ]['_inIfCtrlVal'] = sVal
+					_addInCtrlId( dTargParam, sCtrlId)
+					_addInIfCtrlVal(dTargParam, sVal)
 				else:
-					dParams[ dSet['param'] ]['_inCtrlId'] = sCtrlId
-					dParams[ dSet['param'] ]['_inIfCtrlVal'] = sVal
-								
+					_addInCtrlId(dTargParam, sCtrlId)
+					_addInIfCtrlVal(dTargParam, sVal)
+
 		else:		
 			if bVar:
 				if sPropUnits: sout(fOut, '%s (%s)'%(sName, sPropUnits))
 				else: sout(fOut, '%s '%sName)
 			else:
-				sout(fOut, '<b>%s</b>: '%sName)
-			
-			
-			if 'title' in dProp:
-				sout(fOut, '<label for="%s">%s</label>'%(sCtrlId, dProp['title']))
+				if 'title' in dProp:
+					sout(fOut, '<label for="%s">%s</label>'%(sCtrlId, dProp['title']))
+				else:
+					sout(fOut, '<label for="%s">%s</label>'%(sCtrlId, sName))
 				
 			if 'description' in dProp:
 				lDesc = dProp['description'].split('\n')
@@ -539,19 +850,49 @@ def prnOptGroupForm(fOut, sCtrlPre, dParams, sGroup, dGroup, sSrcUrl, bVar=False
 			sReq = ""
 			if ('required' in dSet) and dSet['required']: sReq = 'required'
 			
-			sout(fOut, '<input type="text" id="%s" size="%d" value="%s" %s>'%(
-				sCtrlId, nSize, sCtrlVal, sReq))
+			sout(fOut, '<input type="text" id="%s" size="%d" value="%s" %s %s>'%(
+				sCtrlId, nSize, sCtrlVal, sReq, sDisabled))
 			
 			# Save off the control information
 			if 'flag' in dSet:
-				dParams[ dSet['param'] ]['flags'][ dSet['flag'] ]['_inCtrlId'] = sCtrlId
+				_addInCtrlId( dTargParam, sCtrlId)
 			else:
-				dParams[ dSet['param'] ]['_inCtrlId'] = sCtrlId
+				_addInCtrlId(dTargParam, sCtrlId)
 			
 		nCtrls += 1
 		
 	
 	sout(fOut, "</p>")
+
+	# Emitt a little group enable, disable javascript if needed
+	if lJsToggle[0]:
+		sSignaler = lJsToggle[0]
+		if sSignaler in lJsToggle[1]:
+			lJsToggle[1].pop(lJsToggle[1].index(sSignaler))
+		if len(lJsToggle[1]) > 0:
+			sout(fOut, '''<script>
+var el_%s = document.getElementById('%s');
+el_%s.onchange = function(bPropagate = true) {'''%(sSignaler, sSignaler, sSignaler)
+			)
+			for sDest in lJsToggle[1]:
+				sout(fOut, "   var el_%s = document.getElementById('%s');"%(sDest, sDest))
+				sout(fOut, "   el_%s.disabled = !Boolean(this.checked);"%sDest)
+
+			# Browsers won't auto-fire the onchange event for deselected items 
+			# (I have no freaking idea why) so we need to find everything else
+			# in our group and fire it's onchange manually.  At this point we 
+			# have no way to know what else might be created in our signaler's 
+			# button group so we'll have to do the lookup at run-time
+			sout(fOut, """
+   if(bPropagate){
+      var siblings = document.getElementsByName( this.name )
+      for(i=0; i < siblings.length; i++){
+         if(!(siblings[i] === this))
+            siblings[i].onchange(false);
+      }
+   }
+}
+</script>""")
 	
 	return nCtrls
 
@@ -566,24 +907,30 @@ def _getDefaultMime(dFormats):
 	dFmt = None
 	for sFmt in dFormats:
 		dTmp = dFormats[sFmt]
-		if ('enabled' in dTmp) and ('value' in dTmp['enabled']):
-			if dTmp['enabled']['value']:
-				dFmt = dTmp
-				sType = sFmt
-				break
+		# Assume it's enabled if no properties 
+		if 'props' not in dTmp:
+			dFmt = dTmp
+			sType = sFmt
+			break
+		else:
+			dProps = dTmp['props']
+			if ('enabled' in dProps) and ('value' in dProps['enabled']):
+				if dProps['enabled']['value']:
+					dFmt = dTmp
+					sType = sFmt
+					break
 
 	if not dFmt: return None
 
 	sVer = None
-	if 'version' in dFmt and ('value' in dFmt['version']):
-		sVer = dFmt['version']['value']
+	if _hasElement(dFmt, ('props','version','value')):
+		sVer = dFmt['props']['version']['value']
 
 	sSerial = None
-	if 'serial' in dFmt and ('value' in dFmt['serial']):
-		sSerial = dFmt['serial']['value']
+	if _hasElement(dFmt, ('props','serial', 'value')):
+		sSerial = dFmt['props']['serial']['value']
 		
-	return getMime(sType, sVer, sSerial)
-
+	return F.getMime(sType, sVer, sSerial)
 
 def _getAction(sBase):
 	"""Get action from base url.  Basically return the URL with no GET params"""
@@ -601,8 +948,8 @@ def prnHttpSource(fLog, dSrc, fOut):
 	generate partial get values.  (I'm looking at you das2 'params' and hapi
 	'parameters'.)  To make life even *more* fun, sometimes servers screw up if
 	an empty parameter is sent (I'm looking at you das2 'resolution' and hapi 
-	'parameters').  So in addition we have to have a way to remove the 'name'
-	attribute from parameters that otherwise would get kicked out the door.
+	'parameters').  So in addition, we have to have a way to remove the 'name'
+	attribute from parameters that would otherwise get kicked out the door.
 	
 	If these protocols (and others) were created in the spirit of HTML this
 	wouldn't be needed, but alas, not everyone wants to make life easy for
@@ -612,36 +959,44 @@ def prnHttpSource(fLog, dSrc, fOut):
 
 	1. 'examples', 'coordinates', 'data', 'options', 'formats' are parsed.
 	   All controls are generated without a name so they cannot be transmitted.
+	   (With the exception of radio controls, see step 5 below)
+
+	2. For any option group (aka "coordinates.time", or "formats.das") if the
+	   enabled property (aka 'coordinates.time.enabled') is set to false, then
+	   everything but the enable/disable control is disabled and an event
+	   handler is emitted to toggle the disabled state as needed.
 	
-	2. All controls are generated with an ID, that has the form:
+	3. All controls are generated with an ID, that has the form:
 	  
-	   basename(_path) + "_" + [coord|data|opt ] + "_" + [varID|optCat] + 
-	                       "_" + [var_aspect|opt_setting ]
+	      prefix + "_" + [coord|data|options|...] + "_" + 
+	      [optGroup] + "_" + [property_setting ]
 	
 	   This insures all controls have a unique ID even if multiple http get
 	   sources are combined into a single page.
 	
-	3. As each control is created it adds it's control ID to the relavent 
-	   parameter in 'http_params'.  If the parameter is a FLAG_SET, or ENUM
-	   then the control ID is added to the flag entry instead of the top level. 
+	4. As each control is created it adds it's control ID to the relavent 
+	   parameter in 'httpParams'.  If the parameter is a FLAG_SET, then the
+	   control ID is added to the flag entry instead of the top level. 
 	
-	4. After all fake controls are generated, 'http_params' is parsed and all
-	   'http_params' with a control ID attached are created as hidden text 
-	   entry forms that are themselves fake (have no name).  The 
-	   to-potentially-be-submitted controls are created with the following
-	   ids:
+	5. After all fake controls are generated, 'httpParams' is parsed and all
+	   'httpParams' with a control ID attached are created as hidden text 
+	   entry forms that are themselves nameless.  The to-potentially-be-submitted
+	   controls are created with the following ids:
 	
-     	basename(_path) + http_params name
+     	   prefix + httpParams name
 	
-	5. An onSubmit function is generated for the form with the following 
+	6. An onSubmit function is generated for the form with the following 
 	   name:
 	
-	     basename(_path) + "_OnSubmit"
+	      prefix + "_OnSubmit"
 	
-	   and the http_parmas element is added as a variable.  When called 
-	   onSubmit inspects the controls registered in 'http_params' and sets
+	   and the httpParmas element is added as a variable.  When called 
+	   onSubmit inspects the controls registered in 'httpParams' and sets
 	   new control values.  Finnally the output controls that have data 
-	   values are given a name so that they can be submitted.
+	   values are given a name so that they can be submitted, and the 
+	   input radio controls have thier names removed.
+
+	...whew
 
 	--cwp
 	"""
@@ -655,10 +1010,12 @@ def prnHttpSource(fLog, dSrc, fOut):
 		sout(fOut, ", ".join(lTmp))
 		sout(fOut, "</b>.</p>")
 
-	if 'protocol' not in dSrc:
-		return _missingKeyError(fOut, 'protocol', sSrcUrl)
-	else:
-		dProto = dSrc['protocol']
+	for sKey in ('protocol','interface'):
+		if sKey not in dSrc:
+			return _missingKeyError(fOut, sKey, sSrcUrl)
+		else:
+			dProto = dSrc['protocol']
+			dIface = dSrc['interface']
 
 	if 'authentication' in dProto:
 		if _isTrue(dProto['authentication'], 'required'):
@@ -670,54 +1027,51 @@ def prnHttpSource(fLog, dSrc, fOut):
 				sout(fOut, "You will be asked to authentication on submit.</p>")
 
 	# Print the examples
-	if 'examples' in dProto:
+	if 'examples' in dIface:
 		sout(fOut, "<p>Example queries:")
-		lExamples = list(dProto['examples'].keys())
-		lExamples.sort()
-		for sExample in lExamples:
-			dExample = dProto['examples'][sExample]
-			sTmp = sExample
-			if 'name' in dExample:	sTmp = dExample['name']
-			if 'title' in dExample: sTmp = dExample['title']
-			sout(fOut, '<a href="%s">%s</a> &nbsp;'%(dExample['url'], sTmp))
+		lExamples = dIface['examples']
+		iTmp = 0
+		for dExample in lExamples:
+			iTmp += 1
+			sTmpTxt = "Example %d"%iTmp
+			if 'label' in dExample:	sTmpTxt = dExample['label']
+			elif 'title' in dExample: sTmpTxt = dExample['title']
+			lTmpUrl = _translateSettings(fLog, dSrc, dExample['settings'])
+			if lTmpUrl:
+				sout(fOut, '<a href="%s">%s</a> &nbsp;'%(lTmpUrl[0], sTmpTxt))
 		sout(fOut, "</p>")
 
 	# Leave the form action blank, we'll set it depending on which submit
 	# button is used.
-	sBaseUri = bname(dSrc['_path'])
+
+	sBaseUri = bname(dSrc['_url']).replace('.json','')
 	sFormId = "%s_download"%sBaseUri
 	sout(fOut, '<form id="%s">'%sFormId)
 
 	# Go through the base URLs see if they have any keys already set, if so
 	# we'll need hidden form parameters to cover those as well
-	if 'base_urls' not in dProto:
-		return _missingKeyError(fOut, 'protocol:base_urls', dSrc['_url'])
+	if 'baseUrls' not in dProto:
+		return _missingKeyError(fOut, 'protocol:baseUrls', dSrc['_url'])
 	
-	_setHidden(fOut, dProto['base_urls'])
+	_setHidden(fOut, dProto['baseUrls'])
 
 	dParams = None
-	if 'http_params' in dProto: dParams = dProto['http_params']
+	if 'httpParams' in dProto: dParams = dProto['httpParams']
 	nSettables = 0
 	
-	if 'interface' not in dSrc:
-		return _missingKeyError(fOut, 'interface', dSrc['_url'])
-	else:
-		dIface = dSrc['interface']
-	
 	# Handle setting coord options, always do time first if it's present
-	if dParams and ('coordinates' in dIface):
+	if dParams and ('coords' in dIface):
 		# Find out if any coordinates provide subselect
-		dCoords = dIface['coordinates']
+		dCoords = dIface['coords']
 		bSubSet = False
 		bEnable = False
 		lMod = []
-		
+
 		# Gather all settable coordinates
 		for sCoord in dCoords:
-			for sAspect in dCoords[sCoord]:
-				if sAspect in ('name','title','description'): continue
-				for sKey in dCoords[sCoord][sAspect]:
-					if sKey.startswith('set'):
+			if 'props' in dCoords[sCoord]:
+				for sProp in dCoords[sCoord]['props']:
+					if 'set' in dCoords[sCoord]['props'][sProp]:
 						if sCoord not in lMod: lMod.append(sCoord)
 							
 		# If the data are sub-settable by at least one property make the fieldset
@@ -742,6 +1096,7 @@ def prnHttpSource(fLog, dSrc, fOut):
 
 			sout(fOut, "</div>")
 			sout(fOut, '</fieldset>')
+			sout(fOut, '<br>')
 	
 	# Handle setting data options.  There's no limit to these, but try to 
 	# inteligently group them.  If a particular data var has a lot of 
@@ -758,12 +1113,11 @@ def prnHttpSource(fLog, dSrc, fOut):
 		nDatOpts = 0
 		lModVars = []
 		for sVar in dData:
-			for sAspect in dData[sVar]:
-				for sKey in dData[sVar][sAspect]:
-					if sKey.startswith('set'):
-						if sVar not in lModVars: lModVars.append(sVar)
-						nDatOpts += 1
-						break
+			for sProp in dData[sVar]['props']:
+				if 'set' in dData[sVar]['props'][sProp]:
+					if sVar not in lModVars: lModVars.append(sVar)
+					nDatOpts += 1
+					break
 				
 		if nDatOpts > 0:
 			sout(fOut, '<fieldset><legend><b>Data Options:</b></legend>')
@@ -780,15 +1134,15 @@ def prnHttpSource(fLog, dSrc, fOut):
 
 			sout(fOut, "</div>")
 			sout(fOut, "</fieldset>")
+			sout(fOut, '<br>')
 		
-		for sData in dData:
-			for sAspect in ('units','enabled'):
-				if sAspect in dData[sData]:
-					for sKey in dData[sData][sAspect]:
-						if sKey.startswith('set'):
-							if sAspect == 'enabled':	bEnable = True
-							else: bUnits = True
-							if sData not in lMod: lMod.append(sData)
+		for sVar in dData:
+			for sProp in ('units','enabled'):
+				if sProp in dData[sVar]['props']:
+					if 'set' in dData[sVar]['props'][sProp]:
+						if sProp == 'enabled':	bEnable = True
+						else: bUnits = True
+						if sVar not in lMod: lMod.append(sVar)
 					
 		if bEnable or bUnits:
 		
@@ -803,48 +1157,60 @@ def prnHttpSource(fLog, dSrc, fOut):
 		
 			# Probably need to return id's to use in javascript here
 			lMod.sort()
-			for sData in lMod:
-				nSettables += _prnVarForm(fOut, sBaseUri, dParams, sData, dData[sData])
+			for sVar in lMod:
+				nSettables += _prnVarForm(fOut, sBaseUri, dParams, sVar, dData[sVar])
 				
 			sout(fOut, "</div>")
 			sout(fOut, "</fieldset>")
 	
-	# Handle setting general options
-	if dParams and ('options' in dIface):
-		dOptions = dIface['options']
+	# Handle setting general options, these are handled as a single property
+	# group
+	if dParams and ('options' in dIface) and ('props' in dIface['options']):
+		dProps = dIface['options']['props']
 
-		lOptions = list(dOptions.keys())
+		lOptions = list(dProps.keys())
 		
 		lMod = []
-		for sProperty in lOptions:
-			if 'set' in dOptions[sProperty]:
+		for sProperty in dProps:
+			if 'set' in dProps[sProperty]:
 				if sProperty not in lMod: lMod.append(sProperty)
 
+		# Don't allow enable, disable in the generic options group
+		if 'enabled' in dProps:
+			fLog.write("   WARNING: Ignoring 'enabled' property in general options.")
+			dProps.pop('enabled')
+
 		if len(lMod) > 0:				
-			sout(fOut, "<fieldset><legend><b>Additional Options:</b></legend>")
+			sout(fOut, "<fieldset><legend><b>Options:</b></legend>")
 				
 			nSettables += prnOptGroupForm(fOut,
-				sBaseUri, dParams, 'options', dOptions, sSrcUrl, 
+				sBaseUri, dParams, 'options', dIface['options'], sSrcUrl, False, True
 			)
 	
-			sout(fOut, "</fieldset>")
+			sout(fOut, "</fieldset>\n<br>")
 
 	# Handle setting format options
 	if dParams and ('formats' in dIface):
-		dFmt = dIface['formats']
-		fLog.write('INFO: Inspecting formats %s'%str(dFmt.keys()))
+		dFormats = dIface['formats']
+		fLog.write('   Inspecting formats: %s'%str(list(dFormats.keys())))
 		bEnable = False
 		
-		# See if any of the formats have settable parameters
+		# See if any of the formats have settable properties
 		nFmtOpts = 0
 		lModFmts = []
-		for sFmt in dFmt:
-			#if sFmt == 'default': continue
-			for sAspect in dFmt[sFmt]:
-				for sKey in dFmt[sFmt][sAspect]:
-					if sKey.startswith('set'):
-						if sFmt not in lModFmts: lModFmts.append(sFmt)
-						nFmtOpts += 1
+		for sFmt in dFormats:
+			dFmt = dFormats[sFmt]
+			if 'props' in dFmt:
+				for sProp in dFmt['props']:
+					if 'set' in dFmt['props'][sProp]:
+						if sFmt not in lModFmts: 
+							# Put enabled stuff in before disabled stuff
+							if (sProp == 'enabled') and \
+								_isElTrue(dFmt, ['props','enabled','value']):
+								lModFmts = [sFmt] + lModFmts
+							else:
+								lModFmts.append(sFmt)
+							nFmtOpts += 1
 						break
 
 		if nFmtOpts > 0:
@@ -861,19 +1227,20 @@ def prnHttpSource(fLog, dSrc, fOut):
 			if nFmtOpts > 10: sStyle = 'class="srcopts_scroll_div"'
 			sout(fOut, '<div %s>'%sStyle)
 
-			lModFmts.sort()
+			#lModFmts.sort()
 			for sFmt in lModFmts:
 				nSettables += prnOptGroupForm(fOut, 
-					sBaseUri, dParams, sFmt, dFmt[sFmt], sSrcUrl, True
+					sBaseUri, dParams, sFmt, dFormats[sFmt], sSrcUrl, False
 				)
 
 			sout(fOut, "</div>")
 			sout(fOut, "</fieldset>")
+			sout(fOut, '<br>')
 	else:
 		fLog.write('INFO: Output format is not selectable.')
 
 
-	# Stage 4, inspect http_params and output hidden controls with no name.
+	# Stage 4, inspect httpParams and output hidden controls with no name.
 	if dParams and (nSettables > 0):
 		nSettables = 0
 		for sParam in dParams:
@@ -881,7 +1248,7 @@ def prnHttpSource(fLog, dSrc, fOut):
 			if 'type' not in dParam: continue
 
 			bOut = False
-			if dParam['type'] == 'flag_set':
+			if dParam['type'] == 'FlagSet':
 				if 'flags' not in dParam: continue
 				
 				for sFlag in dParam['flags']:
@@ -889,14 +1256,17 @@ def prnHttpSource(fLog, dSrc, fOut):
 					if '_inCtrlId' in dFlag:
 						bOut = True
 						break
-			elif dParam['type'] == 'enum':
-				if 'items' not in dParam: continue
-				
-				for sItem in dParam['items']:
-					dItem = dParam['items'][sItem]
-					if '_inCtrlId' in dItem:
-						bOut = True
-						break
+			
+			# If one boolean UI control set's a particular enum value then it needs
+			# to record that pval in it's interface description
+			#elif dParam['type'] == 'enum':
+			#	if 'enum' not in dParam: continue
+			#	
+			#	for sItem in dParam['enum']:
+			#		dItem = dParam['enum'][sItem]
+			#		if '_inCtrlId' in dItem:
+			#			bOut = True
+			#			break
 			else:
 				if '_inCtrlId' in dParam: bOut = True
 
@@ -918,13 +1288,15 @@ function %s(sActionUrl) {
 	// Strip this from outgoing control id's, to get the output control
 	// name.  It was added to keep out controls from different forms separate.
 	var sNamePre = "%s";
+	var lKeep = [];
 
-	for(var sParam in dParams){
+	for(let sParam in dParams){
 		dParam = dParams[sParam]
 		
 		if(!("_outCtrlId" in dParam)) continue;
 		var ctrlOut = document.getElementById(dParam["_outCtrlId"]);
 		var sOutName = dParam["_outCtrlId"].replace(sNamePre, "");
+		lKeep.push(sOutName);
 		
 		// Flagset parameters, the most complicated ones
 		if( ('type' in dParam) && (dParam['type'] == 'flag_set')){
@@ -934,7 +1306,7 @@ function %s(sActionUrl) {
 			var dFlags = dParams[sParam]['flags'];
 			var sOutVal = "";
 			var sOutSep = " ";
-			if( 'flag_sep' in dParam) sOutSep = dParam['flag_sep'];
+			if( 'flagSep' in dParam) sOutSep = dParam['flagSep'];
 			
 			for(var sFlag in dFlags){
 				var dFlag = dFlags[sFlag];
@@ -999,7 +1371,17 @@ function %s(sActionUrl) {
 		else {
 			
 			if(!("_inCtrlId" in dParam)) continue;
-			var ctrlIn = document.getElementById(dParam["_inCtrlId"]);
+
+			// Multiple controls might be trying to set my value, but I only care
+			// about ones that are currently enabled
+			var ctrlIn = null;
+			for(let i = 0; i < dParam['_inCtrlId'].length; i++ ){
+				var sInId = dParam["_inCtrlId"][i];
+				ctrlIn = document.getElementById(sInId);
+				if(!ctrlIn.disabled ) break;
+				else ctrlIn = null;
+			}
+			if(ctrlIn === null) continue; 
 			
 			// Check boxes...
 			if(ctrlIn.getAttribute("type") == "checkbox"){
@@ -1019,24 +1401,40 @@ function %s(sActionUrl) {
 		}
 	}
 
-	document.getElementById("%s").action = sActionUrl;
+	// To finalize, iterate over all values to be submitted by the form.  If 
+	// they ain't one of my output values, disable them.
+	elForm = document.getElementById('%s');
+	for(let i in elForm.elements){
+		let sName = elForm.elements[i].name;
+		if((sName != "") && (! lKeep.includes(sName)))
+			elForm.elements[i].name = "";
+	}
+
+	elForm.action = sActionUrl;
 }
 </script>
 	"""%(sFuncName, sJson, sNamePrefix, sFormId))
 		
-		# Make one submit function per base url that starts with https				
-		for sBase in dProto['base_urls']:
+		# Make one submit function per base url that starts with https
+		for sBase in dProto['baseUrls']:
 
 			if sBase.startswith('ws'): continue  # Ignore websocket sources for regular browsers
 
-			sout(fOut, '<input type="submit" value="Get from %s"'%_hostSimpleName(sBase) +\
-		     	' onclick=\'%s("%s");\'>'%(sFuncName, _getAction(sBase) ))
+			sLabel = "Download"
+			if len(dProto['baseUrls'])	> 1:
+				sLabel = "Download from %s"%_hostSimpleName(sBase)
 
-	sout(fOut, '</form>')
+			sout(fOut, '<input type="submit" value="%s" onclick=\'%s("%s");\'>'%(
+				sLabel, sFuncName, _getAction(sBase) 
+			))
+
+	sout(fOut, '</form>\n<br>')
 
 	sout(fOut, '<div class="identifers">')
-	sout(fOut, '<br><br>Catalog Path: %s &nbsp; <br>'%dSrc['_path'])
-	sout(fOut, 'Read From: &nbsp; <a href="%s">%s</a></a>'%(dSrc['_url'], dSrc['_url']))
+	#sout(fOut, '<br><br>Catalog Path: %s &nbsp; <br>'%dSrc['_path'])
+	sout(fOut, '<span class="minor">Source definition: &nbsp; <a href="%s">%s</a></a></span>'%(
+		dSrc['_url'], dSrc['_url']
+	))
 	
 	if 'uris' in dSrc and len(dSrc['uris']) > 0:
 		sout(fOut, '<br>Permanent IDs:')
@@ -1045,47 +1443,103 @@ function %s(sActionUrl) {
 	
 	sout(fOut, '</div>')	
 
+# ########################################################################## #
+def _loadJson(fLog, sInPath):
+	"""The missing 1-liner from the json module"""
+
+	fLog.write("   Loading: %s"%sInPath)
+	with open(sInPath) as fIn:
+		dObj = json.load(fIn)
+	return dObj
+
+def _urlToCatPath(U, dConf, sUrl):
+	"""Convert a URL back to a local catalog object path, or return None
+	"""
+	sScriptUrl = U.webio.getScriptUrl(dConf)
+	if not sUrl.startswith(sScriptUrl): return None
+
+	sUrlRoot     = "%s/source"%sScriptUrl
+	sFileSysRoot = pjoin(dConf['DATASRC_ROOT'], 'root')
+
+	sPath = sUrl.replace(sUrlRoot, sFileSysRoot).replace('/', os.sep)
+
+	return sPath
+
 	
-##############################################################################
+# ########################################################################## #
 def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
-	global getMime
-	getMime = U.output.getMime
+	fLog.write("\nLocal catalog node GUI handler")
 
-	fLog.write("\nDas2 HttpStreamSrc definition Handler")
+	loadFormats(dConf)
+
+	# Find the corresponding json object and load it
+	sPathInfo = os.getenv("PATH_INFO")
+	if not sPathInfo.startswith('/source/'):
+		return U.webio.serverError(fLog, "PATH_INFO did not start with /source/")
+
+	if not sPathInfo.endswith('.html'):
+		return U.webio.serverError(fLog, "PATH_INFO did not end with .html")
+
+	sFormUrl = "%s%s"%(U.webio.getScriptUrl(dConf), sPathInfo)
+	sCatUrl  = sFormUrl.replace(".html",'.json')
+
+	sLocalId = sPathInfo[len('/source/'):].strip('/')
+	sRelPath = sLocalId.replace('/', os.sep).replace('.html','.json')
 	
-	sScriptUrl = U.webio.getScriptUrl().strip('/')
+	sPath = pjoin(dConf['DATASRC_ROOT'], 'root', sRelPath)
 
-	sSource = os.getenv("PATH_INFO")  # Knock off leading '/source'
-	if sSource.startswith('/source/'):
-		sSource = sSource[len('/source/'):]
-	else:
-		U.webio.serverError(fLog, u"PATH_INFO did not start with /source/")
-
-	if sSource.endswith('/form.html'):
-		sSource = sSource.replace("/form.html", '')
-	else:
-		U.webio.notFoundError(fLog, u"PATH_INFO did not end with /form.html")
+	if not os.path.isfile(sPath):
+		return U.webio.notFoundError(fLog, "PATH_INFO did not end with /form.html")
 
 	try:
-		dNode = U.source.external(fLog, dConf, sSource)
+		dNode = _loadJson(fLog, sPath)
 	except U.errors.QueryError as e:
-		U.webio.queryError(fLog, str(e))
+		return U.webio.queryError(fLog, str(e))
 		return 17
 	except U.errors.ServerError as e:
-		U.webio.serverError(fLog, str(e));
+		return U.webio.serverError(fLog, str(e));
 		return 17
-	
+
 	# Slide in the json data location in case they want to look at it
-	dNode["_url"] = "%s%s"%(sScriptUrl, 
-		os.getenv("PATH_INFO").replace('form.html','api.json')
-	)
-	dNode["_path"] = "%s:/%s/%s"%(
-		dConf['SITE_CATALOG_TAG'], dConf['SERVER_ID'].lower(),
-		sSource.replace('.dsdf','').lower()
-	)
+	dNode["_url"] = sCatUrl
+
+	if ('type' not in dNode) or ('catalog' not in dNode):
+		return U.webio.serverError(fLog, "Unknown file at %s"%dNode['_url'])
+	if dNode['type'] not in ('Catalog','SourceSet'):
+		return U.webio.serverError(fLog, "Unknown object type %s in %s"%(
+			dNode['type'], dNode['_url']
+		))
+
+	# If this is a source set, then pull up the HttpStreamSrc
+	if dNode['type'] == 'SourceSet':
+		# Now overlay the node
+		sSrcPath = None
+		sSrcUrl  = None
+		for sSource in dNode['catalog']:
+			if ('type' in dNode['catalog'][sSource]) and \
+				(dNode['catalog'][sSource]['type'] == 'HttpStreamSrc'):
+				sSrcUrl = dNode['catalog'][sSource]['urls'][0]
+				sSrcPath = _urlToCatPath(U, dConf, sSrcUrl)
+				break
+		if not sSrcPath:
+			return U.webio.notFoundError(
+				fLog, "%s %s does not have an HttpStreamSrc node"%(
+				dNode['type'], sPath 
+			))
+
+		try:
+			dSrcNode = _loadJson(fLog, sSrcPath)
+		except U.errors.ServerError as e:
+			return U.webio.serverError(fLog, str(e))
+
+		# Update the url, and swap-in
+		dSrcNode['_url'] = sSrcUrl
+		dNode = dSrcNode
 
 	# ...okay should output something 
+	sScriptUrl = U.webio.getScriptUrl(dConf)
+
 	sys.stdout.write('Content-Type: text/html; charset=utf-8\r\n\r\n')
 	
 	dReplace = {"script":sScriptUrl}
@@ -1110,26 +1564,40 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	pout('<body>')
 
-	U.page.header(dConf, fLog)
+	#U.page.header(dConf, fLog)
 	
 	# Add side navigation bar to top level categories, need to put this in a
 	# libray call
 	pout('<div class="main">')
 	
-	U.page.sidenav(dConf, fLog)
+	U.page.sidenav(dConf, fLog, True)
 	
 	pout('<div class="article">')
 
 	# ####################################################################### #
 	# The main show #
 
-	#pout('<h1>TODO: Data Download Page</h1>')
+	U.page.navheader(dConf, fLog, sPathInfo)
+	if ('label' in dNode) or ('title' in dNode):
+		pout("<h1>")
+		if 'label' in dNode:
+			pout('<b>%s</b> - '%dNode['label'])
+		if 'title' in dNode:
+			pout(dNode['title'])
+		pout("</h1>")
+	else:
+		pout("<h1>Untitled Data Source</h2>")
 
-	U.page.navheader(dConf, fLog, sPathInfo.replace('form.html','download'))
+	if 'description' in dNode:
+		pout("<p>\n%s\n</p>")%dNode['description']
 
 	try:
 		fOut = StringIO()
-		prnHttpSource(fLog, dNode, fOut)
+
+		if dNode['type'] == 'Catalog':
+			prnCatalog(fLog, dNode, fOut)
+		else:
+			prnHttpSource(fLog, dNode, fOut)
 		fOut.seek(0)
 		pout(fOut.read())
 	except Exception:
@@ -1150,7 +1618,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	# END Article Div, and Main DIV ######################################### #
 	pout('  </div>\n</div>\n') 
 	
-	U.page.footer(dConf, fLog)
+	#U.page.footer(dConf, fLog)
 
 	pout('''</body>
 </html>''')
