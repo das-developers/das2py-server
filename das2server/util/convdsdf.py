@@ -835,6 +835,12 @@ def makeGetSrc(fLog, dConf, sPath, sLocalId = None):
 	dOut['type'] = 'HttpStreamSrc'
 	dOut['version'] = "0.7"
 
+	if 'summary' in dDsdf:
+		lKeys = list(dDsdf['summary'].keys())
+		lKeys.sort()
+		sDesc = '\n'.join([dDsdf['summary'][sKey] for sKey in lKeys])
+		dOut['description'] = sDesc
+
 	# potentially override the base url and set the protocol convention
 	if not sLocalId:
 		if ('localId' in dProps) and ('00' in dProps['localId']):

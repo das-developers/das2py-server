@@ -28,9 +28,9 @@ localId = 'Examples/Params'
 description = 'THEMIS SCW-EFW Power Spectral Density (Sample Dataset)'
 
 summary = 'The coordinate system for these data are local magnetic '+$
-          'field-aligned coordinate system: Z-axis along static magnetic '+$
-			 'field B0, Y-axis = R x B0 (R ... radius vector of s/c), '+$
-			 'X-axis = Y x Z'
+          'field-aligned coordinate system: <ul><li>Z-axis along static magnetic '+$
+			 'field B0</li> <li>Y-axis = R x B0 (R ... radius vector of s/c)</li><li> '+$
+			 'X-axis = Y x Z</li></ul>'
 
 reader = 'env PYTHONPATH=%(PREFIX)s/lib/python%(PYVER)s python%(PYVER)s %(PREFIX)s/examples/cdf.py %(PREFIX)s/examples/themis_data'
 das2Stream = 1

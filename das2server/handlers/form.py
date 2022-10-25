@@ -1089,7 +1089,7 @@ def prnHttpSource(fLog, dSrc, fOut):
 
 	# Print the examples
 	if 'examples' in dIface:
-		sout(fOut, "<p>Example queries: &nbsp;")
+		sout(fOut, '<p><b class="legend">Examples:</b> &nbsp;')
 		lExamples = dIface['examples']
 		iTmp = 0
 		for dExample in lExamples:
@@ -1247,11 +1247,13 @@ def prnHttpSource(fLog, dSrc, fOut):
 
 		if len(lMod) > 0:				
 			sout(fOut, "<fieldset><legend><b>Options:</b></legend>")
+			if len(lMod) > 12: sout(fOut, '<div class="srcopts_scroll_div">')
 				
 			nSettables += prnOptGroupForm(fLog, fOut,
 				sBaseUri, dParams, 'options', dIface['options'], sSrcUrl, False, True
 			)
-	
+
+			if len(lMod) > 12: sout(fOut, '</div>')
 			sout(fOut, "</fieldset>\n<br>")
 
 	# Handle setting format options
@@ -1511,7 +1513,8 @@ function %s(sActionUrl) {
 
 	sout(fOut, '<div class="identifers">')
 	#sout(fOut, '<br><br>Catalog Path: %s &nbsp; <br>'%dSrc['_path'])
-	sout(fOut, '<span class="minor">Source definition: &nbsp; <a href="%s">%s</a></a></span>'%(
+	sout(fOut, '<span class="minor">Source definition: &nbsp; <a href="%s">%s</a></span>'%(
+	#sout(fOut, '<i>Source definition: &nbsp; <a href="%s">%s</a></i>'%(
 		dSrc['_url'], dSrc['_url']
 	))
 	
@@ -1658,7 +1661,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 
 	U.page.navheader(dConf, fLog, sPathInfo)
 	if ('label' in dNode):
-		pout('<h1><b>%s</b></h1>'%dNode['label'])
+		pout('<h1>%s</h1>'%dNode['label'])
 	else:
 		pout("<h1>Unlabeled Data Source</h1>")
 
@@ -1666,7 +1669,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 			pout('<h2 class="center">%s</h2>'%dNode['title'])
 
 	if 'description' in dNode:
-		pout("<p>\n%s\n</p>")%dNode['description']
+		pout('<div class="docs">\n%s\n</div>'%dNode['description'])
 
 	try:
 		fOut = StringIO()
