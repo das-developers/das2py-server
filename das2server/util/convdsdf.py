@@ -390,7 +390,7 @@ def _mergeSrcCoordInfo(dOut, dProps, fLog):
 		dTime['props']['res'] = {'label':'Resolution', sV:None, "units":"s"}
 	
 	sNum = None
-	
+
 	# Don't mix in stuff that is not needed, no default values!
 	#if 'exampleRange' in dProps:
 	#	lNums = list(dProps['exampleRange'].keys())
@@ -608,6 +608,7 @@ def _mergeDas2Params(dOut, dProps, fLog):
 			sOptName = sFlag.strip('-').strip().lower()
 			dOpt = _getDict(dOptProps, sOptName)
 			dOpt['title'] = dFlag['title']
+			dFlag.pop('title')
 			
 			if ('type' in dFlag) and (dFlag['type'] in ('real','integer')):
 				dOpt['type'] = dFlag['type']
@@ -741,7 +742,7 @@ def _mergeExamples(dOut, dProps, sBaseUrl, fLog):
 				# Okay, param_00 and friends were defined, so set each one
 				lFlags = sOpts.split()
 				for sFlag in lFlags:
-					dQuery['options/%s'%sFlag.lower()] = True
+					dQuery['options/props/%s'%sFlag.lower()] = True
 
 		#if sBaseUrl[-1] in ('?','&'): sSep = ""
 		#elif '?' in sBaseUrl: sSep = '&'

@@ -253,7 +253,7 @@ class UrlBldr:
 			self.dQuery[sParam] = sFlagVal
 		else:
 			sSep = " "
-			if 'flagSep' in dHParam: sSep = 'flagSep'
+			if 'flagSep' in dFlag: sSep = 'flagSep'
 			self.dQuery[sParam] += "%s%s"%(sSep, sFlagVal)
 		
 		return True
@@ -784,9 +784,9 @@ def prnOptGroupForm(
 		elif sDataType == 'enum':  sCtrlType = 'select'
 		else: sCtrlType = 'text'
 
-		fLog.write("   Prop: %s.%s data_type: %s control_type: %s"%(
-			sGroup, sProp, sDataType, sCtrlType
-		))
+		#fLog.write("   Prop: %s.%s data_type: %s control_type: %s"%(
+		#	sGroup, sProp, sDataType, sCtrlType
+		#))
 
 		if sCtrlType == 'bool':
 
@@ -912,7 +912,17 @@ def prnOptGroupForm(
 			
 		nCtrls += 1
 		
-	
+	# If this is a var form, and we have a valid range, go ahead and print that
+	if bVar and ('validRange' in dGroup) and (len(dGroup['validRange']) > 1):
+		lRng = dGroup['validRange']
+		if _hasElement(dGroup, ['props','units','value']):
+			sUnits = " &nbsp; (%s)"%(dGroup['props']['units']['value'])
+		else:
+			sUnits = ""
+		sout(fOut, '<br><span class="minor">'+\
+			'Vaild range is: &nbsp; %s &nbsp; to &nbsp; %s%s</span>'%(lRng[0], lRng[1], sUnits)
+		)
+
 	sout(fOut, "</p>")
 
 	# Emitt a little group enable, disable javascript if needed
@@ -1056,10 +1066,10 @@ def prnHttpSource(fLog, dSrc, fOut):
 
 	if 'contacts' in dSrc:
 		sout(fOut, "<p>Technical problems using this data source should be "
-		     "directed to: <b>")
+		     "directed to: <i>")
 		lTmp = [d['name'].strip() for d in dSrc['contacts']]
 		sout(fOut, ", ".join(lTmp))
-		sout(fOut, "</b>.</p>")
+		sout(fOut, "</i>.</p>")
 
 	for sKey in ('protocol','interface'):
 		if sKey not in dSrc:
@@ -1079,7 +1089,7 @@ def prnHttpSource(fLog, dSrc, fOut):
 
 	# Print the examples
 	if 'examples' in dIface:
-		sout(fOut, "<p>Example queries:")
+		sout(fOut, "<p>Example queries: &nbsp;")
 		lExamples = dIface['examples']
 		iTmp = 0
 		for dExample in lExamples:
@@ -1089,7 +1099,11 @@ def prnHttpSource(fLog, dSrc, fOut):
 			elif 'title' in dExample: sTmpTxt = dExample['title']
 			lTmpUrl = _translateSettings(fLog, dSrc, dExample['settings'])
 			if lTmpUrl:
-				sout(fOut, '<a href="%s">%s</a> &nbsp;'%(lTmpUrl[0], sTmpTxt))
+				if iTmp > 1: sout(fOut, '&nbsp;')
+				sTmpTxt = sTmpTxt.replace(' ', '&nbsp;')
+				sout(fOut, '<a class="attn" href="%s">%s</a>'%(
+					lTmpUrl[0], sTmpTxt
+				))
 		sout(fOut, "</p>")
 
 	# Leave the form action blank, we'll set it depending on which submit
@@ -1128,7 +1142,7 @@ def prnHttpSource(fLog, dSrc, fOut):
 		# If the data are sub-settable by at least one property make the fieldset
 		# indicate that
 		if len(lMod) > 0:
-			sout(fOut, '<fieldset><legend><b>Coordinate Options:</b></legend>')
+			sout(fOut, '<fieldset><legend>Coordinate Options:</legend>')
 			
 			sStyle = ''
 			if len(lMod) > 12: sStyle = 'class="srcopts_scroll_div"'
@@ -1268,9 +1282,9 @@ def prnHttpSource(fLog, dSrc, fOut):
 			# TODO: Handle undo and revert back to the default
 			sout(fOut, '<fieldset><legend><b>Format Options:</b></legend>')
 			
-			(sMime, sExt, sName) = _getDefaultMime(dFmt)
+			(sMime, sExt, sName) = _getDefaultMime(dFormats)
 			sout(fOut, 
-				"<p>Output will be <b>%s</b> (<tt>%s</tt>) unless set below.</p>"%(
+				"<p>Output will be <b>%s</b> (<tt>%s</tt>) unless changed.</p>"%(
 				sName, sMime
 			))
 
@@ -1649,7 +1663,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		pout("<h1>Unlabeled Data Source</h1>")
 
 	if 'title' in dNode:
-			pout("<h2>%s</h2>"%dNode['title'])
+			pout('<h2 class="center">%s</h2>'%dNode['title'])
 
 	if 'description' in dNode:
 		pout("<p>\n%s\n</p>")%dNode['description']
@@ -1664,18 +1678,18 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		fOut.seek(0)
 		pout(fOut.read())
 	except Exception:
-		pout('<h2>Error in data source</h2>')
+		pout('<h2>Catalog Node Display Error</h2>')
 		pout('''<pre>
 %s
 </pre>
 '''%traceback.format_exc())
 
 
-	pout('<h2>Source definition is</h2>')
-	pout('''<pre>
-%s
-</pre>
-'''%json.dumps(dNode, indent=2))
+#	pout('<h2>Source definition is</h2>')
+#	pout('''<pre>
+#%s
+#</pre>
+#'''%json.dumps(dNode, indent=2))
 
 
 	# END Article Div, and Main DIV ######################################### #

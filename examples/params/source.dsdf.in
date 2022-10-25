@@ -50,10 +50,10 @@ exampleParams_00 = 'BxBx'
 exampleRange_01 = '2008-06-29T17:11:51 to 2008-06-29T17:11:53 | All Autocorrelations'
 
 exampleRange_02 = '2008-06-29T17:11:51 to 2008-06-29T17:11:53 | BxEx Cross-correlation'
-exampleParams_02 = 'BxEx complex'
-
-exampleRange_02 = '2008-06-29T17:11:51 to 2008-06-29T17:11:53 | BxEx Cross-correlation (Polar)'
 exampleParams_02 = 'BxEx'
+
+exampleRange_03 = '2008-06-29T17:11:51 to 2008-06-29T17:11:53 | BxEx Cross-correlation (Polar)'
+exampleParams_03 = 'BxEx complex'
 
 ; List the set of flags the reader understands here
 param_00 = 'complex | For cross-correlations output real and imaginary parts instead of magnitude and phase angle'
