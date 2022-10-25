@@ -197,13 +197,13 @@ def getFormatSelection(dConf, lRdrOut, bWebSockConn=False):
 	dTextOpts = {
 		"fracSecs":{
 			"label":  "Factional Seconds",
-			"title": "Number of fractional seconds digits in text streams, (minimum 0)",
+			"title": "Number of fractional seconds digits in text streams",
 			"value": 3,
 			"set":{"param":g_sParamSecFrac}
 		},
 		"sigDigits":{
 			"label":"Significant Digits",
-			"title":"General significant digits for text stream values (minimum 2)",
+			"title":"General significant digits for values in text streams",
 			"value":5,					
 			"set":{"param":g_sParamSigDigit}
 		}
@@ -215,7 +215,7 @@ def getFormatSelection(dConf, lRdrOut, bWebSockConn=False):
 	# Handle qstream
 	if sRdr == 'qstream':
 		dSettings = {
-			"enabled":{"value":True,
+			"enabled":{'type':'boolean', "value":True,
 				"set":{"param":"format.type", "value":"qstream"},
 			}
 		}
@@ -248,9 +248,9 @@ def getFormatSelection(dConf, lRdrOut, bWebSockConn=False):
 			"title":"Streaming format for plots",
 			"mimeTypes":lMimes,
 			'props':{
-				"enabled":{"xorGroup":"format", "value":True, "set":{
-					"value":True, "param":"format.type", 'pval':'das'
-				}}
+				"enabled":{'type':'boolean', "xorGroup":"format", "value":True, 
+					"set":{"value":True, "param":"format.type", 'pval':'das'}
+				}
 			}
 		}
 
@@ -323,7 +323,7 @@ def getFormatSelection(dConf, lRdrOut, bWebSockConn=False):
 			"mimeTypes":["text/csv"],
 			#"extension":".csv",
 			'props':{
-				"enabled":{"xorGroup":"format", "value":False,
+				"enabled":{'type':'boolean', "xorGroup":"format", "value":False,
 					"set":{"value":True, "param":"format.type", "pval":"csv"},
 				},
 				"delim":{
@@ -351,7 +351,7 @@ def getFormatSelection(dConf, lRdrOut, bWebSockConn=False):
 			#"mime":"image/png",
 			#"extension":".png",
 			'props':{
-				"enabled":{"value":False,
+				"enabled":{'type':'boolean', "value":False,
 					"set":{"param":"format.mime","value":"image/png"}
 				},
 				"width":{
@@ -375,7 +375,7 @@ def getFormatSelection(dConf, lRdrOut, bWebSockConn=False):
 			"title":"Output a VOTable for use with TOPCAT, application/x-votable+xml (*.xml)",
 			#"mime":"application/x-votable+xml",
 			#"extension":".xml",
-			"enabled":{"value":False,
+			"enabled":{'type':'boolean', "value":False,
 				"set":{"param":"format.mime","value":"application/x-votable+xml"}
 			},
 			"serial":{

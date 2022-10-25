@@ -83,8 +83,8 @@ exampleRange_00 = '1979-03-01T12:26:11 to 1979-03-01T12:29:24 | Bow shock crossi
 ; descriptions are visible to the end user, but are somewhat cluncky at
 ; this point.
 
-param_00 = 'DFT_LEN | The length of each transform, defaults to 800 | integer '
-param_01 = 'DFT_SLIDE | The denominator of the overlap fraction, defaults to 2 (i.e. 1/2 overlap) | integer'
+param_00 = 'DFT_LEN | The length of each transform | integer | 800 '
+param_01 = 'DFT_SLIDE | The denominator of the overlap fraction, so 2 means 1/2 overlap | integer | 2'
 
 ; The output of this reader may be cached at various resolution to allow
 ; for rapid graphical navigation.  The line below states that the server

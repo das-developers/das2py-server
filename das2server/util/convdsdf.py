@@ -390,33 +390,35 @@ def _mergeSrcCoordInfo(dOut, dProps, fLog):
 		dTime['props']['res'] = {'label':'Resolution', sV:None, "units":"s"}
 	
 	sNum = None
-	if 'exampleRange' in dProps:
-		lNums = list(dProps['exampleRange'].keys())
-		lNums.sort()
-		sNum = lNums[0]
 	
-		lTmp = [s.strip() for s in dProps['exampleRange'][sNum].split('|')]
-		lTmp = [s.strip() for s in lTmp[0].split('to')]
-		dTime['props']['min'][sV] = lTmp[0]		
-		if len(lTmp) > 1:
-			dTime['props']['max'][sV] = lTmp[1].replace('UTC','').strip()
+	# Don't mix in stuff that is not needed, no default values!
+	#if 'exampleRange' in dProps:
+	#	lNums = list(dProps['exampleRange'].keys())
+	#	lNums.sort()
+	#	sNum = lNums[0]
+	#
+	#	lTmp = [s.strip() for s in dProps['exampleRange'][sNum].split('|')]
+	#	lTmp = [s.strip() for s in lTmp[0].split('to')]
+	#	dTime['props']['min'][sV] = lTmp[0]		
+	#	if len(lTmp) > 1:
+	#		dTime['props']['max'][sV] = lTmp[1].replace('UTC','').strip()
 	
-	if 'exampleInterval' in dProps:
-		lNums = list(dProps['exampleRange'].keys())
-		if not sNum or (not (sNum in lNums)):
-			lNums.sort()
-			sNum = lNums[0]
-		if 'interval' not in dTime:
-			fLog.write("ERROR: Updating from %s\n"%dOut['path'])
-			
-		dTime['props']['inter'][sV] = dProps['exampleInterval'][sNum]
-	else:	
-		# Default to 1/2000th of the range, here's where we need the
-		# das2 module.
-		if dTime['props']['min'][sV] and dTime['props']['max'][sV]:
-			dtBeg = das2.DasTime(dTime['props']['min'][sV])
-			dtEnd = das2.DasTime(dTime['props']['max'][sV])
-			dTime['props']['res'][sV] = (dtEnd - dtBeg) / 2000.0
+	#if 'exampleInterval' in dProps:
+	#	lNums = list(dProps['exampleRange'].keys())
+	#	if not sNum or (not (sNum in lNums)):
+	#		lNums.sort()
+	#		sNum = lNums[0]
+	#	if 'interval' not in dTime:
+	#		fLog.write("ERROR: Updating from %s\n"%dOut['path'])
+	#		
+	#	dTime['props']['inter'][sV] = dProps['exampleInterval'][sNum]
+	#else:	
+	#	# Default to 1/2000th of the range, here's where we need the
+	#	# das2 module.
+	#	if dTime['props']['min'][sV] and dTime['props']['max'][sV]:
+	#		dtBeg = das2.DasTime(dTime['props']['min'][sV])
+	#		dtEnd = das2.DasTime(dTime['props']['max'][sV])
+	#		dTime['props']['res'][sV] = (dtEnd - dtBeg) / 2000.0
 				
 	# Set up the alteration rules
 	dTime['props']['min']['set'] = {'param':sBegKey, 'required':True}
@@ -516,6 +518,10 @@ def _mergeDas2Params(dOut, dProps, fLog):
 	
 	lNums = list(dProps['param'])
 	lNums.sort()
+
+	# Save off a list of default values, if present
+	dDefs = {}
+	sDef = None
 	
 	if bFlagSet:
 		dFlags = {}
@@ -541,6 +547,9 @@ def _mergeDas2Params(dOut, dProps, fLog):
 				dFlags[sFlag]['type'] = sType
 			else:
 				dFlags[sFlag]['value'] = lParam[0]
+
+			if len(lParam) > 3:
+				dDefs[sFlag] = lParam[3]
 	
 	else:
 		# For readers that don't have FLAGSET make a description that preserves
@@ -560,6 +569,9 @@ def _mergeDas2Params(dOut, dProps, fLog):
 			sType = lParam[2]
 			if sType == 'int': sType = 'integer'
 			dGet[sOptKey]['type'] = sType
+
+		if len(lParam) > 3:
+			sDef = lParam[3]
 	
 	
 	dIface = _getDict(dOut, 'interface')
@@ -598,7 +610,9 @@ def _mergeDas2Params(dOut, dProps, fLog):
 			dOpt['title'] = dFlag['title']
 			
 			if ('type' in dFlag) and (dFlag['type'] in ('real','integer')):
+				dOpt['type'] = dFlag['type']
 				dOpt['value'] = None
+				if sFlag in dDefs: dOpt['value'] = dDefs[sFlag]
 				dOpt['set'] = {'param':sOptKey, 'flag':sFlag}
 						
 			else:

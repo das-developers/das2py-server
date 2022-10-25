@@ -110,11 +110,32 @@ def _getElement(fLog, d, l):
 
 	for i in range(len(l)):
 		if l[i] not in d:
-			return False
+			return None
 
 		d = d[l[i]]
 
 	return d
+
+def _getPropDataType(dProp, dParams):
+	"""Get the type value direct from the property, or from the underlying
+	protocol if the type is not set directly. The default type is 'string'
+	if nothing else can be determined.
+	"""
+	if 'type' in dProp: return dProp['type']
+
+	if not _hasElement(dProp, ['set','param']):  return 'string'
+
+	sParam = dProp['set']['param']
+
+	# Pull up full parameter, or from a flag
+	if not _hasElement(dProp, ['set','flag']):
+		if 'type' in dParams[sParam]: return dParams[sParam]['type']
+	else:
+		sFlag = dProp['set']['flag']
+		if _hasElement(dParams, [sParam, 'flags', sFlag]):
+			dFlag = dParams[sParam]['flags'][sFlag]
+			if 'type' in dFlag: return dFlag['type']
+
 
 # ######################################################################### #
 
@@ -326,6 +347,12 @@ def _addInIfCtrlVal(dParam, sVal):
 	elif sVal not in dParam['_inIfCtrlVal']:
 		dParam['_inIfCtrlVal'].append(sVal)
 
+def _addInIfCtrlNotVal(dParam, sVal):
+	if not '_inIfCtrlNotVal' in dParam:
+		dParam['_inIfCtrlNotVal'] = [sVal ]
+	elif sVal not in dParam['_inIfCtrlNotVal']:
+		dParam['_inIfCtrlNotVal'].append(sVal)
+
 
 def _inputVarTextAspect(fOut, dParams, dVar, sProp, sCtrlId):
 	"""Create a text entry field for a variable property such as 'minimum' or 
@@ -519,13 +546,18 @@ def _inputItemEnum(fOut, dParams, dItem, sMsg, sCtrlId, sDisabled):
 		# Save the control id's in the flag_set, but since we are saving the same
 		# control id in multiple members also as an '_ifCtrlVal' item as well.	
 		if 'flag' in dMap:
-			_addInCtrlId(dParams[ dSet['param'] ]['flags'][ dMap['flag'] ], sCtrlId)
-			_addInIfCtrlVal(dParams[ dSet['param'] ]['flags'][ dMap['flag'] ], sVal)
+			dTarget = dParams[ dSet['param'] ]['flags'][ dMap['flag'] ]
+			_addInCtrlId(dTarget, sCtrlId)
 		elif 'flag' in dItem:
-			_addInCtrlId(dParams[ dSet['param'] ]['flags'][ dItem['flag'] ], sCtrlId)
+			dTarget = dParams[ dSet['param'] ]['flags'][ dItem['flag'] ]
+			_addInCtrlId(dTarget, sCtrlId)
 		else:
-			_addInCtrlId(dParams[ dSet['param'] ], sCtrlId)
-			_addInIfCtrlVal(dParams[ dSet['param'] ], sVal)
+			dTarget = dParams[ dSet['param'] ]
+			_addInCtrlId(dTarget, sCtrlId)
+	
+		# If not the selected value or item is required, set send condition
+		if (sSelected != "") and (('required' not in dSet) or (not dSet['required'])):
+			_addInIfCtrlNotVal(dTarget, sVal)
 
 	sout(fOut, '</select>')
 	
@@ -612,13 +644,15 @@ def _startGroupDisabled(dProps):
 
 
 def prnOptGroupForm(
-	fOut, sCtrlPre, dParams, sGroup, dGroup, sSrcUrl, bVar=False,
+	fLog, fOut, sCtrlPre, dParams, sGroup, dGroup, sSrcUrl, bVar=False,
 	bSingleGroup=False
 ):
 	"""Run through all the options in a group making output controls for each
 	settable property
 
 	Args:
+		fLog (file-like): Logger file-like object
+
 		fOut (file-like): The file-like object receive output
 
 		sCtrlPre (str): The prefix to assign to control IDs
@@ -701,6 +735,12 @@ def prnOptGroupForm(
 		if 'units' in dProp: sPropUnits = dProp['units']
 		elif sGrpUnits: sPropUnits = sGrpUnits
 		
+		# Bubble up the data type, defaults to type in params if not sepecified
+		if sProp == 'enabled':
+			sDataType = 'boolean'
+		else:
+			sDataType = _getPropDataType(dProp, dParams)
+
 		# Note: The type of curval is unknown at this point
 		if 'value' in dProp: curval = dProp['value']
 		else:
@@ -710,12 +750,7 @@ def prnOptGroupForm(
 		if ('set' not in dProp) or ('param') not in dProp['set']:
 			#sout(fOut, "%s: %s &nbsp"%(sProp, curval))
 			continue
-			
-		# make a row prefix
-		#if not bVar:
-		#	if iProp == 0: sout(fOut, "<p>")
-		#	else: sout(fOut, "</p>\n<p>")
-		#else:
+		
 		if (bSingleGroup):
 			if (iProp > 0): sout(fOut, "<br>")
 		else:
@@ -732,32 +767,34 @@ def prnOptGroupForm(
 		else:
 			dTargParam = dParams[ dSet['param'] ]
 
-			
 		if 'label' in dProp: sName = dProp['label']
 		else: sName = sProp[0].upper() + sProp[1:]
 
 		sCtrlId = "%s_%s_%s"%(sCtrlPre, sGroup, sProp)
 		lJsToggle[1].append(sCtrlId)
 		
-		if 'flag' in dSet: sCtrlVal = dSet['flag']
-		elif 'pval' in dSet: sCtrlVal = dSet['pval']
-		else: sCtrlVal = "%s"%curval
-		
 		# There are four basic types of controls: 
 		#
-		#  radio buttons, check boxes, text boxes, select boxes.  
+		#  check boxes, (aka exclusive check boxen) text boxes, select boxes.  
 		# 
 		# Determine what kind to make here.  Instances where there are only two
-		# values that can be selected (the initial value, and the set) use
-		# select boxes.
+		# values that can be selected (the initial value, and the set) use select.
 		
-		sType = 'unk'
-		if isinstance(curval, bool): sType = 'bool'
-		elif 'enum' in dSet:  sType = 'select'
-		elif 'value' in dSet: sType = 'select'
-		else: sType = 'text'
-		
-		if sType == 'bool':
+		if sDataType == 'boolean': sCtrlType = 'bool'
+		elif sDataType == 'enum':  sCtrlType = 'select'
+		else: sCtrlType = 'text'
+
+		fLog.write("   Prop: %s.%s data_type: %s control_type: %s"%(
+			sGroup, sProp, sDataType, sCtrlType
+		))
+
+		if sCtrlType == 'bool':
+
+			# Propogating down values
+			if 'pval' in dSet: sCtrlVal = dSet['pval']      # Translated value
+			elif 'value' in dSet: sCtrlVal = str( bool( dSet['value']) ).lower()
+			else: sCtrlVal = str( not bool( dSet['value']) ).lower()
+			
 			sInfo = sProp
 			if bVar or (sProp == "enabled"):
 				sName = "Output"
@@ -769,7 +806,12 @@ def prnOptGroupForm(
 				elif 'label' in dProp: sInfo = dProp['label']
 			
 			sChecked = ""
-			if curval == True: sChecked = "checked"
+			if dProp['value'] == True: 
+				sChecked = "checked"
+				# If I'm checked by default and this is not a required value then don't
+				# send it just because I'm checked
+				if ('required' not in dSet) or (not dSet['required']): 
+					_addInIfCtrlNotVal(dTargParam, sCtrlVal)
 			
 			# Some boolean options are part of a radio group	
 			if 'xorGroup' in dProp:
@@ -791,12 +833,12 @@ def prnOptGroupForm(
 			#print('dParams.keys()  = ', list(dParams.keys()))
 			
 			# Save off the control information
-			if 'flag' in dSet:
-				_addInCtrlId(dTargParam, sCtrlId)
-			else:
-				_addInCtrlId(dTargParam, sCtrlId)
+			_addInCtrlId(dTargParam, sCtrlId)
 
-		elif sType == 'select':
+			# If I'm a boolean option
+			
+
+		elif sCtrlType == 'select':
 			if 'title'  in dProp: sMsg = dProp['title']
 			elif 'label' in dProp: sMsg = dProp['label']
 			else:                 sMsg = sProp[0].upper() + sProp[1:]
@@ -826,7 +868,8 @@ def prnOptGroupForm(
 					_addInCtrlId(dTargParam, sCtrlId)
 					_addInIfCtrlVal(dTargParam, sVal)
 
-		else:		
+		else:		# The text fields
+
 			if bVar:
 				if sPropUnits: sout(fOut, '%s (%s)'%(sName, sPropUnits))
 				else: sout(fOut, '%s '%sName)
@@ -840,6 +883,11 @@ def prnOptGroupForm(
 				lDesc = dProp['description'].split('\n')
 				sDesc = '<br>\n'.join(lDesc)
 				sout(fOut, '<p>%s</p>'%sDesc)
+
+			# These start pre-populated with a value that is visible to the user
+			# so they can't use pval's
+			if dProp['value']: sCtrlVal = str(dProp['value'])
+			else: sCtrlVal = ""
 				
 			nSize = 8
 			if sPropUnits and sPropUnits.lower() == 'utc': nSize = 16
@@ -848,16 +896,19 @@ def prnOptGroupForm(
 			if nSize < 2: nSize = 2
 			
 			sReq = ""
-			if ('required' in dSet) and dSet['required']: sReq = 'required'
+			if ('required' in dSet) and dSet['required']: 
+				sReq = 'required'
+			else:
+				# This is not a require value, only send it if it changes from
+				# the default value
+				_addInIfCtrlNotVal(dTargParam, sCtrlVal)
 			
 			sout(fOut, '<input type="text" id="%s" size="%d" value="%s" %s %s>'%(
 				sCtrlId, nSize, sCtrlVal, sReq, sDisabled))
 			
 			# Save off the control information
-			if 'flag' in dSet:
-				_addInCtrlId( dTargParam, sCtrlId)
-			else:
-				_addInCtrlId(dTargParam, sCtrlId)
+			_addInCtrlId( dTargParam, sCtrlId)
+			
 			
 		nCtrls += 1
 		
@@ -1090,7 +1141,7 @@ def prnHttpSource(fLog, dSrc, fOut):
 				lMod = ['time'] + lMod
 			for sCoord in lMod:
 				# Function below writes control IDs into dParams
-				nSettables += prnOptGroupForm(fOut, 
+				nSettables += prnOptGroupForm(fLog, fOut, 
 					sBaseUri, dParams, sCoord, dCoords[sCoord], sSrcUrl, True
 				)
 
@@ -1128,7 +1179,7 @@ def prnHttpSource(fLog, dSrc, fOut):
 			
 			lModVars.sort()
 			for sVar in lModVars:
-				nSettables += prnOptGroupForm(fOut,
+				nSettables += prnOptGroupForm(fLog, fOut,
 					sBaseUri, dParams, sVar, dData[sVar], sSrcUrl, True
 				)
 
@@ -1183,7 +1234,7 @@ def prnHttpSource(fLog, dSrc, fOut):
 		if len(lMod) > 0:				
 			sout(fOut, "<fieldset><legend><b>Options:</b></legend>")
 				
-			nSettables += prnOptGroupForm(fOut,
+			nSettables += prnOptGroupForm(fLog, fOut,
 				sBaseUri, dParams, 'options', dIface['options'], sSrcUrl, False, True
 			)
 	
@@ -1229,7 +1280,7 @@ def prnHttpSource(fLog, dSrc, fOut):
 
 			#lModFmts.sort()
 			for sFmt in lModFmts:
-				nSettables += prnOptGroupForm(fOut, 
+				nSettables += prnOptGroupForm(fLog, fOut, 
 					sBaseUri, dParams, sFmt, dFormats[sFmt], sSrcUrl, False
 				)
 
@@ -1283,77 +1334,83 @@ def prnHttpSource(fLog, dSrc, fOut):
 		sout(fOut, """
 <script>
 function %s(sActionUrl) {
-	var dParams = %s;
+	const dParams = %s;
 	
 	// Strip this from outgoing control id's, to get the output control
 	// name.  It was added to keep out controls from different forms separate.
-	var sNamePre = "%s";
-	var lKeep = [];
+	let sNamePre = "%s";
+	let lKeep = [];
 
 	for(let sParam in dParams){
-		dParam = dParams[sParam]
+		let dParam = dParams[sParam]
 		
 		if(!("_outCtrlId" in dParam)) continue;
-		var ctrlOut = document.getElementById(dParam["_outCtrlId"]);
-		var sOutName = dParam["_outCtrlId"].replace(sNamePre, "");
+		let ctrlOut = document.getElementById(dParam["_outCtrlId"]);
+		let sOutName = dParam["_outCtrlId"].replace(sNamePre, "");
 		lKeep.push(sOutName);
 		
 		// Flagset parameters, the most complicated ones
-		if( ('type' in dParam) && (dParam['type'] == 'flag_set')){
+		if( ('type' in dParam) && (dParam['type'] == 'FlagSet')){
 		
 			if( !('flags' in dParam) ) continue;
 			
-			var dFlags = dParams[sParam]['flags'];
-			var sOutVal = "";
-			var sOutSep = " ";
+			let dFlags = dParams[sParam]['flags'];
+			let sOutVal = "";
+			let sOutSep = " ";
 			if( 'flagSep' in dParam) sOutSep = dParam['flagSep'];
 			
-			for(var sFlag in dFlags){
-				var dFlag = dFlags[sFlag];
+			for(let sFlag in dFlags){
+				let dFlag = dFlags[sFlag];
 				if( !('_inCtrlId' in dFlag) ) continue;
 				
-				var ctrlIn = document.getElementById(dFlag["_inCtrlId"]);
-				
-				// Check to see if we only add the output flag when the input
-				// has a certian value
-				if( '_inIfCtrlVal' in dFlag ){
-					if(ctrlIn.type == 'checkbox'){
-					
-						// If the state of the checkbox matches the send state then add the
-						// parameter.  This might mean than NOT checked sends a value.
-						if(dFlag['_inIfCtrlVal'] ==  ctrlIn.checked){
-							if((sOutSep.length > 0)&&(sOutVal.length > 0)) sOutVal += sOutSep;
-							sOutVal += dFlag['value'];
-						}
+				// Multiple controls may be trying to set my value.  Take the one
+				// that is not disabled and does not provide an excluded value.
+				let ctrlIn = null;
+				for(let i = 0; i < dFlag['_inCtrlId'].length; i++ ){
+					let sInId = dFlag["_inCtrlId"][i];
+					ctrlIn = document.getElementById(sInId);
+					if(ctrlIn.disabled)
+						continue;
+
+					// See if this value is one of the ignorables
+					if('_inIfCtrlNotVal' in dFlag){
+						if(dFlag['_inIfCtrlNotVal'].includes(ctrlIn.value))
+							continue;
 					}
-					else{
-						if( ctrlIn.value == dFlag['_inIfCtrlVal']){
-							if((sOutSep.length > 0)&&(sOutVal.length > 0)) sOutVal += sOutSep;
-							sOutVal += dFlag['value'];
-						}
-					}
-				}
-				else{
-					// So the input sets the whole flag only set the output if something
-					// has changed.
-					if(ctrlIn.type == 'checkbox'){
+
+					// Check boxes and friends
+					if((ctrlIn.type == 'checkbox')||(ctrlIn.type == 'radio')){
 						if( ctrlIn.checked == true){
+
+							// Extra work to build up the flag value
 							if((sOutSep.length > 0)&&(sOutVal.length > 0)) sOutVal += sOutSep;
 							if('prefix' in dFlag) sOutVal += dFlag['prefix'];
-							sOutVal += dFlag['value'];
+
+							// Now if the flag has a value, set it otherwise pass through
+							// the control value
+							if('value' in dFlag) 
+								sOutVal += dFlag['value'];
+							else
+								sOutVal += ctrlIn.value;
 						}
 					}
 					else{
 						if( ctrlIn.value.length > 0){
+
+							// Extra work to build the flag value
 							if((sOutSep.length > 0)&&(sOutVal.length > 0)) sOutVal += sOutSep;
 							if('prefix' in dFlag) sOutVal += dFlag['prefix'];
+
+							// Not a boolean control, just pass through the value
 							sOutVal += ctrlIn.value;					
 						} 
 					}
+					
+					break;
 				}
 			}
 			
-			// Set control name and value if value changed
+			// After looping through all the flags, set control name if we have a value
 			if(sOutVal.length > 0){
 				ctrlOut.name = sOutName;
 				ctrlOut.value = sOutVal;
@@ -1372,31 +1429,37 @@ function %s(sActionUrl) {
 			
 			if(!("_inCtrlId" in dParam)) continue;
 
-			// Multiple controls might be trying to set my value, but I only care
-			// about ones that are currently enabled
+			// Multiple controls might be trying to set my value, look at all of
+			// them, excluding disabled controls
 			var ctrlIn = null;
 			for(let i = 0; i < dParam['_inCtrlId'].length; i++ ){
 				var sInId = dParam["_inCtrlId"][i];
 				ctrlIn = document.getElementById(sInId);
-				if(!ctrlIn.disabled ) break;
-				else ctrlIn = null;
-			}
-			if(ctrlIn === null) continue; 
-			
-			// Check boxes...
-			if(ctrlIn.getAttribute("type") == "checkbox"){
-				if(ctrlIn.checked == true){
-					// Text fields
-					ctrlOut.value = ctrlIn.value;
-					ctrlOut.name = sOutName;
+				if(ctrlIn.disabled ) 
+					continue;
+
+				// See if this value is one of the ignorables
+				if('_inIfCtrlNotVal' in dParam){
+					if(dParam['_inIfCtrlNotVal'].includes(ctrlIn.value))
+						continue;
 				}
-			} 
-			else {
-				if(ctrlIn.value.length > 0){
-					// Text fields
-					ctrlOut.value = ctrlIn.value;
-					ctrlOut.name = sOutName;
+
+				// Check boxes...
+				if((ctrlIn.getAttribute("type") == "checkbox")||
+				   (ctrlIn.getAttribute("type") == "radio")){
+					if(ctrlIn.checked == true){
+						ctrlOut.value = ctrlIn.value;
+						ctrlOut.name = sOutName;
+					}
+				} 
+				else {
+					if(ctrlIn.value.length > 0){
+						ctrlOut.value = ctrlIn.value;
+						ctrlOut.name = sOutName;
+					}
 				}
+				
+				break;
 			}
 		}
 	}
@@ -1416,6 +1479,7 @@ function %s(sActionUrl) {
 	"""%(sFuncName, sJson, sNamePrefix, sFormId))
 		
 		# Make one submit function per base url that starts with https
+		sout(fOut, '<div class="center">')
 		for sBase in dProto['baseUrls']:
 
 			if sBase.startswith('ws'): continue  # Ignore websocket sources for regular browsers
@@ -1427,6 +1491,7 @@ function %s(sActionUrl) {
 			sout(fOut, '<input type="submit" value="%s" onclick=\'%s("%s");\'>'%(
 				sLabel, sFuncName, _getAction(sBase) 
 			))
+		sout(fOut, '</div>')
 
 	sout(fOut, '</form>\n<br>')
 
@@ -1578,15 +1643,13 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	# The main show #
 
 	U.page.navheader(dConf, fLog, sPathInfo)
-	if ('label' in dNode) or ('title' in dNode):
-		pout("<h1>")
-		if 'label' in dNode:
-			pout('<b>%s</b> - '%dNode['label'])
-		if 'title' in dNode:
-			pout(dNode['title'])
-		pout("</h1>")
+	if ('label' in dNode):
+		pout('<h1><b>%s</b></h1>'%dNode['label'])
 	else:
-		pout("<h1>Untitled Data Source</h2>")
+		pout("<h1>Unlabeled Data Source</h1>")
+
+	if 'title' in dNode:
+			pout("<h2>%s</h2>"%dNode['title'])
 
 	if 'description' in dNode:
 		pout("<p>\n%s\n</p>")%dNode['description']
