@@ -10,10 +10,6 @@ from os.path import dirname as dname
 import json
 from copy import deepcopy
 
-from . import errors
-from . import webio
-from . import output
-from . import srcfunc
 
 import das2
 

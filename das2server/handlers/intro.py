@@ -170,11 +170,7 @@ Merely reading one of the catalog files: <a href="%(script)s/catalog.json">catal
 or <a href="%(script)s/nodes.csv">nodes.csv</a> is sufficent.</p>
 
 <pre>
-<a href="%(script)s">server/</a>  This introductory page, at %(script)s
-  |
-  |- <a href="%(script)s/hapi/">hapi/</a> - Heliophysics API subsystem (if enabled)
-  |
-  |- <a href="%(script)s/static/">static/</a> - static files such as logos, etc
+  / This introductory page, at <a href="%(script)s">%(script)s</a>
   |
   |- <a href="%(script)s/source/">source/</a> - root directory for all data sources 
   |    |
@@ -209,6 +205,8 @@ or <a href="%(script)s/nodes.csv">nodes.csv</a> is sufficent.</p>
   |- <a href="%(script)s/nodes.csv">nodes.csv</a> - A flat listing of individual data
   |     source catalog nodes for this server.  Any one of the URLs in this file can be 
   |     used as a data query point.
+  |
+  |- <a href="%(script)s/static/">static/</a> - static files such as logos, etc
   |
   |- <a href="%(script)s/root.json">root.json</a> - The root of all individual catalog
   |     nodes on this server.  Also happens to be the first node listed in <a href="%(script)s/nodes.csv">nodes.csv</a> above.
