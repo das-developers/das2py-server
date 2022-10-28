@@ -329,7 +329,7 @@ def updateFromSrc(dConf, sRootDir, sLocalId):
 
 	sSetFile = dPaths['set']
 
-	# Git individual directories
+	# Get individual directories
 	lDirs = [sTopSrcDir] + sLocalId.lower().split('/')
 	
 	# Not add all previous directories to the current one
@@ -348,6 +348,7 @@ def updateFromSrc(dConf, sRootDir, sLocalId):
 	#lUrls[-1] = "%s/%s"%(dConf['SERVER_URL'], bname(sTopSrc))
 	
 	lTitles = [None]*(len(lLbls)-1) + ['Local Root Catalog']
+	lSep    = [None]*(len(lLbls)-1) + [':/']
 	
 	#print("lLbls:", lLbls)
 	#print("lDirs:", lDirs)
@@ -369,6 +370,7 @@ def updateFromSrc(dConf, sRootDir, sLocalId):
 				'version':'0.5', 'type':'Catalog', 'label':lLbls[i], 'catalog':dCat
 			}
 			if lTitles[i]: dObject['title'] = lTitles[i]
+			if lSep[i]:    dObject['separator'] = lSep[i]
 
 		# List all the objects in this directory and add them to the catalog
 		# you will need to make URLs for them
@@ -552,9 +554,9 @@ def updateLists(dConf, sRoot=None):
 	"""
 	Walk the sources updating the three collapsed lists.  Will update at least
 	the catalogs:
-		$DATASRC_ROOT/catalog.csv   Flat listing
+		$DATASRC_ROOT/node.csv      Flat listing
 	   $DATASRC_ROOT/catalog.json  Hierarchical listing
-	   $DATASRC_ROOT/catalog.txt   (das2 compat)
+	   $DATASRC_ROOT/das2list.txt  (das2 compat)
 	   $DATASRC_ROOT/hcat.json     (hapi compat)
 	   ???                         (IVOA compat)
 

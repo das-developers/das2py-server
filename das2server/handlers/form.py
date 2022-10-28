@@ -137,6 +137,173 @@ def _getPropDataType(dProp, dParams):
 			if 'type' in dFlag: return dFlag['type']
 
 
+# ########################################################################## #
+def prnCatalog(U, fLog, dConf, sRelPath, dNode, fOut):
+	"""Given a catalog node, print the sub items.  
+	Args:
+		dNode (dict) - Catalog node definition with fully qualified URLs for
+		   sub items.  Atomic catalog nodes with only stub items are required
+		   since stub items contain the URLs directly.
+	"""
+
+	sScriptUrl = U.webio.getScriptUrl(dConf)
+
+	dSub = dNode['catalog']
+
+	sSep = "/"
+	if 'separator' in dNode:
+		sSep = dNode['separator']
+		if sSep == None: 	sSep = ""
+
+	lKeys = list(dSub.keys())
+	lKeys.sort()
+	#sout(fOut, '<div id="indent30_div">')
+	sout(fOut, '<ul>')
+	for sKey in lKeys:
+		
+		if 'label' in dSub[sKey]:
+			sName = dSub[sKey]['label']
+		else:
+			sName = sKey
+		if len(sName) < 2:
+			sName = " &nbsp; %s &nbsp;"%sName
+
+		if 'title' in dSub[sKey]:
+			sTitle = dSub[sKey]['title']
+		else:
+			sTitle = "An untitled %s"%dSub[sKey]['type']
+
+		sClass = "cat_cat"
+		if dSub[sKey]['type'] == 'Collection':
+			sClass = "type_stream"
+
+		# Make use the local symmetry between .json and .html 
+		if 'urls' in dSub[sKey]:
+			sSubUrl = dSub[sKey]['urls'][0].replace('.json','.html')
+
+		sout(fOut, '<li class="%s"><a href="%s">%s</a> - %s<br></li>'%(
+			sClass, sSubUrl, sName, sTitle)
+		)
+
+	sout(fOut, '</ul>')
+	#sout(fOut, '</div>')
+
+	# This stuff is for general catalog clients, doesn't make sense
+	# without a path to follow
+
+	sout(fOut, '<hr class="code_sep">')
+
+#	if ('catalog' in dNode) and (len(list(dNode['catalog'].keys())) > 0):
+#		lKeys = list(dNode['catalog'].keys())
+#		lKeys.sort()
+#		sSubNode = "subnode = catalog['%s']"%lKeys[0]
+#	else:
+#		sSubNode = ""
+#
+#	sThisCat = sRelPath.replace('/',"']['")
+#
+#	# Python
+#	sout(fOut, '<button class="accordian">Using this catalog with Python 3</button>')
+#	sout(fOut, '<div class="code">')
+#	sout(fOut, '''
+#<blockquote class="code"><pre><code>
+#   import json
+#   import das2
+#
+#   # Example of direct server access without a multiserver catalog
+#   server = das2.get_node("%s","%s/root.json")
+#   catalog = server['%s']
+#
+#   # Pretty print node content
+#   s = json.dumps(node.props, ensure_ascii=False, indent="  ", sort_keys=True)
+#   print(s)
+#   
+#   # List and access sub-nodes
+#   catalog.keys()
+#   %s
+#   
+#</code></pre></blockquote>
+#'''%(dConf['SERVER_ID'], sScriptUrl, sThisCat, sSubNode))
+#	sout(fOut, '</div>')
+#
+#	# Javascript
+#	sout(fOut, '<button class="accordian">Using this catalog with JavaScript</button>')
+#	sout(fOut, '<div class="code">')
+#	sout(fOut, '''
+#<blockquote class="code"><pre><code>
+#   
+#	// TODO: Add Javascript example
+#
+#</code></pre></blockquote>
+#''')
+#	sout(fOut, '</div>')
+#
+#	# Matlab
+#	sout(fOut, '<button class="accordian">Using this catalog with MATLAB</button>')
+#	sout(fOut, '<div class="code">')
+#	sout(fOut, '''
+#<blockquote class="code"><pre><code>
+#   
+#	// TODO: Add matlab example
+#
+#</code></pre></blockquote>
+#''')
+#	sout(fOut, '</div>')
+#
+#	# IDL
+#	sout(fOut, '<button class="accordian">Using this catalog with IDL</button>')
+#	sout(fOut, '<div class="code">')
+#	sout(fOut, '''
+#<blockquote class="code"><pre><code>
+#   
+#	// TODO: Add matlab example
+#
+#</code></pre></blockquote>
+#''')
+#	sout(fOut, '</div>')
+#
+#	# C
+#	sout(fOut, '<button class="accordian">Using this catalog with C99</button>')
+#	sout(fOut, '<div class="code">')
+#	sout(fOut, '''
+#<blockquote class="code"><pre><code>
+#   #include &lt;stdio.h&gt;
+#   #include &lt;das2/core.h&gt;
+#
+#   DasNode* pRoot = new_RootNode_url("%s/root.json", "%s", NULL, NULL);
+#   DasNode* pCat  = DasNode_subNode(pRoot, "%s:/%s", NULL, NULL);
+#   DasJdo*  pJdo  = DasNode_getJdo(pCat, NULL);
+#   size_t uLen;
+#   const char* sOut = DasJdo_writePretty(pJdo, "   ", "\\n", &uLen);
+#   fputs(sOut, stdout);
+#
+#</code></pre></blockquote>
+#'''%(sScriptUrl, dConf['SERVER_ID'], dConf['SERVER_ID'], sRelPath))
+#	sout(fOut, '</div>')
+#
+#
+## small chunk of java script to make code examples collapse
+#	sout(fOut, '''
+#<script>
+#var acc = document.getElementsByClassName("accordian");
+#var i;
+#
+#for (i = 0; i < acc.length; i++) {
+#    acc[i].addEventListener("click", function() {
+#        this.classList.toggle("active");
+#        var panel = this.nextElementSibling;
+#        if (panel.style.display === "block") {
+#            panel.style.display = "none";
+#        } else {
+#            panel.style.display = "block";
+#        }
+#    });
+#}
+#</script>
+#''')
+#
+
+
 # ######################################################################### #
 
 class UrlBldr:
@@ -1000,7 +1167,7 @@ def _getAction(sBase):
 	else: return sBase
 
 
-def prnHttpSource(fLog, dSrc, fOut):
+def prnHttpSource(U, fLog, dConf, dSrc, fOut):
 	""" Print an http source, this is complicated
 
 	Handling input forms.
@@ -1065,11 +1232,21 @@ def prnHttpSource(fLog, dSrc, fOut):
 	sSrcUrl = dSrc['_url']
 
 	if 'contacts' in dSrc:
-		sout(fOut, "<p>Technical problems using this data source should be "
-		     "directed to: <i>")
-		lTmp = [d['name'].strip() for d in dSrc['contacts']]
-		sout(fOut, ", ".join(lTmp))
-		sout(fOut, "</i>.</p>")
+		lTech = []
+		lSci  = []
+		for dContact in dSrc['contacts']:
+			if dContact['type'] == 'technical':
+				lTech.append(dContact['name'])
+			elif dContact['type'] == 'scientific':
+				lSci.append(dContact['name'])
+
+		if len(lTech) > 0:
+			sout(fOut, "<p>Technical problems using this data source should be "
+		   	  "directed to: <i>%s</i><p>"%(", ".join(lTech)))
+		
+		if len(lSci) > 0:
+			sout(fOut, "<p>Questions concerning the content or usefulness of "
+		   	  "these data should be directed to: <i>%s</i><p>"%(", ".join(lSci)))
 
 	for sKey in ('protocol','interface'):
 		if sKey not in dSrc:
@@ -1675,9 +1852,9 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		fOut = StringIO()
 
 		if dNode['type'] == 'Catalog':
-			prnCatalog(fLog, dNode, fOut)
+			prnCatalog(U, fLog, dConf, sRelPath, dNode, fOut) # dConf used for source examples
 		else:
-			prnHttpSource(fLog, dNode, fOut)
+			prnHttpSource(U, fLog, dConf, dNode, fOut)     # ditto
 		fOut.seek(0)
 		pout(fOut.read())
 	except Exception:

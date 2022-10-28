@@ -213,6 +213,12 @@ div.article input[type="text"][required] {
 div.article h2 {
 	font-weight: normal;
 	font-size: 1.3em;
+	text-align:  center;
+}
+
+/* A div who's only job is to center stuff */
+div.article div.center {
+	text-align:  center;
 }
 
 div.article h1 {
@@ -222,6 +228,65 @@ div.article h1 {
 }
 
 span.minor{ color: #777; font-style: italic; font-size: 75%}
+
+/* Styles used by source example buttons *********************************** */
+
+/* Source code items */
+/* hr.code_sep{ 
+	height: 4px; 
+	border: none; 
+	background: #032666; 
+	background-color: #032666; 
+}
+
+.accordian {
+	 background-color: #eee;
+    color: #444;
+    cursor: pointer;
+    padding: 12px;
+    width: 100%;
+    text-align: left;
+    border: none;
+    outline: none;
+    transition: 0.4s;
+}
+
+.active, .accordian:hover {
+	 background-color: #b2c6ea;
+}
+
+.accordian:after {
+    content: '\002B'; / * Unicode character for "plus" sign (+) * /
+	 color: #777;
+    font-weight: bold;
+    float: right;
+    margin-left: 5px;
+}
+
+.active:after {
+    content: "\2212"; / * Unicode character for "minus" sign (-) * /
+}
+
+div.code{ 
+	display: none;
+	overflow: hidden;
+	font-size: 80% 
+}
+
+blockquote.code{ 
+	font-size: 125%; 
+	background-color: #222222; 
+	color: #eeeeee;
+	border-radius: 1em;
+}
+
+blockquote.code pre{
+	color: #eeeeee;
+	background-color: #222222; 
+}
+
+*/
+
 
 /* Style by class and attributes ******************************************* */
 

@@ -62,7 +62,7 @@ def getWebTargets(dConf, fLog, sRelPath):
 	sCatRoot = dConf['DATASRC_ROOT']
 	
 	if not os.path.isdir(sCatRoot):
-		fLog.write("   ERROR: DATASRC_ROOT dir '%s' does not exist"%sRoot)
+		fLog.write("   ERROR: DATASRC_ROOT dir '%s' does not exist"%sCatRoot)
 		return None
 	
 	if sRelPath == '/':
@@ -207,7 +207,7 @@ def sidenav(dConf, fLog, bAddExtra=False):
 		else:
 			sServer = "{Set SERVER_NAME in %s}"%dConf['__file__']
 			
-		pout('''<b>%s</b></br>
+		pout('''<b>%s</b><br>
 <a href="%s/">
 <img src="%s/static/logo.png" alt="%s" height="64" ></a>
 <br>
@@ -284,7 +284,7 @@ def navheader(dConf, fLog, sPathInfo):
 		sName = sName[0].upper() + sName[1:]
 		
 		if i < (nParts - 1):
-			sUrl = '%s/source/%s.html'%(sScriptUrl, ''.join(lParts[:i+1]))
+			sUrl = '%s/source/%s.html'%(sScriptUrl, '/'.join(lParts[:i+1]))
 			pout('    <li> &gt; <a href="%s">%s</a></li>'%(sUrl, sName))
 		else:
 			pout('    <li> &gt; &nbsp; <i>%s</i></li>'%sName)

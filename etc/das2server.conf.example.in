@@ -1,7 +1,8 @@
 # Site name.  Many das2 servers can be located at the same site, please
 # use the same SITE_TITLE for all the das2 servers in a given organization.
 
-SITE_TITLE = "My Data Source Site"
+SITE_TITLE = "My Org"
+SITE_URL   = "https://my.organization.place"
 
 # A nicer name for the server
 SERVER_NAME = "%(SERVER_ID)s"
