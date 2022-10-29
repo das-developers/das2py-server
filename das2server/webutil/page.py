@@ -12,103 +12,6 @@ def pout(sOut):
 	sys.stdout.write(sOut)
 	sys.stdout.write('\r\n')
 
-##############################################################################
-# Provide a list of name and directory tuples from a given data level
-
-def isVisible(sDsdfFile):
-	if not os.path.isfile(sDsdfFile): return False
-	
-	try:
-		fIn = open(sDsdfFile, 'r')
-
-		for sLine in fIn:
-			if sLine.find('#') != -1:
-				sLine = sLine[: sLine.find('#') ]
-			sLine = sLine.strip()
-			if sLine.startswith('hidden'):
-				lLine = [s.strip().strip("'") for s in sLine.split('=')]
-				if len(lLine) > 1:
-					if lLine[1].lower() in ('yes','true','1'):
-						fIn.close()
-						return False;
-
-		fIn.close()
-	except:
-		return False
-	return True
-
-# ########################################################################## #
-
-def getWebTargets(dConf, fLog, sRelPath):
-	"""Get a list of display names, filesystem names and links and names for
-   everything at a particular level
-	
-	Args:
-	   dConf (dict):   Server configuration
-
-	   fLog  (object): An object with a .write method
-
-		sRelPath (str): Level under SCRIPT/source, use a '/' to get information
-		   for the top of the dsdf root
-   
-   Returns [(str, str, str)]: A list of the: 
-      Item label, the sub-relative path (for recursive calls), the URL target
-	"""
-
-	if 'DATASRC_ROOT' not in dConf:
-		fLog.write("   ERROR: Configuration item DATASRC_ROOT missing")
-		return None
-
-	sCatRoot = dConf['DATASRC_ROOT']
-	
-	if not os.path.isdir(sCatRoot):
-		fLog.write("   ERROR: DATASRC_ROOT dir '%s' does not exist"%sCatRoot)
-		return None
-	
-	if sRelPath == '/':
-		sPath = pjoin(sCatRoot, 'root.json')
-	else:
-		sMiddle = sRelPath.strip('/').replace('/', os.sep)
-		sPath = pjoin(sCatRoot, 'root', sMiddle + ".json")
-		
-		sRelPath = "/%s/"%(sRelPath.strip('/'))
-		
-	if not os.path.isfile(sPath):
-		fLog.write("   ERROR: Catalog node '%s' does not exist"%sPath)
-		return None
-	
-	lOut = []
-	
-	try:
-		with open(sPath) as fIn:
-			dCat = json.load(fIn)
-	except Exception as e:
-		fLog.write("   ERROR: %s"%str(e))
-		return None
-
-	if ('catalog' not in dCat) or (len(dCat['catalog']) == 0):
-		fLog.write("   WARN: Catalog node '%s' is empty"%sPath)
-		return None
-
-	#fLog.write("   INFO: Listing items in %s for relpath %s"%(sPath, sRelPath))
-
-	lItems = list(dCat['catalog'].keys())
-	lItems.sort()
-	lOut = []
-
-	sScriptUrl = webio.getScriptUrl()
-	
-	# Don't open sub catlogs, just print details from this one
-	for sItem in lItems:
-
-		dItem = dCat['catalog'][sItem]
-		sItemUrl = "%s/source%s%s.html"%(sScriptUrl, sRelPath, sItem)
-	
-		lOut.append( (dItem['label'], "%s%s"%(sRelPath, sItem), sItemUrl) )
-	
-	#fLog.write("TARGETS: %s"%str(lOut))
-	return lOut
-
 # ########################################################################## #
 
 def header(dConf, fLog, sTitle=None): 
@@ -159,6 +62,114 @@ def allowViewLog(dConf, fLog, sIP):
 	fLog.write("   WARNING: das2server.util.page.allowViewLog not implemented, always says yes")
 	
 	return True
+
+# ########################################################################## #
+
+def _unquote(sVal):
+	if (len(sVal) > 0) and (sVal[0] == '"') and (sVal[-1] == '"'):
+		sVal = sVal[1:-1]
+	return sVal.replace('""','"')
+
+def _parseCatRows(lRows):
+	"""Handle CSV escapes etc. to parse a row of csv data.  if it's not a 
+	catalog item, ignore it.  This is the tightest CSV parser I've seen,
+	should prob post it somewhere for closer inspection.
+	"""
+	llOut = []
+
+	for sRow in lRows:
+		lRow = []
+		bInQuote = False
+		iBeg = 0
+		iEnd = 0
+		nLen = len(sRow)
+		while(iEnd < nLen):
+		
+			if (sRow[iEnd] == ',') and (not bInQuote):
+				lRow.append( _unquote(sRow[iBeg:iEnd]) )
+				iBeg = iEnd + 1
+
+			elif sRow[iEnd] == '"':
+				bInQuote = not bInQuote
+
+			iEnd += 1
+
+		# Handle last item
+		lRow.append(_unquote(sRow[iBeg:iEnd]))
+
+		# Ignore stuff I don't care about
+		if (len(lRow) > 1) and (len(lRow[0]) > 0) and (lRow[1] in ('Catalog','SourceSet')):
+			llOut.append(lRow)
+
+	return llOut
+
+
+def pullNavItems(dConf):
+	""" Get a list of side name items based off the nodes.csv file  Reading
+	this one file is faster then looking at a lot of disk locations.
+	Args:
+		dConf - Server config (could be cashed)
+
+	Returns list( (sName, nIndent, sUrl) ): 
+		A list of navigation items that should be around 20 items long
+	"""
+
+	LOCAL_ID  = 0
+	TYPE      = 1
+	TITLE     = 2
+	URL       = 3
+	ITEM_MIME = 4
+	PROV_MIME_0 = 5
+
+	sNodes = pjoin(dConf['DATASRC_ROOT'], 'nodes.csv')
+	with open(sNodes, 'r') as fIn:
+		lRows = [s.strip() for s in fIn.read().split('\n')]
+	
+	llRows = _parseCatRows(lRows)  # pull out the catalog items
+
+	dLevels = {}                   # key = level, val = count
+	for i in range(len(llRows)):
+		lRow = llRows[i]
+
+		iLevel = lRow[LOCAL_ID].count('/')
+		if iLevel in dLevels: dLevels[iLevel] += 1
+		else: dLevels[iLevel] = 1
+
+	if len(dLevels) == 0:  # No data sources !!!
+		return []
+
+	nMaxCatLevels = max(dLevels.keys()) + 1
+	lLevels = [0]*(nMaxCatLevels)  # Make into a list
+	for i in range(nMaxCatLevels):
+		lLevels[i] = dLevels[i]
+
+	# How far can I go down the list and be less than 40 ?
+	iMaxPrnLevel = -1
+	nTotal = 0
+	
+	for i in range(len(lLevels)):
+		if lLevels[i] + nTotal < 50:
+			iMaxPrnLevel += 1
+			nTotal += lLevels[i]
+		else:
+			break
+
+	# Always show at least the first level no matter how crazy big it is
+	if iMaxPrnLevel < 0: iMaxPrnLevel = 0 
+
+	# Now Build the output down to level X
+	lOut = []
+	for i in range(len(llRows)):
+		lRow = llRows[i]
+		iLevel = lRow[LOCAL_ID].count('/')
+		if iLevel > iMaxPrnLevel:
+			continue
+
+		#print(lRow)
+		sPage = lRow[URL].replace('.json','.html')
+		lOut.append( (lRow[LOCAL_ID].split('/')[-1], iLevel, sPage) )
+
+	return lOut
 
 # ########################################################################## #
 
@@ -213,27 +224,33 @@ def sidenav(dConf, fLog, bAddExtra=False):
 <br>
 '''%(sSite, sScriptUrl, sScriptUrl, sServer))
 
-		#pout('<hr>\n<i>%s</i>'%sServer)
-	#else:
+	# Returns an ordered list of: (sName, nIndent, sUrl) 
+	# Uses fuzzy algorithm to decide how many levels to decend
+	lItems = pullNavItems(dConf)
+
 	pout('<hr>\n<i>Data Sources</i>')
 
-	pout('<ul>')
-	
-	lTop = getWebTargets(dConf, fLog, '/')
-	if lTop != None:
-		for (sName, sPathName, sUrl) in lTop:
-			pout('    <li><a href="%s">%s</a><br>'%(sUrl, sName))
+	if len(lItems) == 0:
+		pout("<br><br><b>None Defined!</b><i><br>Use <tt>das_srv_sdef</tt>"+\
+		     "<br>to import<br>definitions.</i><br><br>")
+	else:
+		pout('<ul>')
+		for i in range(len(lItems)):
+			(sName, nIndent, sUrl) = lItems[i]
+			if nIndent == 0:
+				if i > 0: pout('   <br></li>') # Close previous top level
 
-			lSub = getWebTargets(dConf, fLog, sPathName)
-			if lSub != None:
-				for (sSubName, sSubPathName, sSubUrl) in lSub:
-					pout('    &nbsp; &nbsp; <a href="%s">%s</a><br>'%(sSubUrl, sSubName))
-			
-			pout('   <br></li>')
+				pout('    <li><a href="%s">%s</a><br>'%(sUrl, sName))
+			else:
+				sIndent = "&nbsp; "*nIndent
+				pout('    %s<a href="%s">%s</a><br>'%(sIndent, sUrl, sName))
 
-	pout('  </ul><hr>')
-	pout('<a href="%s/catalog.json">Full Catalog</a><br><br>'%sScriptUrl)
-	pout('<a href="%s/nodes.csv">Catalog Nodes</a><br><br>'%sScriptUrl)
+		if len(lItems) > 0: pout('   <br></li>')
+		pout('  </ul><hr>')
+
+		pout('<a href="%s/catalog.json">Full Catalog</a><br><br>'%sScriptUrl)
+		pout('<a href="%s/nodes.csv">Catalog Nodes</a><br><br>'%sScriptUrl)
+
 	pout('''%s<br><br>
   %s<br><br>
   <a href="%s/peers.xml">Peer Servers</a>
