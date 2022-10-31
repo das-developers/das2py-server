@@ -167,16 +167,11 @@ def loadDsdf(dConf, sName, sPath, fLog):
 		fLog.write("Reading: %s"%sPath)
 
 		fIn = open(sPath, encoding='UTF-8')
-
-		try:
-			dDsdf = _rawReadDsdf(fIn, fLog)
-		except ValueError as e:
-			raise errors.ServerError(str(e))
-
+		dDsdf = _rawReadDsdf(fIn, fLog)
 		fIn.close()
 
 		if len(dDsdf) == 0:
-			raise errors.ServerError("Data source file is empty")
+			raise ValueError("Data source file %s is empty"%sPath)
 
 		dDsdf['__path__'] = sPath  # Save case-sensitive name and disk path
 		dDsdf['__name__'] = bname(sName)
@@ -287,7 +282,7 @@ def _ageAuthNote(dProps):
 			lMeth = [s.strip() for s in lMethods[i].split(':')]
 			
 			if len(lMeth) < 2:
-				raise errors.ServerError("Syntax error in readAccess key value")
+				raise ValueError("Syntax error in 'readAccess' key values")
 
 			sCheckType = lMeth[0].lower().strip()
 				
@@ -357,7 +352,7 @@ def _mergeProto(dOut, dConf, dProps, fLog, sLocalId):
 	sServer = dConf['SERVER_URL']
 	
 	dProto['convention']	= 'HTTP/1.1'
-	sBaseUrl = "%s/source/%s/data"%(sServer, sLocalId.lower())
+	sBaseUrl = "%s/source/%s/das3"%(sServer, sLocalId.lower())
 
 	dProto['baseUrls'] = [sBaseUrl]
 
@@ -846,7 +841,7 @@ def makeGetSrc(fLog, dConf, sPath, sLocalId = None):
 		if ('localId' in dProps) and ('00' in dProps['localId']):
 			sLocalId == dProps['localId']['00']
 		else:
-			raise errors.ServerError("localId not supplied and not in %s"%sPath)
+			raise ValueError("localId not supplied and not in %s"%sPath)
 
 	sBaseUrl = _mergeProto(dOut, dConf, dDsdf, fLog, sLocalId)
 	
@@ -943,7 +938,7 @@ def _mergeWsProto(dOut, dConf, dProps, fLog, sLocalId):
 	sServer = dConf['SERVER_URL']
 	
 	dProto['subprotocols'] = ['forward-stream-v1.das2.org']
-	sBaseUrl = "%s/%s/data"%(dConf['WEBSOCKET_URI'], sLocalId.lower())
+	sBaseUrl = "%s/%s/das3rt"%(dConf['WEBSOCKET_URI'], sLocalId.lower())
 
 	dProto['baseUrls'] = [sBaseUrl]
 
@@ -1073,7 +1068,7 @@ def makeSockSrc(fLog, dConf, sPath, sLocalId=None):
 		if ('localId' in dProps) and ('00' in dProps['localId']):
 			sLocalId == dProps['localId']['00']
 		else:
-			raise errors.ServerError("localId not supplied and not in %s"%sPath)
+			raise ValueError("localId not supplied and not in %s"%sPath)
 					
 	sBaseUrl = _mergeWsProto(dOut, dConf, dDsdf, fLog, sLocalId)
 	
@@ -1186,15 +1181,14 @@ def makeInternal(fLog, dConf, sPath):
 
 	(sBegKey, sEndKey, sResKey, sIntKey, sOptKey) = g_tKeyConvention
 
-	# Put in translations for other systems by default
 	dTr = _getDict(dOut, 'translate')
 	for sSys in ('das2','hapi'):
 		(sBegTr, sEndTr, sResTr, sIntTr, sOptTr) = stdFormKeys(sSys)
 		dTr[sSys] = {
 			sBegTr:sBegKey, sEndTr:sEndKey, sResTr:sResKey, sOptTr:sOptKey,
-			'start':sBegKey, 'stop':sEndKey
+			'start':sBegKey, 'stop':sEndKey, 'server':None, 'dataset':None
 		}
-
+	
 	dCmds = _getDict(dOut, 'commands')
 	
 	# By default, both das2 and das3 sources output the same thing
@@ -1351,9 +1345,7 @@ def makeInternal(fLog, dConf, sPath):
 				lMeth = [s.strip() for s in lMethods[i].split(':')]
 				#fLog.write("DEBUG: auth methods %s"%lMeth)
 				if len(lMeth) < 2:
-					raise errors.ServerError(
-						"Syntax error in readAccess key value"
-					)
+					raise ValueError("Syntax error in 'readAccess' key value")
 
 				sCheckType = lMeth[0].lower().strip()
 				
@@ -1377,20 +1369,30 @@ def makeInternal(fLog, dConf, sPath):
 		dAuth = _getDict(dOut, 'authentication')
 		dAuth['securityRealm'] = dProps['securityRealm']['00']
 
-	# Formatting commands
-	lRdrOut = ['das', '1.0', 'binary']  # The default
+	# Formatting commands and default format
+	# Put in auto-keys and translations for other systems by default
+	dDefParams = _getDict(dOut, 'default')
 	if _isPropTrue(dProps, 'qstream'):
 		lRdrOut = ['qstream', None, 'binary']
+		dDefParams["das2"] = {"format.type":"qstream"}
 
 	elif _isPropTrue(dProps, 'das2Stream'):
 		lRdrOut = ['das', '2.2', 'binary']
-		
+		dDefParams["das2"] = {"format.type":"das","format.version":"2.2"}
+
 	elif _isPropTrue(dProps, 'das3Stream'):
 		lRdrOut = ['das', '3.0', 'binary']
+		dDefParams["das3"] = {"format.type":"das","format.version":"3.0"}
+		
+	else:
+		# Still default to das1 for readers, but assume das2 is wanted
+		lRdrOut = ['das', '1.0', 'binary']
+		dDefParams["das2"] = {"format.type":"das","format.version":"2.2"}
+
 
 	# Add our supported output conversion interface controls and parameters
-	dFmts = _getDict(dCmds, 'format')
-	formats.addFormatCommands(dConf, dFmts, lRdrOut)
+	lFormatters = _getList(dCmds, 'format')
+	formats.addFormatCommands(dConf, lFormatters, lRdrOut)
 
 	return dOut
 

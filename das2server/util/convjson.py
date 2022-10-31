@@ -144,36 +144,32 @@ def _findSrcNoCase(sRoot, sSource, sExt, fLog):
 
 def stripCppComments(fLog, sPath):
 	lLines = []
-	try:
-		fIn = open(sPath, encoding='UTF-8')
-		for sLine in fIn:
-			sLine = sLine.strip()
-			# Walk the line, if we are not in quotes and see '//' ignore everything
-			# from there to the end
-			iQuote = 0
-			iComment = -1
-			n = len(sLine)
-			for i in range(n):
-				if sLine[i] == '"': 
-					iQuote += 1
-					continue
-				if sLine[i] == '/' and (i < n-1) and (sLine[i+1] == '/') \
-					and (iQuote % 2 == 0):
-					iComment = i
-					break;
+	
+	fIn = open(sPath, encoding='UTF-8')
+	for sLine in fIn:
+		sLine = sLine.strip()
+		# Walk the line, if we are not in quotes and see '//' ignore everything
+		# from there to the end
+		iQuote = 0
+		iComment = -1
+		n = len(sLine)
+		for i in range(n):
+			if sLine[i] == '"': 
+				iQuote += 1
+				continue
+			if sLine[i] == '/' and (i < n-1) and (sLine[i+1] == '/') \
+				and (iQuote % 2 == 0):
+				iComment = i
+				break;
 					
-			if iComment > -1:
-				sLine = sLine[:iComment]
-				sLine = sLine.strip()
+		if iComment > -1:
+			sLine = sLine[:iComment]
+			sLine = sLine.strip()
 			
-			lLines.append(sLine)
+		lLines.append(sLine)
 
-		sData = '\n'.join(lLines)
-
-	except FileNotFoundError:
-		fIn.close()
-		raise errors.ServerError("File '%s' does not exist."%sPath)
-
+	sData = '\n'.join(lLines)
+	
 	fIn.close()
 
 	return sData
@@ -188,14 +184,7 @@ def loadCommentedJson(fLog, sPath):
 		otherwise a ServerError is raised if basic parsing failed.
 	"""
 	sData = stripCppComments(fLog, sPath)
-	
-	try:
-		dOut = json.loads(sData)
-	except ValueError as e:
-		raise errors.ServerError("Syntax error in %s: %s\n"%(sPath, str(e)))
-
-	return dOut
-
+	return json.loads(sData)
 
 # ########################################################################## #
 
@@ -236,7 +225,7 @@ def include(fLog, dCur, lIncPath, nLevel = 1):
 	"""
 
 	if nLevel > 11:
-		raise errors.ServerError(
+		raise RecursionError(
 			"Object depth of 12 encountered, does one of your files accidentally"+\
 			" include itself?"
 		)
@@ -245,13 +234,13 @@ def include(fLog, dCur, lIncPath, nLevel = 1):
 	while '$include' in dCur:
 		nIncludes += 1
 		if nIncludes > 12:
-			raise errors.ServerError(
+			raise RecursionError(
 				"Recursive $include limit of 12 encountered, does one of your"+\
 				" files accidentally include itself?"
 			)
 
 		if not isinstance(dCur['$include'], list):
-			raise errors.ServerError("$include does not contain a file list.")
+			raise ValueError("$include does not contain a file list.")
 
 		lFiles = dCur.pop('$include')
 
@@ -266,7 +255,7 @@ def include(fLog, dCur, lIncPath, nLevel = 1):
 					break
 
 			if not bLoaded:
-				raise errors.ServerError(
+				raise FileNotFoundError(
 					"Couldn't find include file %s in %s"%(sFile,str(lIncPath)
 				));
 
@@ -313,7 +302,7 @@ def generate(fLog, dConf, dTop, dCur=None, nLevel=1):
 	"""
 
 	if nLevel > 11:
-		raise errors.ServerError(
+		raise RecursionError(
 			"Object depth of 12 encountered, does one of your files accidentally"+\
 			" include itself?"
 		)
@@ -332,7 +321,7 @@ def generate(fLog, dConf, dTop, dCur=None, nLevel=1):
 	
 		for sFunc in dFuncs:
 			if sFunc not in srcfunc.g_dRegistry:
-				raise errors.ServerError(
+				raise ValueError(
 					"Unknown server side source function '%s' referenced from '%s"%(
 					sFunc, bname(dTop['__path__'])
 				))
@@ -459,7 +448,7 @@ def load(fLog, dConf, sSource, sTarget="external"):
 		dSource = dsdf2Source(fLog, dConf, sPath, sTarget)
 		return dSource
 
-	raise errors.QueryError(u"Data source %s doesn't exist on this server"%sSource)
+	raise FileNotFoundError(u"Data source %s doesn't exist on this server"%sSource)
 
 # ########################################################################## #
 
@@ -488,13 +477,13 @@ def _das22Iface(U, dSrc):
 	(sBeg, sEnd, sRes, sInt, Opts) = U.source.stdFormKeys('v3')
 
 	if ('protocol' not in dSrc) or ('http_params' not in dSrc['protocol']):
-		raise U.errors.ServerError("'http_params' missing from source definition")
+		raise ValueError("'http_params' missing from source definition")
 
 	dParams = dSrc['protocol']['http_params']
 	
 	# Have to have at least a begin time and end time to support a das2.2 query
 	if (sBeg not in dParams) or (sEnd not in dParams):
-		raise U.errors.notFoundError("Data source does not support the das2/v2.2 query interface.")
+		raise ValueError("Data source does not support the das2/v2.2 query interface.")
 
 	dDsdf = {}
 	if 'title' in dSrc:  dDsdf['description'] = dSrc['title']

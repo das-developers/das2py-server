@@ -426,7 +426,7 @@ def addFormatHttpParams(dConf, dParams, lRdrOut, bWebSockConn=False):
 	dParams['format.version']  = {"required":False, "type":"string"}
 	
 ##############################################################################
-def addFormatCommands(dConf, dFmts, lRdrOut):
+def addFormatCommands(dConf, lFormatters, lRdrOut):
 	"""Add command templates for formatting output."""
 
 	(sKeyBeg, sKeyEnd, sKeyRes, sKeyIntr, sKeyParams) = g_tKeyConvention
@@ -445,7 +445,6 @@ def addFormatCommands(dConf, dFmts, lRdrOut):
 			'input':{'type':'qstream'},
 			'output':{'type':'qstream','variant':'text'}
 		}
-		nFmt += 1
 		return   # Don't know of anything else I can do with QStream
 
 	if sRdr == 'das':
@@ -455,7 +454,7 @@ def addFormatCommands(dConf, dFmts, lRdrOut):
 			sCmd = 'das2_from_das1'
 			if 'DAS1_TO_DAS2' in dConf: sCmd = dConf['DAS1_TO_DAS2']
 
-			dFmts[nFmt] = {
+			lFormatters.append({
 				'label':'das v1.0 to v2.2 converter',
 				'template':[
 					"%s #[_THIS_DIRECTORY_]/%s #%s #%s #[%s#@#]"%(
@@ -465,28 +464,28 @@ def addFormatCommands(dConf, dFmts, lRdrOut):
 				'triggers':[{'key':'format.version','value':"2.2", 'compare':'ge'}],
 				'input':{'type':'das','version':'1.0'},
 				'output':{'type':'das','version':'2.2'}
-			}
-			nFmt += 1
+			})
+			
 
 			# Now act as if my version was v2 :)
 			sVer = '2.2'
 
 		elif sVer == '1.1': # Tagged stream (B0, etc.)
 			sCmd = 'das2_from_tagged_das1'
-			dFmts[nFmt] = {
+			lFormatters.append({
 				'label':'das v1.1 (tagged) to v2.2 converter',
 				'template':'%s -s -tBeg #%s'%(sCmd, sKeyBeg),
 				'triggers':[{'key':'format.version','value':"2.2", 'compare':'ge'}],
 				'input':{'type':'das','version':'1.1'},
 				'output':{'type':'das','version':'2.2'}
-			}
-			nFmt += 1
+			})
+			
 			sVer = '2.2'
 
 		if sVer == '2.2':
 			sCmd = 'das2_ascii'
 			if 'D2S_TO_UTF8' in dConf: sCmd = dConf['D2S_TO_UTF8']
-			dFmts[nFmt] = {
+			lFormatters.append({
 				'label':'das 2.2 binary to text',
 				'template':'%s -c #[%s#-s @#] #[%s#-r @#]'%(
 					sCmd, g_sParamSecFrac, g_sParamSigDigit
@@ -494,11 +493,11 @@ def addFormatCommands(dConf, dFmts, lRdrOut):
 				'triggers':[{'key':'format.serial','value':'text'}],
 				'input':{'type':'das','version':'2.2'},
 				'output':{'type':'das','version':'2.2','variant':'text'}
-			}
-			nFmt += 1	
+			})
+			
 			sCmd = 'das2_csv'
 			if 'D2S_CSV_CONVERTER' in dConf: sCmd = dConf['D2S_CSV_CONVERTER']
-			dFmts[nFmt] = {
+			lFormatters.append({
 				'label':'das 2.2 to CSV converter',
 				'template':'%s #[%s#-s @#] #[%s#-r @#] #[%s#-d @#]'%(
 					sCmd, g_sParamSecFrac, g_sParamSigDigit, g_sParamDelim
@@ -506,11 +505,11 @@ def addFormatCommands(dConf, dFmts, lRdrOut):
 				'triggers':[{'key':'format.type','value':'csv'}],
 				'input':{'type':'das','version':'2.2'},
 				'output':{'type':'csv'}
-			}
-			nFmt += 1	
+			})
+			
 			if 'DAS_TO_PNG' in dConf:
 				sCmd = dConf['DAS_TO_PNG']
-				dFmts[nFmt] = {
+				lFormatters.append({
 					'label':'das v2.2 plot image generator',
 					'template':'%s #[%s#-w @#] #[%s#-h @#]'%(
 						sCmd, 'format.width', 'format.height'
@@ -519,6 +518,6 @@ def addFormatCommands(dConf, dFmts, lRdrOut):
 					'input':{'type':'das','version':'2.2'},
 					'output':{'type':'png'},
 					'streaming':False
-				}
-				nFmt += 1
+				})
+				
 			
