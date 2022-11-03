@@ -19,7 +19,7 @@
 
 ; Required Items
 description = 'Authentication test, username is "testuser" and password is "test"'
-reader = 'env PYTHONPATH=%(PREFIX)s/lib/python%(PYVER)s python%(PYVER)s %(PREFIX)s/examples/randata.py'
+reader = 'env PYTHONPATH=%(PREFIX)s/lib/python%(PYVER)s python%(PYVER)s %(PREFIX)s/examples/auth/sine.py'
 reducer = not_reducible
 das2Stream = 1
 techContact = 'Your Name <your.name@yourplace.edu>'

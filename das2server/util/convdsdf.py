@@ -41,7 +41,7 @@ g_dStdKeys = {
 
 def stdFormKeys(sConvention):
 	"""Get the standard time parameter keys based on the call convention
-	In das3 the key names are picked for coordinate names to help the
+	For das flex, the key names are picked for coordinate names to help the
 	developer keep different physical dimensions separate.
 
 	Returns 
@@ -352,7 +352,7 @@ def _mergeProto(dOut, dConf, dProps, fLog, sLocalId):
 	sServer = dConf['SERVER_URL']
 	
 	dProto['convention']	= 'HTTP/1.1'
-	sBaseUrl = "%s/source/%s/das3"%(sServer, sLocalId.lower())
+	sBaseUrl = "%s/source/%s/flex"%(sServer, sLocalId.lower())
 
 	dProto['baseUrls'] = [sBaseUrl]
 
@@ -938,7 +938,7 @@ def _mergeWsProto(dOut, dConf, dProps, fLog, sLocalId):
 	sServer = dConf['SERVER_URL']
 	
 	dProto['subprotocols'] = ['forward-stream-v1.das2.org']
-	sBaseUrl = "%s/%s/das3rt"%(dConf['WEBSOCKET_URI'], sLocalId.lower())
+	sBaseUrl = "%s/%s/flexRT"%(dConf['WEBSOCKET_URI'], sLocalId.lower())
 
 	dProto['baseUrls'] = [sBaseUrl]
 
@@ -948,7 +948,7 @@ def _mergeWsProto(dOut, dConf, dProps, fLog, sLocalId):
 
 def _mergeWsFormat(dConf, dOut, dProps, fLog):
 
-	# Different das3 servers can have different capabilities so we *really*
+	# Different flex servers can have different capabilities so we *really*
 	# shouldn't make api.json files for others.  I have done so here, but
 	# they aren't in the catalog at least and they are hidden from wget.
 	
@@ -1199,7 +1199,7 @@ def makeInternal(fLog, dConf, sPath, sLocalId):
 	
 	lCmds = _getList(dOut, 'commands')
 	
-	# By default, both das2 and das3 sources output the same thing
+	# By default, both das2 and dasFlex sources output the same thing
 	# User can customize if desired downstream
 	
 	# Reader Section #################################
@@ -1373,13 +1373,13 @@ def makeInternal(fLog, dConf, sPath, sLocalId):
 
 	elif _isPropTrue(dProps, 'das2Stream'):
 		lRdrOut = ['das', '2', 'binary']
-		# das3 requests can handle das2 streams, we're not pulling a python here
+		# flex requests can handle das2 streams, we're not pulling a python here
 		dDefParams["das2"] = {"format.type":"das","format.version":"2"}
-		dDefParams["das3"] = {"format.type":"das","format.version":"2"}
+		dDefParams["flex"] = {"format.type":"das","format.version":"2"}
 
 	elif _isPropTrue(dProps, 'das3Stream'):
 		lRdrOut = ['das', '3', 'binary']
-		dDefParams["das3"] = {"format.type":"das","format.version":"3"}
+		dDefParams["flex"] = {"format.type":"das","format.version":"3"}
 		
 	else:
 		# Still default to das1 for readers, but assume das2 is wanted

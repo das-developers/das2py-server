@@ -12,8 +12,8 @@ from . import formats
 # NOTE: If these change, update class MyOptParse in das_srv_sdef
 g_sStdDas1 = 'das1.pro'
 g_sStdDas2 = 'das2.d2t'
-g_sStdDas3 = 'das3.json'
-g_sStdRt   = 'das3rt.json'
+g_sStdDas3 = 'flex.json'
+g_sStdRt   = 'flexRT.json'
 g_sStdHapi2 = 'hapi2.json'
 g_sStdVo  = 'voservice.xml'
 g_sStdIntern = 'internal.json'
@@ -73,8 +73,8 @@ def sourceFiles(sRoot, sLocalId):
 		local id.  The dictionary will have at least the following keys:
 
 		  d['set'] - Standard location of the SourceSet catalog
-		  d['das3'] - Standard location of the das3 federated catalog entry
-		  d['das3rt'] - Standard location of the das3 realtime source def
+		  d['flex'] - Standard location of the das federated catalog entry
+		  d['flexRT'] - Standard location of the fed cat realtime source def
 		  d['das2'] - Standard location of the das2 source descriptor
 		  d['das1'] - Standard location of the das1 source descriptor
 		  d['intern']  - Standard location of the internal processing instructions
@@ -89,8 +89,8 @@ def sourceFiles(sRoot, sLocalId):
 
 	d = {
 		'set': pjoin(sTopCatDir, sSubPath+'.json'),
-      'das3'  : pjoin(sTopCatDir, sSubPath, g_sStdDas3),
-      'das3rt': pjoin(sTopCatDir, sSubPath, g_sStdRt),
+      'flex'  : pjoin(sTopCatDir, sSubPath, g_sStdDas3),
+      'flexRT': pjoin(sTopCatDir, sSubPath, g_sStdRt),
       'das2'  : pjoin(sTopCatDir, sSubPath, g_sStdDas2),
       'das1'  : pjoin(sTopCatDir, sSubPath, g_sStdDas1),
       'intern'   : pjoin(sTopCatDir, sSubPath, g_sStdIntern),
@@ -164,7 +164,7 @@ def makeCollection(dConf, sSet, lInput, sOutPath):
 		if s in dDas3Src: dCat[s] = dDas3Src[s]
 
 	# There are many ways to advertise the coordinates and data for this source
-	# but the only one I care about are the ones in das3.json
+	# but the only one I care about are the ones in flex.json
 	
 	# Pull up the coordinates and data from the interface description
 	dIFace = dDas3Src['interface']
@@ -203,7 +203,7 @@ def makeCollection(dConf, sSet, lInput, sOutPath):
 		if bname(sInPath) == g_sStdDas3:
 
 			# Re-use the source file already loaded
-			dSources['das3'] = {
+			dSources['flex'] = {
 				'type':'HttpStreamSrc', 'purpose':'primary-stream',
 				'label':'Primary Source',
 				'description':'A semantic interface definition as '+\
@@ -217,7 +217,7 @@ def makeCollection(dConf, sSet, lInput, sOutPath):
 		elif bname(sInPath) == g_sStdRt:
 			dSource = _loadJson(sInPath)
 			
-			dSources['das3rt'] = {
+			dSources['flexRT'] = {
 				'type':'WebSocSrc', 'purpose':'primary-stream',
 				'label':'Real-time Source',
 				'description':'Similar to regular Das3 sources but also supports real-time '+\

@@ -63,7 +63,7 @@ _g_BrowserAgent = ['firefox','explorer','chrome','safari','edge']
 #   |             |- survey/ - An html directory listing, useful for wget
 #   |                  |
 #   |                  |- das2.d2t - the old dsdf as das2 stream trick
-#   |                  |- das3.json - a fed cat HttpStreamSource object
+#   |                  |- flex.json - a fed cat HttpStreamSource object
 #   |                  |- voservice.xml 
 #   |                  |
 #   |                  |- data - form action handler (hidden from indexes)
@@ -117,11 +117,11 @@ g_dDefHandlers = {
 	# Directory info pages leading to a data source page
 	'HANDLE_INFO':     'das2server.handlers.info',
 
-	# New das3: /source/juno/wav/survey.html
+	# New flex requests: /source/juno/wav/survey.html
 	'HANDLE_FORM':     'das2server.handlers.d3form',
 
-	# New das3: /source/juno/wav/survey/das3 (can handle others as well)
-	'HANDLE_DAS3':  'das2server.handlers.d3data',
+	# New das flex: /source/juno/wav/survey/flex (can handle others as well)
+	'HANDLE_DATA':  'das2server.handlers.d3data',
 
 	# List of services offered by this server (failed experiment)
 	#'HANDLE_SERVICES': 'das2server.handlers.services',
@@ -433,7 +433,7 @@ def main(form):
 			sPathInfo = "/source/%s/das2"%(
 				form.getfirst('dataset', 'nosuchset').lower()
 			)
-			sReqType = 'HANDLE_DAS3'
+			sReqType = 'HANDLE_DATA'
 	
 		#elif sServer == 'image':
 		#	sReqType = 'HANDLE_DSDF_IMAGE'
@@ -470,7 +470,7 @@ def main(form):
 				sReqType = 'HANDLE_H_API_NONE'
 			
 			
-	# Handle Das3 path oriented queries
+	# Handle DasFlex path oriented queries
 	else:
 		if sPathInfo in [None, '', '/']:
 			sReqType = 'HANDLE_NONE'
@@ -497,8 +497,8 @@ def main(form):
 			sReqType = 'HANDLE_VERIFY'
 
 		elif sPathInfo.startswith('/source/'):
-			if  sPathInfo.endswith('das2') or sPathInfo.endswith('das3'):
-				sReqType = 'HANDLE_DAS3'
+			if  sPathInfo.endswith('das2') or sPathInfo.endswith('flex'):
+				sReqType = 'HANDLE_DATA'
 
 			elif sPathInfo.endswith('/') or sPathInfo.endswith('index.html'):
 				sReqType = 'HANDLE_DIR'

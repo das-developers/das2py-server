@@ -1,4 +1,4 @@
-"""Error types for Das2 pyserver libraries"""
+"""Error types for das flex server libraries"""
 
 class DasError(Exception):
 	"""Generic class to catch all das errors but ignore built-in errors"""
@@ -43,6 +43,6 @@ class NotFoundError(DasError):
 	pass
 
 class RemoteServer(DasError):
-	"""In das3 catalogs aren't supposed to advertise other servers stuff
-	it's not this servers job to worry about it"""
+	"""With federated catalogs, server  aren't supposed to advertise other
+	servers stuff it's not thier job to worry about it"""
 

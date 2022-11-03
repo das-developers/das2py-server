@@ -413,12 +413,12 @@ def main(argv):
 		lOutput = []
 		try:
 			if sInType == 'dsdf':
-				lOutput.append(dPaths['das3'])
+				lOutput.append(dPaths['flex'])
 				sFormAction = '%s/data'
 				_writeJsonFile(lOutput[-1], U.convdsdf.makeGetSrc(fLog, dConf, sPath, sLocalId))
 				
 				if opts.bSocSrc:
-					lOutput.append(dPaths['das3rt'])
+					lOutput.append(dPaths['flexRT'])
 					_writeJsonFile(lOutput[-1], U.convdsdf.makeSockSrc(fLog, dConf, sPath, sLocalId))
 				
 				lOutput.append(dPaths['intern'])	
@@ -434,11 +434,11 @@ def main(argv):
 					_writeFile(lOutput[-1], sDas1)
 					
 			else:
-				lOutput.append(dPaths['das3'])
+				lOutput.append(dPaths['flex'])
 				_writeJsonFile(lOutput[-1], U.convjson.makeFedCat(fLog, dConf, sPath))
 
 				lOutput.append(dPaths['intern'])
-				_writeJsonFile(lOutput[-1], U.convjson.makeDas3Int(fLog, dConf, sPath))
+				_writeJsonFile(lOutput[-1], U.convjson.makeInternal(fLog, dConf, sPath))
 
 				lOutput.append(dPaths['das2'])
 				_writeFile(lOutput[-1], U.convjson.makeD2t(fLog, dConf, sPath))

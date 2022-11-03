@@ -35,8 +35,8 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 
 	# Output one of three versions:
    # (no path)     - old das2 list
-	# /node.csv  - New das3 list
-	# /sources.json - New das3 catalog
+	# /node.csv     - New catalog node list
+	# /sources.json - New integrated catalog
 	if sUrlPath.endswith('nodes.csv'):
 		lHeaders += [
 			"Content-Type: text/csv; charset=utf-8",

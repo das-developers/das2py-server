@@ -1,4 +1,4 @@
-"""Default handler for das3 style catalog level lists"""
+"""Default handler for das flex style catalog level lists"""
 
 import sys
 import codecs
@@ -15,8 +15,8 @@ from os.path import basename as bname
 # Copy in from das2server.util.catalog.py
 g_sStdDas1 = 'das1.pro'
 g_sStdDas2 = 'das2.d2t'
-g_sStdDas3 = 'das3.json'
-g_sStdRt   = 'das3rt.json'
+g_sStdDas3 = 'flex.json'
+g_sStdRt   = 'flexRT.json'
 g_sStdHapi2 = 'hapi2.json'
 g_sStdVo  = 'voservice.xml'
 g_sStdIntern = 'internal.json'
@@ -185,8 +185,8 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 			sFormRow = None
 			if sItem == g_sStdDas1: sDesc = "das1 local source definition"
 			elif sItem == g_sStdDas2: sDesc = 'das2 http/get source definition'
-			elif sItem == g_sStdDas3: sDesc = 'das3 http/get source definition'
-			elif sItem == g_sStdRt:   sDesc = 'das3 web socket source definition'
+			elif sItem == g_sStdDas3: sDesc = 'das flex http/get source definition'
+			elif sItem == g_sStdRt:   sDesc = 'das flex web socket source definition'
 			elif sItem == g_sStdHapi2:sDesc = 'hapi2 source definition'
 			elif sItem == g_sStdVo:   sDesc = 'IVOA service definition'
 			elif sItem.endswith('.json'):

@@ -31,7 +31,7 @@ if not g_sPrefix:
 	sys.exit(7)
 
 g_sEtc	= pjoin(g_sPrefix, 'etc')
-g_sConfig = pjoin(g_sEtc, 'das2server.conf')
+g_sConfig = pjoin(g_sEtc, 'dasflex.conf')
 
 g_bInstExamples = True
 
@@ -50,7 +50,7 @@ class build_scripts_wconf(build_scripts):
 	
 	def embed_config(self, lLines, encoding):
 		r"""Convert lines that start with g_sConfPath (no proceeding whitespace)
-		and change them to g_sConfPath = $SERVER_ETC/das2server.conf
+		and change them to g_sConfPath = $SERVER_ETC/dasflex.conf
 		"""
 		
 		# Not efficient, don't care, it's easy to read and this is just install
@@ -329,7 +329,7 @@ lScripts = [ 'scripts/%s'%s for s in [
 lDataFiles = [
 	('bin', ['scripts/das_startup.sh.in']),
 	('etc', [
-		'etc/das2server.conf.example.in','etc/das2peers.ini.example.in',
+		'etc/dasflex.conf.example.in','etc/das2peers.ini.example.in',
 		'etc/group', 'etc/passwd', 'etc/ReadMe-Passwords.txt.in',
 		'etc/mime.json.example'
 	]),

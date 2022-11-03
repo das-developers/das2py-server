@@ -1,7 +1,7 @@
 """
 This is one of the two major endpoint handlers for the server, it provides
-user interfaces for native das3 data sources.  The other is the data request
-handler that provides the actual data for all data source types.
+user interfaces for flexible data sources.  The other is the data request
+handler that provides the actual data for many data source types.
 
 The handler assumes that:
 
