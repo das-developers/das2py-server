@@ -1,6 +1,7 @@
 """Grab bag of utilities for the Das2.2 server"""
 
 import os
+import json
 from . import webio
 
 ##############################################################################
@@ -52,23 +53,6 @@ def checkParams(fLog, form):
 
 	return True
 
-
-##############################################################################
-class recursionError(Exception):
-	"""Little exception class to denote reaching a recursion limit, didn't
-	see one built into the standard library"""
-
-	def __init__(self, nMax, sMsg=None):
-		self.sMsg = sMsg
-		self.nMax = nMax
-
-	def __str__(self):
-		if self.sMsg == None:
-			return "Maximum recursion depth %s exceeded"%self.nMax
-		else:
-			return "%s Maximum recursion depth %s exceeded"%(self.sMsg, self.nMax)
-
-
 ############################################################################
 def symWalk(fLog, sRoot, fileCallBack = None, dirCallBack = None, tData = None, 
             nMaxDepth=20, _n=0):
@@ -107,7 +91,7 @@ def symWalk(fLog, sRoot, fileCallBack = None, dirCallBack = None, tData = None,
 	
 	nCurDepth = _n + 1
 	if nCurDepth > nMaxDepth:
-		raise recursionError("In symWalk:", nMaxDepth)
+		raise RecursionError("In symWalk:", nMaxDepth)
 	
 	try:
 		lItems = os.listdir(_sRoot)

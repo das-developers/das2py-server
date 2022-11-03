@@ -422,7 +422,7 @@ def main(argv):
 					_writeJsonFile(lOutput[-1], U.convdsdf.makeSockSrc(fLog, dConf, sPath, sLocalId))
 				
 				lOutput.append(dPaths['intern'])	
-				_writeJsonFile(lOutput[-1], U.convdsdf.makeInternal(fLog, dConf, sPath))
+				_writeJsonFile(lOutput[-1], U.convdsdf.makeInternal(fLog, dConf, sPath, sLocalId))
 				
 				lOutput.append(dPaths['das2'])
 				_writeFile(lOutput[-1], U.convdsdf.makeD2t(fLog, dConf, sPath))
@@ -449,9 +449,11 @@ def main(argv):
 	
 			perr("Source Def: %s"%("\n            ".join(lOutput)))
 	
-		except U.errors.ServerError as e:
+		except Exception as e:
+			import traceback
 			perr('%s'%fLog.getvalue())
 			perr('ERROR: %s'%str(e))
+			perr(traceback.format_exc())
 			return 22
 
 		lLocalSrcIds.append(sLocalId)

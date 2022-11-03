@@ -70,7 +70,7 @@ of an HTTP GET parameter.
 
 The template:
 ```
-#[read.time.min # -beg @ # -beg 2020-01-14 ]#
+#[read.time.min # -beg @ # -beg 2020-01-14 ]
 ```
 would reduce as follows if "read.time.min" were among the given GET parameters:
 ```
@@ -104,14 +104,14 @@ which has *values* for each flag.  Obviously each flag in this example should be
 it's own query parameter.
 
 To deal with this all too common situation, the PARAM_SELECTOR may denote:
-   * a parameter keyword
-   * a sub-parameter keyword
-   * a separator for sub-parameters
-   * a separator for sub-parameters and thier values
+   1. a parameter keyword  (required)
+   2. a sub-parameter keyword
+   3. a separator for sub-parameters
+   4. a separator for sub-parameters and thier values
 
 Here's the full syntax for a PARAM_SELECTOR:
 ```
-#[ PARAM[SUB_PARAM # SUB_SEP # SUB_VAL_SEP] #  Replacement if present  #  Replacement if absent]
+#[ PARAM(SUB_SEP | SUB_PARAM | SUB_VAL_SEP) #  Replacement if present  #  Replacement if absent]
 ```
 The SUB_SEP defaults to comma `,`.  By default the SUB_VAL_SEP is not defined and 
 everything between two sub-seperators is taken to be the parameter name.  Thus for 
@@ -121,9 +121,9 @@ Here's a few examples demonstrating flag values of increasing complexity.
 
 Flag values separated by commas
 ```
-HTTP GET:   bands=Ex,By
+HTTP GET:   bands=ExBy
 
-Templates:  #[bands[By] # --magnetic # ]  #[bands[Ex] # --electric # ]
+Templates:  #[bands(|By) # --magnetic # ]  #[bands(,|Ex) # --electric # ]
 
 Output:     --magnetic --electric
 ```
@@ -132,16 +132,16 @@ Flag values separated by spaces
 ```
 HTTP GET:   bands=Ex By
 
-Templates:  #[bands[By # ] # --magnetic # ]  #[bands[Ex # ] # --electric # ]
+Templates:  #[bands( |By) # --magnetic # ]  #[bands( |Ex) # --electric # ]
 
 Output:     --magnetic --electric
 ```
 
 Full sub-parameters pushed into a single query param:
 ```
-HTTP GET:   args=lfdr=ExEw mfr=13ExEw hfr=ABC12EuEvExEw
+HTTP GET:   params=lfdr=ExEw mfr=13ExEw hfr=ABC12EuEvExEw
 
-Template:   #[params[mfr# #=] # -mfr @ # ]
+Template:   #[params( |mfr|=) # -mfr @ # ]
 
 Output:     -mfr 13ExEw
 ```
@@ -173,13 +173,14 @@ which is equivalent to `#[ PARAM_SELECTOR # @ ]` above.
 
 ## Predefined Parameters
 
-When templates are evaluated by das2-pyserver, the following "parameters" are aways
+When templates are evaluated by das2py-server, the following "parameters" are aways
 defined and may be thus may always be used:
 
-   * `_server` - The URL to the das2-pyserver root URL, for example https://jupiter.physics.uiowa.edu/das/server
+   * `_SERVER_` - The URL to the das2-pyserver root URL, for example https://jupiter.physics.uiowa.edu/das/server
 
-   * `_sourcename` - The connical name of the datasource, for example Juno/WAV/Survey
+   * `_LOCAL_ID_` - The local ID of the datasource, for example Juno/WAV/Survey
 
-   * `_file` - The automatically calculated output filename in case the attachment
+   * `_FILENAME_` - The automatically calculated output filename in case the attachment
       disposititon should be used
 
+   * 

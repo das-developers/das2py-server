@@ -330,7 +330,8 @@ lDataFiles = [
 	('bin', ['scripts/das_startup.sh.in']),
 	('etc', [
 		'etc/das2server.conf.example.in','etc/das2peers.ini.example.in',
-		'etc/group', 'etc/passwd', 'etc/ReadMe-Passwords.txt.in'
+		'etc/group', 'etc/passwd', 'etc/ReadMe-Passwords.txt.in',
+		'etc/mime.json.example'
 	]),
 	
 	# the resource files
@@ -370,11 +371,11 @@ else:
 	]))
 
 	lDataFiles.append( ('examples/random', [
-		'examples/random/randata.py','examples/random/source.dsdf.in'
+		'examples/random/reader.py','examples/random/source.dsdf.in'
 	]))
 
 	lDataFiles.append( ('examples/waveform', [
-		'examples/waveform/waveform.py','examples/waveform/source.dsdf.in'
+		'examples/waveform/reader.py','examples/waveform/source.dsdf.in'
 	]))
 
 	lDataFiles.append( 
@@ -387,11 +388,11 @@ else:
 	)
 
 	lDataFiles.append( ('examples/spectra', [
-		'examples/spectra/spectra.sh.in','examples/spectra/source.dsdf.in'
+		'examples/spectra/reader.sh.in','examples/spectra/source.dsdf.in'
 	]))
 
 	lDataFiles.append( ('examples/params',[
-		'examples/params/cdf.py','examples/params/source.dsdf.in'
+		'examples/params/reader.py','examples/params/source.dsdf.in'
 	]))
 	lDataFiles.append( ('examples/params/themis_data', [
 		'examples/params/themis_data/tha_l3_sm_20080629_171151_20080629_171152_burst_v01.cdf'

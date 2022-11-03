@@ -114,20 +114,20 @@ def _getDas3Fmts(dSource):
 
 	return lProvides
 
-def _getDas2Fmts(sSource):
+def _getDas2Fmts(dMime, sSource):
 	lLines = [sLine.strip() for sLine in sSource.split('\n')]
 	for sLine in lLines:
 		if sLine.startswith('das2Stream'):
 			lSub = [s.strip('"\'').strip() for s in sLine.split('=')]
 			if (len(lSub) > 1) and (lSub[1].lower() in ('1','t','true')):
-				return [ formats.getMime('das','2','binary')[0] ]
+				return [ formats.getMime(dMime, 'das','2','binary')[0] ]
 
 		if sLine.startswith('qstream'):
 			lSub = [s.strip('"\'').strip() for s in sLine.split('=')]
 			if (len(lSub) > 1) and (lSub[1].lower() in ('1','t','true')):
-				return [ formats.getMime('qstream','2','binary')[0] ]
+				return [ formats.getMime(dMime, 'qstream','2','binary')[0] ]
 
-	return [ formats.getMime('das','1.0','binary')[0]]
+	return [ formats.getMime(dMime, 'das','1','binary')[0]]
 
 def makeCollection(dConf, sSet, lInput, sOutPath):
 	"""Create or update the source collection file at sPath.  Source collections
@@ -186,6 +186,18 @@ def makeCollection(dConf, sSet, lInput, sOutPath):
 	if sSet.startswith('/'): sSet = sSet[1:]
 	sSetUrl = "%s/source/%s"%(dConf['SERVER_URL'], sSet.lower())
 
+	# Load our mime dictionary
+	# Load the mime dictionary
+	if 'MIME_FILE' not in dConf:
+		raise EnvironmentError("MIME_FILE is not defined in your das2server.conf file.")
+
+	if not os.path.isfile(dConf['MIME_FILE']):
+		raise EnvironmentError("Move %s.example to %s to finish server configuration"%(
+			dConf['MIME_FILE'],dConf['MIME_FILE']
+		))
+
+	dMime = formats.loadCommentedJson(dConf['MIME_FILE'])
+
 	# Examine the inputs
 	for sInPath in lInput:
 		if bname(sInPath) == g_sStdDas3:
@@ -222,7 +234,7 @@ def makeCollection(dConf, sSet, lInput, sOutPath):
 				'description':'A variable resolution data source description '+\
 				   'accessed via a static API',
 				'mime':'text/vnd.das2.das2stream',
-				'provides':_getDas2Fmts(sSource),
+				'provides':_getDas2Fmts(dMime, sSource),
 				'urls':[ "%s/%s"%(sSetUrl,g_sStdDas2)]
 			}
 

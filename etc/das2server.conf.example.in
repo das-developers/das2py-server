@@ -63,14 +63,12 @@ DATASRC_INC  = "%(PREFIX)s/datasource/sdef/include"
 # Version 3.1 of the server should add better authentication methods
 USER_PASSWD = "%(PREFIX)s/etc/passwd"
 USER_GROUP  = "%(PREFIX)s/etc/group"
+MIME_FILE   = "%(PREFIX)s/etc/mime.json"
 
 # The module path for loading utilities and handles, there can be
 # more than one entry, seperate them via ':' characters, no matter
 # the operating systems default pathsep character.
 MODULE_PATH = "%(PREFIX)s/lib:%(PREFIX)s/lib/python%(PYVER)s"
-
-# The file providing default command templates for this server
-CMD_TEMPLATES = "%(PREFIX)s/etc/commands.json"
 
 # The directory for binaries that don't have an explicit path, separate
 # multiple paths with ':'

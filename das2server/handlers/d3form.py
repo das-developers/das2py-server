@@ -29,25 +29,25 @@ from os.path import basename as bname
 # ########################################################################## #
 # Placeholder for the Formats module #
 
-F = None
+# F = None
 
-def loadFormats(dConf):
-	global F
+# def loadFormats(dConf):
+#	global F
 
-	# Load the webutil module
-	try:
-		mTmp = __import__('das2server.util', globals(), locals(), ['formats'], 0)
-	except ImportError as e:
-		preLoadError(
-			"Error importing module 'das2server': %s\r\nsys.path is:\r\n%s\r\n"%(
-			str(e), sys.path
-		))
-		return 19
-	try:
-		F = mTmp.formats
-	except AttributeError:
-		preLoadError('No module named das2server.util under %s'%dConf['MODULE_PATH'])
-		return 20
+#	# Load the webutil module
+#	try:
+#		mTmp = __import__('das2server.util', globals(), locals(), ['formats'], 0)
+#	except ImportError as e:
+#		preLoadError(
+#			"Error importing module 'das2server': %s\r\nsys.path is:\r\n%s\r\n"%(
+#			str(e), sys.path
+#		))
+#		return 19
+#	try:
+#		F = mTmp.formats
+#	except AttributeError:
+#		preLoadError('No module named das2server.util under %s'%dConf['MODULE_PATH'])
+#		return 20
 
 ##############################################################################
 def pout(sOut):
@@ -1124,7 +1124,7 @@ el_%s.onchange = function(bPropagate = true) {'''%(sSignaler, sSignaler, sSignal
 	
 	return nCtrls
 
-def _getDefaultMime(dFormats):
+def _getDefaultMime(U, dConf, dFormats):
 	"""Given a standard formats section, return the default mime types if nothing
 	is changed.
 
@@ -1157,8 +1157,11 @@ def _getDefaultMime(dFormats):
 	sSerial = None
 	if _hasElement(dFmt, ('props','serial', 'value')):
 		sSerial = dFmt['props']['serial']['value']
+
+	dMimes = U.mime.load(dConf)
 		
-	return F.getMime(sType, sVer, sSerial)
+	return U.mime.get(dMimes, sType, sVer, sSerial)
+
 
 def _getAction(sBase):
 	"""Get action from base url.  Basically return the URL with no GET params"""
@@ -1461,7 +1464,7 @@ def prnHttpSource(U, fLog, dConf, dSrc, fOut):
 			# TODO: Handle undo and revert back to the default
 			sout(fOut, '<fieldset><legend><b>Format Options:</b></legend>')
 			
-			(sMime, sExt, sName) = _getDefaultMime(dFormats)
+			(sMime, sExt, sName) = _getDefaultMime(U, dConf, dFormats)
 			sout(fOut, 
 				"<p>Output will be <b>%s</b> (<tt>%s</tt>) unless changed.</p>"%(
 				sName, sMime
@@ -1730,7 +1733,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	
 	fLog.write("\nLocal catalog node GUI handler")
 
-	loadFormats(dConf)
+	#loadFormats(dConf)
 
 	# Find the corresponding json object and load it
 	sPathInfo = os.getenv("PATH_INFO")

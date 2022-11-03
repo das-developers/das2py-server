@@ -10,8 +10,9 @@ from os.path import dirname as dname
 import json
 from copy import deepcopy
 
-
 import das2
+
+from . import formats
 
 """Automatic source definition section generation based on server configuration
 
@@ -138,53 +139,6 @@ def _findSrcNoCase(sRoot, sSource, sExt, fLog):
 	sName = '/'.join(lName)
 	sName = sName.rstrip(sExt);
 	return (sName, sPath)
-
-
-# ########################################################################## #
-
-def stripCppComments(fLog, sPath):
-	lLines = []
-	
-	fIn = open(sPath, encoding='UTF-8')
-	for sLine in fIn:
-		sLine = sLine.strip()
-		# Walk the line, if we are not in quotes and see '//' ignore everything
-		# from there to the end
-		iQuote = 0
-		iComment = -1
-		n = len(sLine)
-		for i in range(n):
-			if sLine[i] == '"': 
-				iQuote += 1
-				continue
-			if sLine[i] == '/' and (i < n-1) and (sLine[i+1] == '/') \
-				and (iQuote % 2 == 0):
-				iComment = i
-				break;
-					
-		if iComment > -1:
-			sLine = sLine[:iComment]
-			sLine = sLine.strip()
-			
-		lLines.append(sLine)
-
-	sData = '\n'.join(lLines)
-	
-	fIn.close()
-
-	return sData
-
-def loadCommentedJson(fLog, sPath):
-	"""Read a commented Json file
-
-	Pre-parse a *.json file removing all C++ style commets, '//', and then
-	build a dictionary using the standard json.loads function.
-
-	Returns (dict): A dictionary object if the file exists and could be read
-		otherwise a ServerError is raised if basic parsing failed.
-	"""
-	sData = stripCppComments(fLog, sPath)
-	return json.loads(sData)
 
 # ########################################################################## #
 
@@ -481,9 +435,9 @@ def _das22Iface(U, dSrc):
 
 	dParams = dSrc['protocol']['http_params']
 	
-	# Have to have at least a begin time and end time to support a das2.2 query
+	# Have to have at least a begin time and end time to support a das2 query
 	if (sBeg not in dParams) or (sEnd not in dParams):
-		raise ValueError("Data source does not support the das2/v2.2 query interface.")
+		raise ValueError("Data source does not support the das v2 query interface.")
 
 	dDsdf = {}
 	if 'title' in dSrc:  dDsdf['description'] = dSrc['title']

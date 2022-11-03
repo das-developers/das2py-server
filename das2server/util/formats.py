@@ -1,5 +1,8 @@
 """Helpers related to output formatting"""
 
+import os.path
+import json
+
 # This is just a convetion used by this server, federated catalog items
 # advertise thier keys in an API file.
 g_tKeyConvention = (
@@ -12,8 +15,54 @@ g_sParamSecFrac = "format.secfrac"
 g_sParamSigDigit = "format.sigdigit"
 g_sParamDelim = "format.delim"
 
+# ########################################################################## #
+
+def stripCppComments(sPath):
+	lLines = []
+	
+	fIn = open(sPath, encoding='UTF-8')
+	for sLine in fIn:
+		sLine = sLine.strip()
+		# Walk the line, if we are not in quotes and see '//' ignore everything
+		# from there to the end
+		iQuote = 0
+		iComment = -1
+		n = len(sLine)
+		for i in range(n):
+			if sLine[i] == '"': 
+				iQuote += 1
+				continue
+			if sLine[i] == '/' and (i < n-1) and (sLine[i+1] == '/') \
+				and (iQuote % 2 == 0):
+				iComment = i
+				break;
+					
+		if iComment > -1:
+			sLine = sLine[:iComment]
+			sLine = sLine.strip()
+			
+		lLines.append(sLine)
+
+	sData = '\n'.join(lLines)
+	
+	fIn.close()
+
+	return sData
+
+def loadCommentedJson(sPath):
+	"""Read a commented Json file
+
+	Pre-parse a *.json file removing all C++ style commets, '//', and then
+	build a dictionary using the standard json.loads function.
+
+	Returns (dict): A dictionary object if the file exists and could be read
+		otherwise a ServerError is raised if basic parsing failed.
+	"""
+	sData = stripCppComments(sPath)
+	return json.loads(sData)
+
 # ######################################################################### #
-def getMime(sType, sVersion, sSerial):
+def getMime(dMimes, sType, sVersion, sSerial):
 	"""Given info on an output type, define the mime string
 
 	Args:
@@ -30,81 +79,35 @@ def getMime(sType, sVersion, sSerial):
 	sExt = None
 	sTitle = None
 
-	if sType == 'das':
-		if sVersion.startswith('3'):
-			if sSerial == 'text':
-				sExt = 'tdas'
-				sTitle = 'das text packet stream'
-				#sMime = 'text/vnd.das.stream; charset=utf-8'
-				sMime = 'text/vnd.das.stream'
+	if sType not in dMimes:
+		return (None, None, None)
 
-			elif sSerial == 'xml':
-				sExt = 'xdas'
-				sTitle = 'das XML stream'
-				sMime = 'application/vnd.das.doc+xml'
+	dType = dMimes[sType]
 
-			else:
-				sExt = 'das'
-				sTitle = 'das binary packet stream'
-				sMime = 'application/vnd.das.stream'
+	# The defaults
+	sMime = dType['mime']
+	sExt  = dType['extension']
+	sTitle = dType['title']
 
-		elif sVersion.startswith('2'):
-			if sSerial == 'text':
-				sExt = 'd2t'
-				sTitle = 'das2 text packet stream'
-				#sMime = 'text/vnd.das2.das2stream; charset=utf-8'
-				sMime = 'text/vnd.das2.das2stream'
+	# Override for version
+	if 'version' in dType:
+		if sVersion in dType['version']:
+			dVer = dType['version'][sVersion]
 
-			else:
-				sExt = 'd2s'
-				sTitle = 'das2 binary packet stream'
-				sMime = 'application/vnd.das2.das2stream'
-			
-		elif sVersion.startswith('1.1'):
-			if sSerial == 'text':
-				sExt = 'd2t'
-				sTitle = 'das1 text packet stream'
-				#sMime = 'text/vnd.das2.das1stream; charset=utf-8'
-				sMime = 'text/vnd.das2.das1stream'
+			sMime = dVer['mime']
+			sExt  = dVer['extension']
+			sTitle = dVer['title']
+	else:
+		dVer = {}
 
-			else:
-				sExt = 'd1s'
-				sTitle = 'das1 binary packet stream'
-				sMime = 'application/vnd.das2.das1stream'
+	# Override for variant
+	if 'variant' in dVer:
+		if sSerial in dVer['variant']:
+			dVariant = dVer['variant'][sSerial]
 
-		elif sVersion.startswith('1.0'):
-			if sSerial == 'text':
-				sExt = 'tab'
-				sTitle = 'Tabular listing'
-				#sMime = 'text/plain; charset=utf-8'
-				sMime = 'text/plain'
-
-			else:
-				sExt = 'bin'
-				sTitle = 'IEEE big-endian floats'
-				sMime = 'application/octet-stream'
-
-	elif sType == 'csv':
-		sExt = '.csv'
-		sTitle = 'Delimited text'
-		sMime = 'text/csv'
-
-	elif sType == 'png':
-		sExt = '.png'
-		sTitle = 'Portable Network Graphics'
-		sMime = 'image/png'
-
-	elif sType == 'qstream':
-		if sSerial == 'text':
-			sTitle = 'Autoplot intrinsic stream'
-			#sMime = 'text/vnd.das2.qstream; charset=utf-8'
-			sMime = 'text/vnd.das2.qstream'
-			sExt = 'qdt'
-		else:
-			sTitle = 'Autoplot intrinsic stream'
-			sMime = 'application/vnd.das2.qstream'
-			sExt = 'qds'
-
+			sMime = dVariant['mime']
+			sExt  = dVariant['extension']
+			sTitle = dVariant['title']
 
 	return (sMime, sExt, sTitle)
 
@@ -134,14 +137,14 @@ def getFormatSelection(dConf, lRdrOut, bWebSockConn=False):
 	das     1.1  binary  application/vnd.das2.das1stream  .d1s  Tagged das1
 	das     1.1  text    text/vnd.das2.das1stream         .d1t
 
-	das     2.2  binary  application/vnd.das2.das2stream  .d2s
-	das     2.2  text    text/vnd.das2.das2stream         .d2t
+	das     2    binary  application/vnd.das2.das2stream  .d2s
+	das     2    text    text/vnd.das2.das2stream         .d2t
 	
-	das     3.0  binary  application/vnd.das.stream       .das   Can contain verson 3
+	das     3    binary  application/vnd.das.stream       .das   Can contain verson 3
 	
-	das     3.0  text    text/vnd.das.stream              .tdas  files, but usable for
-	das     3.0  xml     application/vnd.das.doc+xml      .xdas  others as well.
-	das     3.0  json    application/vnd.das.doc+json     .jdas  
+	das     3    text    text/vnd.das.stream              .tdas  files, but usable for
+	das     3    xml     application/vnd.das.doc+xml      .xdas  others as well.
+	das     3    json    application/vnd.das.doc+json     .jdas  
 
 	h-api        text    text/csv                         .csv
 
@@ -186,6 +189,17 @@ def getFormatSelection(dConf, lRdrOut, bWebSockConn=False):
 	#   TODO: Replace with a list of atomic transitions and a solver
 	#
 
+	# Load the mime dictionary
+	if 'MIME_FILE' not in dConf:
+		raise EnvironmentError("MIME_FILE is not defined in your das2server.conf file.")
+
+	if not os.path.isfile(dConf['MIME_FILE']):
+		raise EnvironmentError("Move %s.example to %s to finish server configuration"%(
+			dConf['MIME_FILE'],dConf['MIME_FILE']
+		))
+
+	dMime = loadCommentedJson(dConf['MIME_FILE'])
+
 	dFmts = {}
 
 	sRdr = lRdrOut[0]
@@ -222,7 +236,7 @@ def getFormatSelection(dConf, lRdrOut, bWebSockConn=False):
 		dFmts['qstream'] = {
 			"label":"QStream",
 			"title":"Native Autoplot data format",
-			"mimeTypes":[getMime('qstream', None, 'binary')[0]],
+			"mimeTypes":[getMime(dMime, 'qstream', None, 'binary')[0]],
 			'props':dSettings
 		}
 
@@ -235,7 +249,9 @@ def getFormatSelection(dConf, lRdrOut, bWebSockConn=False):
 					"enum": [{"value":"text"},{"value":"binary"}]
 				}
 			}
-			dFmts['qstream']['mimeTypes'].append(getMime('qstream',None,'text')[0])
+			dFmts['qstream']['mimeTypes'].append(getMime(
+				dMime, 'qstream',None,'text')[0]
+			)
 
 			# Don't know if qds transformer has sig-digit options don't add them
 			# in for now.
@@ -257,25 +273,25 @@ def getFormatSelection(dConf, lRdrOut, bWebSockConn=False):
 		# Set the output versions, with regard to supported transforms, since
 		# we don't down-convert only the supported version and higher are allowed
 
-		# Uncomment when das-2.2 to das-3.0 converter exists
-		#if sVer in ("1.0", "1.1"): lVals = [sVer, "2.2", "3.0"]
-		#elif sVer == "2.2":        lVals = [sVer, "3.0"]
-		#elif sVer == "3.0":        lVals = [sVer]
+		# Uncomment when das-2 to das-3 converter exists
+		#if sVer in ("1.0", "1.1"): lVals = [sVer, "2", "3"]
+		#elif sVer == "2":        lVals = [sVer, "3"]
+		#elif sVer == "3":        lVals = [sVer]
 
 		if sVer in ("1.0", "1.1"):
-			lVers = [sVer, "2.2"]
-			lMimes = [getMime('das', sVer, "binary")[0]]
-		elif sVer == "2.2":
+			lVers = [sVer, "2"]
+			lMimes = [getMime(dMime, 'das', sVer, "binary")[0]]
+		elif sVer == "2":
 			lVers = [sVer]
 			lMimes = []
-		elif sVer == "3.0":
+		elif sVer == "3":
 			lVers = [sVer]
-			lMimes = [getMime('das', sVer, "binary")[0]]
+			lMimes = [getMime(dMime, 'das', sVer, "binary")[0]]
 
 		# We always have das2_ascii
-		if "2.2" in lVers:
-			lMimes.append( getMime(sRdr, "2.2", "binary")[0] )
-			lMimes.append( getMime(sRdr, "2.2", "text")[0] )
+		if "2" in lVers:
+			lMimes.append( getMime(dMime, sRdr, "2", "binary")[0] )
+			lMimes.append( getMime(dMime, sRdr, "2", "text")[0] )
 
 		dFmts['das']['mimeTypes'] = lMimes
 
@@ -296,7 +312,7 @@ def getFormatSelection(dConf, lRdrOut, bWebSockConn=False):
 		# if "3.0" in lVers:
 		#	lSerials.append( {"value":"xml"} )
 		
-		if sVer == '2.2':
+		if sVer == '2':
 			dFmts['das']['props']['serial'] = {
 				"label":"Serialization",
 				"value":"binary",
@@ -426,25 +442,29 @@ def addFormatHttpParams(dConf, dParams, lRdrOut, bWebSockConn=False):
 	dParams['format.version']  = {"required":False, "type":"string"}
 	
 ##############################################################################
-def addFormatCommands(dConf, lFormatters, lRdrOut):
+def getCommands(dConf, lRdrOut):
 	"""Add command templates for formatting output."""
 
 	(sKeyBeg, sKeyEnd, sKeyRes, sKeyIntr, sKeyParams) = g_tKeyConvention
+
+	lFormatters = []
 
 	sRdr = lRdrOut[0]
 	sVer = lRdrOut[1]
 	sVar = lRdrOut[2]
 
-	nFmt = 0
+	# Assume that das1 -to-> das2 converters have to happen early
+
 
 	if sRdr == 'qstream' and ('QDS_TO_UTF8' in dConf):
-		dFmts[nFmt] = {
+		lFormatters.append({
 			'label':'.qds to .qdt converter',
 			'triggers':[{'key':'format.serial','value':'text'}],
 			'template': dConf['QDS_TO_UTF8'],
 			'input':{'type':'qstream'},
-			'output':{'type':'qstream','variant':'text'}
-		}
+			'output':{'type':'qstream','variant':'text'},
+			'order':5
+		})
 		return   # Don't know of anything else I can do with QStream
 
 	if sRdr == 'das':
@@ -455,69 +475,85 @@ def addFormatCommands(dConf, lFormatters, lRdrOut):
 			if 'DAS1_TO_DAS2' in dConf: sCmd = dConf['DAS1_TO_DAS2']
 
 			lFormatters.append({
-				'label':'das v1.0 to v2.2 converter',
+				'label':sCmd,
+				'title':'Das v1 to v2 converter',
 				'template':[
 					"%s #[_THIS_DIRECTORY_]/%s #%s #%s #[%s#@#]"%(
 						sCmd, g_sDas1File, sKeyBeg, sKeyEnd, sKeyIntr
 					)
 				],
-				'triggers':[{'key':'format.version','value':"2.2", 'compare':'ge'}],
-				'input':{'type':'das','version':'1.0'},
-				'output':{'type':'das','version':'2.2'}
+				'triggers':[{'key':'format.version','value':"2", 'compare':'ge'}],
+				'input':{'type':'das','version':'1'},
+				'output':{'type':'das','version':'2'},
+				'order': 2
 			})
 			
 
 			# Now act as if my version was v2 :)
-			sVer = '2.2'
+			sVer = '2'
 
 		elif sVer == '1.1': # Tagged stream (B0, etc.)
 			sCmd = 'das2_from_tagged_das1'
 			lFormatters.append({
-				'label':'das v1.1 (tagged) to v2.2 converter',
+				'label':sCmd,
+				'title':'das v1.1 (tagged) to v2 converter',
 				'template':'%s -s -tBeg #%s'%(sCmd, sKeyBeg),
-				'triggers':[{'key':'format.version','value':"2.2", 'compare':'ge'}],
+				'triggers':[{'key':'format.version','value':"2", 'compare':'ge'}],
 				'input':{'type':'das','version':'1.1'},
-				'output':{'type':'das','version':'2.2'}
+				'output':{'type':'das','version':'2'},
+				'order': 2
 			})
 			
-			sVer = '2.2'
+			sVer = '2'
 
-		if sVer == '2.2':
+		if sVer == '2':
 			sCmd = 'das2_ascii'
 			if 'D2S_TO_UTF8' in dConf: sCmd = dConf['D2S_TO_UTF8']
 			lFormatters.append({
-				'label':'das 2.2 binary to text',
+				'label':sCmd,
+				'title':'das 2 binary to text',
 				'template':'%s -c #[%s#-s @#] #[%s#-r @#]'%(
 					sCmd, g_sParamSecFrac, g_sParamSigDigit
 				),
-				'triggers':[{'key':'format.serial','value':'text'}],
-				'input':{'type':'das','version':'2.2'},
-				'output':{'type':'das','version':'2.2','variant':'text'}
+				'triggers':[
+					{'key':'format.serial', 'value':'text'},
+					{'key':'format.type',   'value':'das'},
+					{'key':'format.version','value':'2'}
+				],
+				'input':{'type':'das','version':'2'},
+				'output':{'type':'das','version':'2','variant':'text'},
+				'order': 5
 			})
 			
 			sCmd = 'das2_csv'
 			if 'D2S_CSV_CONVERTER' in dConf: sCmd = dConf['D2S_CSV_CONVERTER']
 			lFormatters.append({
-				'label':'das 2.2 to CSV converter',
+				'label':sCmd,
+				'title':'das 2 to CSV converter',
 				'template':'%s #[%s#-s @#] #[%s#-r @#] #[%s#-d @#]'%(
 					sCmd, g_sParamSecFrac, g_sParamSigDigit, g_sParamDelim
 				),
 				'triggers':[{'key':'format.type','value':'csv'}],
-				'input':{'type':'das','version':'2.2'},
-				'output':{'type':'csv'}
+				'input':{'type':'das','version':'2'},
+				'output':{'type':'csv'}, 
+				'order': 5    # Same as the das2_ascii converter on purpose
 			})
 			
 			if 'DAS_TO_PNG' in dConf:
 				sCmd = dConf['DAS_TO_PNG']
 				lFormatters.append({
-					'label':'das v2.2 plot image generator',
+					'label':sCmd,
+					'title':'das v2 plot image generator',
 					'template':'%s #[%s#-w @#] #[%s#-h @#]'%(
 						sCmd, 'format.width', 'format.height'
 					),
 					'triggers':[{'key':'format.type','value':'png'}],
-					'input':{'type':'das','version':'2.2'},
+					'input':{'type':'das','version':'2'},
 					'output':{'type':'png'},
-					'streaming':False
+					'streaming':False,
+					'order': 5   # Same as text converters on purpose
 				})
+
+	return lFormatters
 				
 			

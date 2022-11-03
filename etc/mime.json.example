@@ -1,0 +1,104 @@
+// Mime types defined for this server.  Add your own as needed.
+// The lookup hierarchy is 'type':'version':'variant' as defined in the 
+// various source definition files.  Always provide info at all levels incase
+// lower levels are not provided.
+
+{
+	"das":{
+		// If nothing is specified, default to 1.0 binary
+		"title":"IEEE big-endian floats",
+		"extension":"bin",
+		"mime":"application/octet-stream",
+
+		// More details by version
+		"version":{
+			"1.0":{
+				"variant":{
+					"text":{
+						"title":"Tabular Listing",
+						"extension":"tab",
+						"mime":"text/plain"
+					}
+				}
+			},
+			"1.1":{
+				"title":"das1 binary packet stream",
+				"extension":"d1s",
+				"mime":"application/vnd.das2.das1stream",
+				"variant":{
+					"text":{
+						"title":"das1 text packet stream",
+						"extension":"d1t",
+						"mime":"text/vnd.das2.das1stream"
+					}
+				}
+			},
+			"2":{
+				"title":"das2 binary packet stream",
+				"extension":"d2s",
+				"mime":"application/vnd.das2.das2stream",
+				"variant":{
+					"text":{
+						"title":"das2 text packet stream",
+						"extension":"d2t",
+						"mime":"text/vnd.das2.das2stream"
+					}
+				}
+			},
+			"3":{
+				"title":"das binary packet stream",
+				"extension":"d3b",
+				"mime":"application/vnd.das.stream",
+				"variant":{
+					"text":{
+						"title":"das text packet stream",
+						"extension":"d3t",
+						"mime":"text/vnd.das.stream"
+					},
+					"xml":{
+						"title":"d3x",
+						"extension":"das XML stream",
+						"mime":"application/vnd.das.doc+xml"
+					}
+				}
+			}
+		}
+	},
+	"qstream":{
+		"title":"Autoplot Intrinsic Stream",
+		"extension":"qds",
+		"mime":"application/vnd.das2.qstream",
+		"variant":{
+			"text":{
+				"title":"Autoplot Intrinsic Text Stream",
+				"extension":"qdt",
+				"mime":"text/vnd.das2.qstream"
+			}
+		}
+	},
+	"json":{
+		"title":"JavaScript Object Notation",
+		"extension":"json",
+		"mime":"application/json"
+	},
+	"xml":{
+		"title":"Extensible Markup Language",
+		"extension":"xml",
+		"mime":"text/xml"
+	},
+	"csv":{
+		"title":"Delimited Text",
+		"extension":"csv",
+		"mime":"text/csv"
+	},
+	"png":{
+		"title":"Portable Network Graphics",
+		"extension":"png",
+		"mime":"image/png"
+	},
+	"cdf":{
+		"title":"Common Data Format",
+		"extension":"cdf",
+		"mime":"application/x-cdf"
+	}
+}

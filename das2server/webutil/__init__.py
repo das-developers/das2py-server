@@ -11,6 +11,7 @@ from . import task
 from . import cache
 from . import command
 from . import page
+from . import mime
 
 #if webio.isBrowser():
 #	from . import site

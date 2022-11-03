@@ -365,7 +365,7 @@ def _mergeSrcCoordInfo(dOut, dProps, fLog):
 	dIface  = _getDict(dOut, 'interface')
 	dCoords = _getDict(dIface, 'coords')
 	
-	# By default das2/2.2 servers only know that there is a time coordinate
+	# By default das2 servers only know that there is a time coordinate
 	# so set that one up.  
 	dTime = _getDict(dCoords, 'time')
 
@@ -474,7 +474,7 @@ def _mergeSrcDataInfo(dOut, dProps, fLog):
 			if len(lItem) > 2: dVar['props'] = {'units': {'value':lItem[2]}}
 
 def _mergeDas2Params(dOut, dProps, fLog):
-	"""Merge in params.  This is a das 2.2 thing.  Any option that is needs
+	"""Merge in params.  This is a das2 thing.  Any option that is needs
 	to be handled by the reader and is not a time parameter is crammed into
 	params, seriously overloading that one setting.  
 	
@@ -695,8 +695,8 @@ def _mergeExamples(dOut, dProps, sBaseUrl, fLog):
 			
 		sBeg = lTmp[0]
 		sEnd = lTmp[1].replace('UTC','').strip()
-		dQuery["coords/time/props/max"] = sBeg
-		dQuery["coords/time/props/min"] = sEnd
+		dQuery["coords/time/props/min"] = sBeg
+		dQuery["coords/time/props/max"] = sEnd
 			
 		# See if we need resolution or interval
 		if sNum in lInterval:
@@ -774,15 +774,15 @@ def _mergeFormat(dConf, dOut, dProps, fLog):
 		if sServer != sMe:
 			dOut['interface']['formats'] = {}
 	
-	lRdrOut = ['das', '1.0', 'binary']  # The default
+	lRdrOut = ['das', '1', 'binary']  # The default
 	if _isPropTrue(dProps, 'qstream'):
 		lRdrOut = ['qstream', None, 'binary']
 
 	elif _isPropTrue(dProps, 'das2Stream'):
-		lRdrOut = ['das', '2.2', 'binary']
+		lRdrOut = ['das', '2', 'binary']
 		
 	elif _isPropTrue(dProps, 'das3Stream'):
-		lRdrOut = ['das', '3.0', 'binary']
+		lRdrOut = ['das', '3', 'binary']
 
 	# Add our supported output conversion interface controls and parameters
 	dOut['interface']['formats'] = formats.getFormatSelection(dConf, lRdrOut)
@@ -970,15 +970,15 @@ def _mergeWsFormat(dConf, dOut, dProps, fLog):
 		if sServer != sMe:
 			dOut['interface']['formats'] = {}
 	
-	lRdrOut = ['das', '1.0', 'binary']  # The default
+	lRdrOut = ['das', '1', 'binary']  # The default
 	if _isPropTrue(dProps, 'qstream'):
 		lRdrOut = ['qstream', None, 'binary']
 
 	elif _isPropTrue(dProps, 'das2Stream'):
-		lRdrOut = ['das', '2.2', 'binary']
+		lRdrOut = ['das', '2', 'binary']
 		
 	elif _isPropTrue(dProps, 'das3Stream'):
-		lRdrOut = ['das', '3.0', 'binary']
+		lRdrOut = ['das', '3', 'binary']
 
 	# Add our supported output conversion interface controls and parameters
 	dOut['interface']['formats'] = formats.getFormatSelection(dConf, lRdrOut, True)
@@ -1152,7 +1152,7 @@ def makeSockSrc(fLog, dConf, sPath, sLocalId=None):
 
 # ########################################################################## #
 
-def makeInternal(fLog, dConf, sPath):
+def makeInternal(fLog, dConf, sPath, sLocalId):
 	"""Get all the items needed for the internal server interface that are
 	not to be sent out to the clients.  This includes:
 
@@ -1177,26 +1177,32 @@ def makeInternal(fLog, dConf, sPath):
 	if _isPropTrue(dProps, 'qstream'):
 		dOutType = {'type':"qstream"}
 	elif _isPropTrue(dProps, 'das2Stream'):
-		dOutType = {'type':'das','version':'2.2'}
+		dOutType = {'type':'das','version':'2'}
 
 	(sBegKey, sEndKey, sResKey, sIntKey, sOptKey) = g_tKeyConvention
 
-	dTr = _getDict(dOut, 'translate')
+	dParams = _getDict(dOut, 'parameters')
+	dTr = _getDict(dParams, 'translate')
 	for sSys in ('das2','hapi'):
 		(sBegTr, sEndTr, sResTr, sIntTr, sOptTr) = stdFormKeys(sSys)
 		dTr[sSys] = {
 			sBegTr:sBegKey, sEndTr:sEndKey, sResTr:sResKey, sOptTr:sOptKey,
 			'start':sBegKey, 'stop':sEndKey, 'server':None, 'dataset':None
 		}
+
+	# Make generic output file naming instructions
+	(sF, sA) = ('function', 'args')
+	dFiles = _getDict(dOut, 'files')
+	lBaseName = _getList(dFiles, 'baseName')
+	lBaseName.append({sF:'echo',   sA:[  sLocalId.split('/')[-1].lower()  ]} )
+	lBaseName.append({sF:'isorange',sA:["#[%s]"%sBegKey, "#[%s]"%sEndKey]} )
 	
-	dCmds = _getDict(dOut, 'commands')
+	lCmds = _getList(dOut, 'commands')
 	
 	# By default, both das2 and das3 sources output the same thing
 	# User can customize if desired downstream
 	
 	# Reader Section #################################
-	lRead = _getList(dCmds, 'read')
-
 	if 'reader' in dProps and '00' in dProps['reader']:
 		sRdr = dProps['reader']['00']
 
@@ -1227,6 +1233,7 @@ def makeInternal(fLog, dConf, sPath):
 		sInterval = ''
 		if _isPropTrue(dProps, 'requiresInterval'):  # Ephemeris readers
 			 sInternal = '#[%s] '%sIntKey
+			 lBaseName.append({sF:'timeres', sA:["#[%s]"%sIntKey]})
 			
 		if _isPropTrue(dProps, 'dropParams'):
 			dReader = {'template':'%s %s#[%s] #[%s]'%(sCmd, sInterval, sBegKey, sEndKey)}
@@ -1235,28 +1242,14 @@ def makeInternal(fLog, dConf, sPath):
 				'%s %s#[%s] #[%s] #[%s#@#]'%(sCmd, sInterval, sBegKey, sEndKey, sOptKey
 			)}
 
-		# A command order: 10, 20, 30, 40 etc
-		# and a command parameter set: can be used to determine what to read
-		# out of cache and what to re-generate.
-		#
-		# For example if we have commands: 
-		#
-		# 0  -> reader
-		# 10 -> psd
-		# 20 -> reducer
-		# 30 -> format as CSV
-		#
-		# If a request comes in for a vo-table, and the cache runs up to processing
-		# level 30, then we can run this:
-		#
-		#   read.cache | das2vo -> output
-		#
-		# Without invoking the whole chain.
-		
-		dReader['order'] = 0
-		dReader['output'] = dOutType
+		lBaseName.append({sF:'normparams', sA:'#[%s#@#]'%sOptKey})
 
-		lRead.append(dReader)
+		dReader['label']  = 'Reader'
+		dReader['title']  = 'Full resolution upstream data reader'
+		dReader['output'] = dOutType
+		dReader['order']  = 1
+
+		lCmds.append(dReader)
 
 	# Is reduction allowed? ####################################
 	bReduce = True
@@ -1282,12 +1275,14 @@ def makeInternal(fLog, dConf, sPath):
 					sReducer = dConf['QDS_REDUCER']
 
 		if sReducer:
-			lBin = _getList(dCmds, 'bin')
-			lBin.append({
+			lCmds.append({
+				'label':sReducer,
 				'template':'%s #[%s]'%(sReducer, sResKey),
-				'trigger':[{"key":sResKey,"value":0,"compare":"gt"}],
-				'order': 20, 'input': dOutType, 'output': dOutType
+				'triggers':[{"key":sResKey,"value":0,"compare":"gt"}],
+				'input': dOutType, 'output': dOutType,
+				'order': 3
 			})
+			lBaseName.append({sF:'timeres', sA:'#[%s#@#]'%sResKey})
 	
 	# Cache Section #####################################
 	if 'cacheLevel' in dProps:
@@ -1295,8 +1290,8 @@ def makeInternal(fLog, dConf, sPath):
 		dCache = _getDict(dOut, 'cache')
 		
 		# The coordinate map for this cache is just the conventional items
-		dCache['min_coord_params'] = [sBegKey],
-		dCache['max_coord_params'] = [sEndKey],
+		dCache['minCoordParams'] = [sBegKey],
+		dCache['maxCoordParams'] = [sEndKey],
 		
 		dSchemeToSize = {
 			"yearly":"1 year", "monthly":"1 month", "daily":"1 day", 
@@ -1315,14 +1310,14 @@ def makeInternal(fLog, dConf, sPath):
 				fLog.write("ERROR: Misconfigured cache block size in %s"%l)
 				continue
 			sBlkSz = dSchemeToSize[l[1]]
-			dBlk = {"block_size":[sBlkSz]}
+			dBlk = {"blockSize":[sBlkSz]}
 
 			if sRes != 'intrinsic':
 				dBlk['resolution'] = [sRes]
 				dBlk['resolutionParams'] = [sResKey]
 		
 			if len(l) > 2: # Has read.options
-				dBlk['fixed_params'] = {sOptKey:l[2]}
+				dBlk['fixedParams'] = {sOptKey:l[2]}
 			
 			try:
 				n = int(sLevel, 10)
@@ -1371,28 +1366,29 @@ def makeInternal(fLog, dConf, sPath):
 
 	# Formatting commands and default format
 	# Put in auto-keys and translations for other systems by default
-	dDefParams = _getDict(dOut, 'default')
+	dDefParams = _getDict(dParams, 'defaults')
 	if _isPropTrue(dProps, 'qstream'):
 		lRdrOut = ['qstream', None, 'binary']
 		dDefParams["das2"] = {"format.type":"qstream"}
 
 	elif _isPropTrue(dProps, 'das2Stream'):
-		lRdrOut = ['das', '2.2', 'binary']
-		dDefParams["das2"] = {"format.type":"das","format.version":"2.2"}
+		lRdrOut = ['das', '2', 'binary']
+		# das3 requests can handle das2 streams, we're not pulling a python here
+		dDefParams["das2"] = {"format.type":"das","format.version":"2"}
+		dDefParams["das3"] = {"format.type":"das","format.version":"2"}
 
 	elif _isPropTrue(dProps, 'das3Stream'):
-		lRdrOut = ['das', '3.0', 'binary']
-		dDefParams["das3"] = {"format.type":"das","format.version":"3.0"}
+		lRdrOut = ['das', '3', 'binary']
+		dDefParams["das3"] = {"format.type":"das","format.version":"3"}
 		
 	else:
 		# Still default to das1 for readers, but assume das2 is wanted
-		lRdrOut = ['das', '1.0', 'binary']
-		dDefParams["das2"] = {"format.type":"das","format.version":"2.2"}
+		lRdrOut = ['das', '1', 'binary']
+		dDefParams["das2"] = {"format.type":"das","format.version":"2"}
 
 
 	# Add our supported output conversion interface controls and parameters
-	lFormatters = _getList(dCmds, 'format')
-	formats.addFormatCommands(dConf, lFormatters, lRdrOut)
+	lCmds += formats.getCommands(dConf, lRdrOut)
 
 	return dOut
 

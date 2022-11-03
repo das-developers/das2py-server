@@ -29,7 +29,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		return 17
 		
 	# Handle our own mime types...
-	tRet = U.webio.getMimeByExt(sFile)
+	tRet = U.mime.getMimeByExt(sFile)
 	
 	if tRet != None:
 		#fLog.write("tuple->'%s'"%str(tRet))
