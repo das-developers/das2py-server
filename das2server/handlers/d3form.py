@@ -1124,6 +1124,23 @@ el_%s.onchange = function(bPropagate = true) {'''%(sSignaler, sSignaler, sSignal
 	
 	return nCtrls
 
+def _onlySingleEnable(dFormats):
+	"""Inspect a formats section and see if only a single format is enabled 
+	and if it has no options.  In this case there is no need to print a format
+	selection form.
+	"""
+	nEnabled = 0
+	nSettables = 0
+	for sFmt in dFormats:
+		if 'props' in dFormats[sFmt]:
+			for sProp in dFormats[sFmt]['props']:
+				if 'set' in dFormats[sFmt]['props'][sProp]:
+					nSettables += 1
+					if sProp == 'enabled': nEnabled += 1	
+
+	return (nEnabled <= 1 and nSettables <= 1)
+
+
 def _getDefaultMime(U, dConf, dFormats):
 	"""Given a standard formats section, return the default mime types if nothing
 	is changed.
@@ -1460,7 +1477,12 @@ def prnHttpSource(U, fLog, dConf, dSrc, fOut):
 							nFmtOpts += 1
 						break
 
-		if nFmtOpts > 0:
+
+		if nFmtOpts == 1 and _onlySingleEnable(dFormats):
+			(sMime, sExt, sName) = _getDefaultMime(U, dConf, dFormats)
+			sout(fOut, '<p>Output format will be <b>%s</b> (<tt>%s</tt>).'%(sName, sMime))
+			sout(fOut, '<br>')
+		elif nFmtOpts > 0:
 			# TODO: Handle undo and revert back to the default
 			sout(fOut, '<fieldset><legend><b>Format Options:</b></legend>')
 			

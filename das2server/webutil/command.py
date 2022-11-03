@@ -426,7 +426,7 @@ def filename(fLog, dConf, dParams, lTranslate, dTarg):
 	else:
 		sDisp = 'attachment'
 
-	return (sMime, sDisp, sName)
+	return (sMime, sDisp, "%s.%s"%(sName, sExt))
 
 
 ##############################################################################

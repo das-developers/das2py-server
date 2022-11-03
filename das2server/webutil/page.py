@@ -242,7 +242,7 @@ def sidenav(dConf, fLog, bAddExtra=False):
 
 				pout('    <li><a href="%s">%s</a><br>'%(sUrl, sName))
 			else:
-				sIndent = "&nbsp;"*nIndent
+				sIndent = "&nbsp;&nbsp;"*nIndent
 				pout('    %s<a href="%s">%s</a><br>'%(sIndent, sUrl, sName))
 
 		if len(lItems) > 0: pout('   <br></li>')
