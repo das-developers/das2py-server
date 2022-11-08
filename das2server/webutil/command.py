@@ -121,7 +121,7 @@ def triggered(fLog, dSrc, dParams):
 		if len(dTrig[nOrder]) > 1:
 			raise E.QueryError(
 				"Query did not resolve to a unique pipeline. "+\
-				"Multiple commands at order %d."%len(lCmds)
+				"Multiple commands at order %d."%nOrder
 			)
 
 	lOut = [ dTrig[nOrder][0] for nOrder in lOrder]
@@ -420,6 +420,7 @@ def filename(fLog, dConf, dParams, lTranslate, dTarg):
 	if 'variant' in dTarg: sVar = dTarg['variant']
 
 	(sMime, sExt, sTitle) = mime.get(dMimes, sType, sVer, sVar)
+	sName = "%s.%s"%(sName,sExt)
 
 	if sMime.startswith('text/') and (not sMime.startswith('text/csv')):
 		sDisp = 'inline'

@@ -123,7 +123,7 @@ def isBrowser():
 # Only ever send one set of headers
 g_bHdrSent = False
 
-def dasExcept(sType, uOut, fLog=None, bHdrSent=False):
+def dasExcept(sType, uOut, fLog=None, bHdrSent=False, sDasVer="2"):
 	"""Send headers if needed, then replace error text newlines with 
 	carrage-return newline pairs
 	"""
@@ -150,18 +150,25 @@ def dasExcept(sType, uOut, fLog=None, bHdrSent=False):
 	else:
 		
 		if not bHdrSent:
-			sOut = "<stream version=\"2.2\" />\n"
-			pout("[00]%06d%s"%(len(sOut), sOut))
+			if sDasVer.startswith("3"):
+				sOut = "<stream version=\"3.0\" type=\"das-basic-stream\"/>\n"
+				pout("|Sx||%d|%s"%(len(sOut), sOut))
+			else:
+				sOut = "<stream version=\"2.2\" />\n"
+				pout("[00]%06d%s"%(len(sOut), sOut))
 
+		uOut = uOut.strip()
 		uOut = uOut.replace(u'\n', u'&#13;&#10;').replace(u'"', u"'")
 		
 		# Handle replacement of < and >
 		uOut = uOut.replace(u'<', u'&lt;').replace(u'>',u'&gt;')
 		
-		uOut = u'<exception type="%s" message="%s" />\n'%(sType, uOut)
-		sOut = uOut.encode('utf-8')
-		pout("[xx]%06d"%len(sOut))
-		pout(sOut)
+		if sDasVer.startswith("3"):
+			sOut = u'<exception type="%s">\n%s\n</exception>\n'%(sType, uOut)
+			pout("|Ex||%d|\n%s"%(len(sOut)+1, sOut))
+		else:
+			sOut = u'<exception type="%s" message="%s" />\n'%(sType, uOut)
+			pout("[xx]%06d%s"%(len(sOut), sOut))
 	
 	sys.stdout.flush()
 	return 3
@@ -169,29 +176,29 @@ def dasExcept(sType, uOut, fLog=None, bHdrSent=False):
 ##############################################################################
 # Error types
 
-def serverError(fLog, uOut, bHdrSent=False):
+def serverError(fLog, uOut, bHdrSent=False, sDasVer="2"):
 	if not bHdrSent:
 		pout("Status: 500 Internal Server Error\r\n")
-	return dasExcept('InternalServerError', uOut, fLog, bHdrSent)
+	return dasExcept('InternalServerError', uOut, fLog, bHdrSent, sDasVer)
 
-def todoError(fLog, uOut, bHdrSent=False):
+def todoError(fLog, uOut, bHdrSent=False, sDasVer="2"):
 	if not bHdrSent:
 		pout("Status: 501 Not Implemented\r\n")
-	return dasExcept('NotImplemented', uOut, fLog, bHdrSent)
+	return dasExcept('NotImplemented', uOut, fLog, bHdrSent, sDasVer)
 
-def queryError(fLog, uOut, bHdrSent=False):
+def queryError(fLog, uOut, bHdrSent=False, sDasVer="2"):
 	if not bHdrSent:
 		pout("Status: 400 Bad Request\r\n")
-	return dasExcept('BadRequest', uOut, fLog, bHdrSent)
+	return dasExcept('BadRequest', uOut, fLog, bHdrSent, sDasVer)
 	
-def forbidError(fLog, uOut, bHdrSent=False):
+def forbidError(fLog, uOut, bHdrSent=False, sDasVer="2"):
 	if not bHdrSent:
-		pout("Status: 403 Forbidden\r\n")
-	return dasExcept('Forbidden', uOut, fLog, bHdrSent)
+		pout("Status: 403 Forbidden\r\n", sDasVer="2")
+	return dasExcept('Forbidden', uOut, fLog, bHdrSent, sDasVer)
 
-def notFoundError(fLog, uOut, bHdrSent=False):
+def notFoundError(fLog, uOut, bHdrSent=False, sDasVer="2"):
 	pout("Status: 404 Not Found\r\n")
-	return dasExcept('NoSuchDataSource', uOut, fLog, bHdrSent)
+	return dasExcept('NoSuchDataSource', uOut, fLog, bHdrSent, sDasVer)
 	
 	
 # Taking any DasError exception and outputting the proper HTTP codes

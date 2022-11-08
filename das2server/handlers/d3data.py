@@ -85,9 +85,9 @@ def _getInternal(fLog, dConf, sPathInfo):
 		fLog.write("   ERROR: %s"%str(e))
 		sContact = ''
 		if 'CONTACT_URL' in dConf:
-			sContact = 'at <a href="%s">%s</a'%(dConf['CONTACT_URL'],dConf['CONTACT_URL'])
+			sContact = ' at <a href="%s">%s</a'%(dConf['CONTACT_URL'],dConf['CONTACT_URL'])
 		elif 'CONTACT_EMAIL' in dConf:
-			sContact = 'at <a href="mailto: %s>%s</a>'%(dConf['CONTACT_EMAIL'],dConf['CONTACT_EMAIL'])
+			sContact = ' at <a href="mailto: %s">%s</a>'%(dConf['CONTACT_EMAIL'],dConf['CONTACT_EMAIL'])
 		U.webio.serverError(fLog, 
 			"There is an internal problem with this data source, please contact "+\
 			"the server administrator%s"%sContact
@@ -195,7 +195,8 @@ def handleReq(modUtil, sReqType, dConf, fLog, form, sPathInfo):
 		U.webio.serverError(
 			fLog, 
 			"exec: %s\n%s\nNon-zero exit value, %d from pipeline"%(sCmd, sStdErr, nRet ), 
-			bHdrSent
+			bHdrSent,
+			dParams['format.version']
 		)
 	
 	return nRet
