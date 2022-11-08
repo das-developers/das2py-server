@@ -1178,6 +1178,8 @@ def makeInternal(fLog, dConf, sPath, sLocalId):
 		dOutType = {'type':"qstream"}
 	elif _isPropTrue(dProps, 'das2Stream'):
 		dOutType = {'type':'das','version':'2'}
+	elif _isPropTrue(dProps, 'das3Stream'):
+		dOutType = {'type':'das','version':'3'}
 
 	(sBegKey, sEndKey, sResKey, sIntKey, sOptKey) = g_tKeyConvention
 

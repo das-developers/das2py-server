@@ -90,6 +90,7 @@ def getMime(dMimes, sType, sVersion, sSerial):
 	sTitle = dType['title']
 
 	# Override for version
+	dVer = {}
 	if 'version' in dType:
 		if sVersion in dType['version']:
 			dVer = dType['version'][sVersion]
@@ -97,9 +98,7 @@ def getMime(dMimes, sType, sVersion, sSerial):
 			sMime = dVer['mime']
 			sExt  = dVer['extension']
 			sTitle = dVer['title']
-	else:
-		dVer = {}
-
+	
 	# Override for variant
 	if 'variant' in dVer:
 		if sSerial in dVer['variant']:
@@ -294,7 +293,9 @@ def getFormatSelection(dConf, lRdrOut, bWebSockConn=False):
 			lMimes.append( getMime(dMime, sRdr, "2", "text")[0] )
 
 		dFmts['das']['mimeTypes'] = lMimes
-
+		dFmts['das']['label'] = "das%s stream"%sVer
+		if sVer == '3':
+			dFmts['das']['title'] = "Semantic streaming format for plots"
 		dFmts['das']['props']['version'] = { "label":"Stream Version", "value": sVer}
 
 		if len(lVers) > 1:
@@ -330,7 +331,7 @@ def getFormatSelection(dConf, lRdrOut, bWebSockConn=False):
 
 
 	# Generic translation formats, depending on installed converters
-	if ('D2S_CSV_CONVERTER' in dConf) and (sRdr == 'das') and (sVer != '3.0'):
+	if ('D2S_CSV_CONVERTER' in dConf) and (sRdr == 'das') and (sVer != '3'):
 		lPropOrder = ['enabled']
 		lPropOrder += lTextOptOrder
 		dFmts['csv'] = {
