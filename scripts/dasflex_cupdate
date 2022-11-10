@@ -239,15 +239,17 @@ def main(argv):
 
 	lSrcSets = list(dSrcSets.keys())
 	lSrcSets.sort(reverse=True)
-	for sSrcSet in lSrcSets:
-		print("%s -> %s"%(sSrcSet, dSrcSets[sSrcSet]))
+	#for sSrcSet in lSrcSets:
+	#	print("%s -> %s"%(sSrcSet, dSrcSets[sSrcSet]))
 
 	# Depends on structure built in getSrcSets, not very maintainable
 	lLocalSrcIds = []
 	
 	for sSrcSetDir in lSrcSets:
 		sSrcSetFile = sSrcSetDir + '.json'
-		sLocalId = sSrcSetFile.replace("%s/root/"%opts.sCatDir, '')
+		sLocalId = sSrcSetDir.replace("%s/root/"%opts.sCatDir, '')
+		#print(sLocalId)
+		perr("Node Update: %s"%sSrcSetFile)
 		U.catalog.makeSrcSet(dConf, sLocalId, dSrcSets[sSrcSetDir], sSrcSetFile)
 		lLocalSrcIds.append(sLocalId)
 
