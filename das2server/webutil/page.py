@@ -231,7 +231,7 @@ def sidenav(dConf, fLog, bAddExtra=False):
 	pout('<hr>\n<i>Data Sources</i>')
 
 	if len(lItems) == 0:
-		pout("<br><br><b>None Defined!</b><i><br>Use <tt>das_srv_sdef</tt>"+\
+		pout("<br><br><b>None Defined!</b><i><br>Use <tt>dasflex_sdef</tt>"+\
 		     "<br>to import<br>definitions.</i><br><br>")
 	else:
 		pout('<ul>')

@@ -9,7 +9,7 @@ from os.path import dirname as dname
 
 from . import formats
 
-# NOTE: If these change, update class MyOptParse in das_srv_sdef
+# NOTE: If these change, update class MyOptParse in dasflex_sdef
 g_sStdDas1 = 'das1.pro'
 g_sStdDas2 = 'das2.d2t'
 g_sStdDas3 = 'flex.json'
@@ -129,7 +129,7 @@ def _getDas2Fmts(dMime, sSource):
 
 	return [ formats.getMime(dMime, 'das','1','binary')[0]]
 
-def makeCollection(dConf, sSet, lInput, sOutPath):
+def makeSrcSet(dConf, sSet, lInput, sOutPath):
 	"""Create or update the source collection file at sPath.  Source collections
 	define a list of sources that basically return the same data but do so
 	via different methods.  They are typed by the convention, the following

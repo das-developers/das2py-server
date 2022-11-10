@@ -15,7 +15,7 @@ DATASRC_ROOT = "%(PREFIX)s/catalog"
 
 # Provide the server URL, this is for self referential items
 #
-#  Note: Re-run das_srv_sdef on your source definitions if this is changed
+#  Note: Re-run dasflex_sdef on your source definitions if this is changed
 SERVER_URL = "http://localhost/das/server"
 
 # This server can send das streams over websocket frames.  To enable this
@@ -40,7 +40,7 @@ SERVER_URL = "http://localhost/das/server"
 # Where the apache URI path and local server location match the
 # WEBSOCKET_PATH and WEBSOCKET_CONN below.  The 
 #
-#  Note: Re-run das_srv_sdef on your source definitions if this is changed
+#  Note: Re-run dasflex_sdef on your source definitions if this is changed
 WEBSOCKET_URI = "ws://localhost/dasws"
 
 # Contact email.  You can use replacement characters to obscure the address

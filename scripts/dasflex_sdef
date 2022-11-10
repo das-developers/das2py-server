@@ -144,15 +144,15 @@ class MyOptParse(optparse.OptionParser):
 
 		file.write("""
 NAME:
-   das_srv_sdef - Create a sets of related data source definitions
+   dasflex_sdef - Create sets of related data source definitions
 
 SYNOPSIS:
-   das_srv_sdef [options] FILE1 [FILE2 FILE3 ...]
+   dasflex_sdef [options] FILE1 [FILE2 FILE3 ...]
 
 DESCRIPTION:
-   das_srv_sdef defines a data source collection for a server.  A single input
-   FILE in either *.dsdf or *.json syntax is parsed to produced the output. The
-   output consists of at least four files:
+   dasflex_sdef defines a data source collection for a server.  Multiple input
+   FILEs in either *.dsdf or *.json syntax is parsed to produced the output.
+   The output consists of at least four files:
 
       root/$LOCAL_ID.json          - An grouping of related data sources
       root/$LOCAL_ID/%(das2)s      - A das v2.2 source description 
@@ -236,7 +236,7 @@ EXAMPLES:
    1. Processing a das2 DSDF file that has localId keyword defined as 
       'Juno/WAV/Survey' within the file using the command:
 
-         das_srv_sdef survey.dsdf
+         dasflex_sdef survey.dsdf
 
       will create at least the following files:
 
@@ -251,7 +251,7 @@ EXAMPLES:
    2. Process a JSON template for the dataset that does not define a local ID
       and install it for use by the server:
 
-         das_srv_sdef -i -l Voyager/1/PWS/Waveform waveform.json
+         dasflex_sdef -i -l Voyager/1/PWS/Waveform waveform.json
 
       The resulting data source set will be visible at:
 
@@ -267,7 +267,7 @@ EXAMPLES:
       define the Local ID:
 
          ROOT=/var/www/das2srv/datasets
-         das_srv_sdef -d $ROOT $(find $ROOT -name "*.dsdf")
+         dasflex_sdef -d $ROOT $(find $ROOT -name "*.dsdf")
 
 SEE ALSO:
    The dsdf format is defined by das2 ICD at DOI: 10.5281/zenodo.3588534
@@ -281,8 +281,8 @@ SEE ALSO:
 def main(argv):
 	global das2, U
 
-	sUsage = "das_srv_sdef [options] DATA_SOURCE_FILE"
-	psr = MyOptParse(prog="das_srv_sdef", usage="sUsage")
+	sUsage = "dasflex_sdef [options] DATA_SOURCE_FILE"
+	psr = MyOptParse(prog="dasflex_sdef", usage="sUsage")
 
 	psr.add_option('-c', '--config', dest="sConfig", default=g_sConfPath)
 	psr.add_option(
@@ -445,7 +445,7 @@ def main(argv):
 	
 			# Read the sources you've written and update the collection
 			lOutput.append(dPaths['set'])
-			U.catalog.makeCollection(dConf, sLocalId, lOutput, lOutput[-1])
+			U.catalog.makeSrcSet(dConf, sLocalId, lOutput, lOutput[-1])
 	
 			perr("Source Def: %s"%("\n            ".join(lOutput)))
 	

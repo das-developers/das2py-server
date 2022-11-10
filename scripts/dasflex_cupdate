@@ -1,0 +1,271 @@
+#!/usr/bin/env python3
+"""Refresh SourceSets and Catalogs when new sources are defined"""
+
+import sys
+import json
+import os.path
+import optparse
+from io import StringIO
+
+g_sConfPath = REPLACED_ON_BUILD
+
+U = None  # Namespace anchor for das2server.util module, loaded after sys.path 
+          # is set via the config file
+
+# ########################################################################## #
+# Work around ubuntu apport bugs
+if sys.excepthook != sys.__excepthook__:
+	if sys.excepthook.__name__ == 'apport_excepthook':
+		#sys.stderr.write("Info: disabling Ubuntu's Apport hook\n")
+		sys.excepthook = sys.__excepthook__
+	else:
+		sys.stderr.write("Warning: 3rd party exception hook is active\n")
+
+# ########################################################################## #
+# handle output
+			
+def perr(item):
+	"""If input item is bytes encode as utf-8 first"""	
+	if isinstance(item, str):
+		sys.stderr.buffer.write(item.encode('utf-8'))
+		sys.stderr.buffer.write('\n'.encode('utf-8'))
+	else:
+		sys.stderr.buffer.write(item)
+
+# ########################################################################## #
+# Get my config file, boiler plate that has to be re-included in each script
+# since the location of the server module is in the config file, not sys.path
+
+def getConf():
+	
+	if not os.path.isfile(g_sConfPath):
+		if os.path.isfile(g_sConfPath + ".example"):
+			perr(u"Move\n   %s.example\nto\n   %s\nto enable your site\n"%(
+				  g_sConfPath, g_sConfPath))
+		else:
+			perr(u"%s is missing\n"%g_sConfPath)
+			
+		return None
+
+	fIn = open(g_sConfPath, 'r')
+	
+	dConf = {}
+	nLine = 0
+	for sLine in fIn:
+		nLine += 1
+		iComment = sLine.find('#')
+		if iComment > -1:
+			sLine = sLine[:iComment]
+	
+		sLine = sLine.strip()
+		if len(sLine) == 0:
+			continue
+		
+		iEquals = sLine.find('=')
+		if iEquals < 1 or iEquals > len(sLine) - 2:
+			preLoadError(u"Error in %s line %d"%(g_sConfPath, nLine))
+			fIn.close()
+			return None
+		
+		sKey = sLine[:iEquals].strip()
+		sVal = sLine[iEquals + 1:].strip(' \t\v\r\n\'"')
+		dConf[sKey] = sVal
+	
+	fIn.close()
+	
+	# As a final step, inclued a reference to the config file itself
+	dConf['__file__'] = g_sConfPath
+	
+	return dConf
+
+# ########################################################################## #
+# Update sys.path, boiler plate code that has to be re-included in each script
+# since config file can change module path
+
+def setModulePath(dConf):
+	if 'MODULE_PATH' not in dConf:
+		perr(u"Set MODULE_PATH = /dir/containing/das2server_python_module")
+		return False	
+	
+	lDirs = dConf['MODULE_PATH'].split(os.pathsep)
+	for sDir in lDirs:
+		if os.path.isdir(sDir):
+				if sDir not in sys.path:
+					sys.path.insert(0, sDir)
+		
+	return True
+
+# ########################################################################## #
+
+def getSrcSets(sRoot, dSrcSets, nMaxDepth=20, _n=0):
+	"""Walk a directory tree, following symlinks.
+
+	Args:
+		sRoot (str): Top level directory to read
+
+		lSources (list): The data structure that will be filled with
+			the data source directory names.
+	
+	Returns (None)
+	"""
+	
+	tSrcFiles = ('flex.json','flexRT.json','das2.d2t','das1.pro')
+
+	_sRoot = sRoot
+	if nMaxDepth < 1:
+		raise ValueError("In find, nMaxDepth must be at least 1")
+	
+	nCurDepth = _n + 1
+	if nCurDepth > nMaxDepth:
+		raise RecursionError("In getSrcSets:", nMaxDepth)
+	
+	try:
+		lItems = os.listdir(_sRoot)
+	except OSError as e:
+		perr("WARNING:  Couldn't list directory '%s'"%_sRoot)
+		return
+		
+	lItems.sort()
+	
+	for sItem in os.listdir(_sRoot):
+		sPath = os.path.join(_sRoot, sItem)
+		
+		if os.path.isfile(sPath) and (sItem in tSrcFiles):
+			if _sRoot not in dSrcSets:
+				dSrcSets[_sRoot] = [sPath]
+			else:
+				dSrcSets[_sRoot].append(sPath)
+			
+		elif os.path.isdir(sPath):
+			getSrcSets(sPath, dSrcSets, nMaxDepth, nCurDepth)
+	
+
+# ########################################################################## #
+
+class MyOptParse(optparse.OptionParser):
+	def print_help(self, file=None):
+		if file == None:
+			file = sys.stdout
+
+
+		# Help pops before the utility module is loaded, hand code these but be
+		# on the lookout for changes.  
+		dRep = {
+			'das2':'das2.d2t', 'das3':'flex.json', 'das3ws':'flexRT.json', 
+			'intern':'internal.json', 'conf':g_sConfPath
+		}
+
+		file.write("""
+NAME:
+   dasflex_cupdate - Update Catalog information after data source changes
+
+SYNOPSIS:
+   dasflex_cupdate [options]
+
+DESCRIPTION:
+   dasflex_cupdate walks the server catalog area in a bottom up fashion 
+   propogating changes to source definitions into higher level catalog 
+   nodes.  Specifically this program updates catalog notes of type:
+
+      Catalog, SourceSet
+
+   as well as the top level listings: catalog.json, das2list.txt, nodes.csv.
+
+   This program is most useful when data source definitions are generated
+   by custom mission specific sources and these changes need to be propogated
+   to higher level nodes.
+
+OPTIONS:
+   -h, --help  Print this help message and exit
+	
+   -c FILE, --config=FILE
+               Use FILE as the das2server.conf configuration instead of the
+               compiled in default.  Should be an absolute path
+
+   -d DIR, --cat-dir=DIR
+               Instead of updating the server's catalogs, update an alternate
+               external catalog area.
+
+FILES:
+   Each das2py-server is defined by a single top-level configuration file. By
+   default, configuration data for this program are taken from:
+	
+      %(conf)s
+
+SEE ALSO:
+   The companion program dasflex_sdef handles import of sources from DSDF or
+   JSON templates and also updates catalog lists as well.
+
+"""%dRep)
+
+# ########################################################################## #
+def main(argv):
+	global U
+
+	sUsage = "dasflex_cupdate [options]"
+	psr = MyOptParse(prog="dasflex_sdef", usage="sUsage")
+
+	psr.add_option('-c', '--config', dest="sConfig", default=g_sConfPath)
+	psr.add_option('-d', '--cat-dir', dest="sCatDir", default=None)
+
+	(opts,lPaths) = psr.parse_args()
+
+	dConf = getConf()
+	if dConf == None:
+		return 17
+
+	if not setModulePath(dConf):   # Set the system path
+		return 18
+
+	if not opts.sCatDir:
+		opts.sCatDir = dConf['DATASRC_ROOT']
+
+	# Load the das2server.util module
+	try:
+		mTmp = __import__('das2server', globals(), locals(), ['util'], 0)
+	except ImportError as e:
+		perr("Error importing module 'das2server' using %s\r\n: %s\n"%(
+			str(e), opts.sConfig))
+		return 19
+	try:
+		U = mTmp.util
+	except AttributeError:
+		perr("Server definition: %s"%opts.sConfig)
+		perr('No module named das2server.util under %s\n'%dConf['MODULE_PATH'])
+		return 20
+
+	dSrcSets = {}
+	getSrcSets(opts.sCatDir, dSrcSets, nMaxDepth=20, _n=0)
+
+	lSrcSets = list(dSrcSets.keys())
+	lSrcSets.sort(reverse=True)
+	for sSrcSet in lSrcSets:
+		print("%s -> %s"%(sSrcSet, dSrcSets[sSrcSet]))
+
+	# Depends on structure built in getSrcSets, not very maintainable
+	lLocalSrcIds = []
+	
+	for sSrcSetDir in lSrcSets:
+		sSrcSetFile = sSrcSetDir + '.json'
+		sLocalId = sSrcSetFile.replace("%s/root/"%opts.sCatDir, '')
+		U.catalog.makeSrcSet(dConf, sLocalId, dSrcSets[sSrcSetDir], sSrcSetFile)
+		lLocalSrcIds.append(sLocalId)
+
+	# Walk backwards up the tree updating catalogs as you go
+	for sLocalId in lLocalSrcIds:
+		lUpdates = U.catalog.updateFromSrc(dConf, opts.sCatDir, sLocalId)
+		if not lUpdates:
+			return 7
+		perr("Node Update: %s"%("\n             ".join(lUpdates)))
+
+	# Recreate the summary listings
+	lWrote = U.catalog.updateLists(dConf, opts.sCatDir)
+	if not lWrote:
+		return 8
+	perr("List Update: %s"%("\n             ".join(lWrote)))
+
+	return 0
+
+# ########################################################################## #
+if __name__ == '__main__':
+	main(sys.argv)
