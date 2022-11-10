@@ -150,8 +150,8 @@ def main():
 	
 	sViewLogUrl = U.webio.getScriptUrl()
 	sMainSrvUrl = 'server'
-	if 'MAIN_SRV_URL' in dConf:
-		sMainSrvUrl = dConf['MAIN_SRV_URL']
+	if 'SERVER_URL' in dConf:
+		sMainSrvUrl = dConf['SERVER_URL']
 
 	# TODO: filter type content
 
