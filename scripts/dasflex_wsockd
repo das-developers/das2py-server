@@ -83,13 +83,22 @@ def getReaderCmd(request):
 		
 	if len(sSrc) > 64: sSrc = sSrc[:64]
 
-	if sSrc == '/tracers/l0/msc/em1/sci/data':
-	
+	# '/tracers/l0/msc/em1/sci/data':
+	lSrc = sSrc.split('/')
+	g_log.info("Read from: %s"%lSrc)
+	if (len(lSrc) == 7) and sSrc.startswith('/tracers/l0'):
+		sInst = lSrc[3]
+		sModel = lSrc[4]
+		sKind  = lSrc[5]	
+		g_log.info("Kind = %s, Instrument = %s, Model = %s"%(sKind, sModel, sKind))
+		
 		for sExpect in ('read.time.min', 'read.time.max'):
 			if sExpect not in dQuery:
 				raise RequestError(QueryError, "Expected query key %s missing"%sExpect)
 		
-		sCmd = "tis_l1db_das msc em1 %s %s"%(dQuery['read.time.min'], dQuery['read.time.max'])
+		sCmd = "tis_l1db_das -k %s %s %s %s %s"%(
+			sKind, sInst, sModel, dQuery['read.time.min'], dQuery['read.time.max']
+		)
 		return (sCmd, False) # False = no keepalive
 	
 	elif sSrc == '/tracers/l0/msc/em1/sci-psd/data':
