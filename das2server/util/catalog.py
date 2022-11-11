@@ -436,7 +436,10 @@ def _gatherDas2List(dCatalog, sCatPath, sId):
 		sSubPath = pjoin(sCatPath.replace('.json',''), sSub + '.json')
 		dSubCat = _loadJson(sSubPath)
 
-		sSubId = dSubCat['label']
+		# We can use the nice lable IF it's the same as the key when lowered
+		if dSubCat['label'].lower() == sSub.lower():  sSubId = dSubCat['label']
+		else: sSubId = sSub	
+
 		if len(sId) > 0: sSubId = "%s/%s"%(sId, sSubId)
 
 		lSubEntries = _gatherDas2List(dSubCat, sSubPath, sSubId)
@@ -456,7 +459,9 @@ def _gatherDas2List(dCatalog, sCatPath, sId):
 		# Now go looking for Das2 sources
 		for sKey in dSubCat['catalog']:
 			if dSubCat['catalog'][sKey]['type'] == 'Das2DSDF':
-				sSubId = dSubCat['label']  # Name it after me!
+				
+				if dSubCat['label'].lower() == sKey.lower(): sSubId = dSubCat['label']
+				else: sSubId = sSub
 
 				if len(sId) > 0: sSubId = "%s/%s"%(sId, sSubId)
 
