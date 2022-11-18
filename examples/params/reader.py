@@ -137,7 +137,7 @@ def setupLogger(sLevel="info"):
 	rootLogger.setLevel(nLevel)
 	
 	# The das2 server CGI script sends all standard error output to log files
-	# under the LOG_PATH directory specified in the das2server.conf file.
+	# under the LOG_PATH directory specified in the dasflex.conf file.
 	conHdlr = logging.StreamHandler(sys.stderr)
 	
 	formatter = logging.Formatter(sMsgFmt)

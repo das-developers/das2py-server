@@ -9,7 +9,7 @@ from io import StringIO
 
 g_sConfPath = REPLACED_ON_BUILD
 
-U = None  # Namespace anchor for das2server.util module, loaded after sys.path 
+U = None  # Namespace anchor for dasflex.util module, loaded after sys.path 
           # is set via the config file
 
 # ########################################################################## #
@@ -84,7 +84,7 @@ def getConf():
 
 def setModulePath(dConf):
 	if 'MODULE_PATH' not in dConf:
-		perr(u"Set MODULE_PATH = /dir/containing/das2server_python_module")
+		perr(u"Set MODULE_PATH = /dir/containing/dasflex_python_module")
 		return False	
 	
 	lDirs = dConf['MODULE_PATH'].split(os.pathsep)
@@ -179,7 +179,7 @@ OPTIONS:
    -h, --help  Print this help message and exit
 	
    -c FILE, --config=FILE
-               Use FILE as the das2server.conf configuration instead of the
+               Use FILE as the dasflex.conf configuration instead of the
                compiled in default.  Should be an absolute path
 
    -d DIR, --cat-dir=DIR
@@ -220,18 +220,18 @@ def main(argv):
 	if not opts.sCatDir:
 		opts.sCatDir = dConf['DATASRC_ROOT']
 
-	# Load the das2server.util module
+	# Load the dasflex.util module
 	try:
-		mTmp = __import__('das2server', globals(), locals(), ['util'], 0)
+		mTmp = __import__('dasflex', globals(), locals(), ['util'], 0)
 	except ImportError as e:
-		perr("Error importing module 'das2server' using %s\r\n: %s\n"%(
+		perr("Error importing module 'dasflex' using %s\r\n: %s\n"%(
 			str(e), opts.sConfig))
 		return 19
 	try:
 		U = mTmp.util
 	except AttributeError:
 		perr("Server definition: %s"%opts.sConfig)
-		perr('No module named das2server.util under %s\n'%dConf['MODULE_PATH'])
+		perr('No module named dasflex.util under %s\n'%dConf['MODULE_PATH'])
 		return 20
 
 	dSrcSets = {}

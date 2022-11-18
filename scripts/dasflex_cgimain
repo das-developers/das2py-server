@@ -91,50 +91,50 @@ _g_BrowserAgent = ['firefox','explorer','chrome','safari','edge']
 g_dDefHandlers = {
 
 	# No path given
-	'HANDLE_NONE':     'das2server.handlers.intro',
+	'HANDLE_NONE':     'dasflex.handlers.intro',
 
 	# ?server=debug /debug
-	'HANDLE_DEBUG':    'das2server.handlers.debug',
+	'HANDLE_DEBUG':    'dasflex.handlers.debug',
 
 	# ?server=peers  /peers.xml
-	'HANDLE_PEERS':    'das2server.handlers.peers',
+	'HANDLE_PEERS':    'dasflex.handlers.peers',
 
 	# /static/*
-	'HANDLE_RESOURCE': 'das2server.handlers.resource',
+	'HANDLE_RESOURCE': 'dasflex.handlers.resource',
 
 	# ?server=logo  /logo.png
-	'HANDLE_LOGO':   'das2server.handlers.logo',
+	'HANDLE_LOGO':   'dasflex.handlers.logo',
 
 	# ?server=id    /id.txt  /id.json
-	'HANDLE_ID':     'das2server.handlers.id',
+	'HANDLE_ID':     'dasflex.handlers.id',
 	
 	# ?server=discovery ?server=list /catalog.json /nodes.csv /root.json
-	'HANDLE_LIST':   'das2server.handlers.catalog',
+	'HANDLE_LIST':   'dasflex.handlers.catalog',
 	
 	# Effectively index.html files for wget... /source /static
-	'HANDLE_DIR':      'das2server.handlers.directory',
+	'HANDLE_DIR':      'dasflex.handlers.directory',
 
 	# Directory info pages leading to a data source page
-	'HANDLE_INFO':     'das2server.handlers.info',
+	'HANDLE_INFO':     'dasflex.handlers.info',
 
 	# New flex requests: /source/juno/wav/survey.html
-	'HANDLE_FORM':     'das2server.handlers.d3form',
+	'HANDLE_FORM':     'dasflex.handlers.d3form',
 
 	# New das flex: /source/juno/wav/survey/flex (can handle others as well)
-	'HANDLE_DATA':  'das2server.handlers.d3data',
+	'HANDLE_DATA':  'dasflex.handlers.d3data',
 
 	# List of services offered by this server (failed experiment)
-	#'HANDLE_SERVICES': 'das2server.handlers.services',
+	#'HANDLE_SERVICES': 'dasflex.handlers.services',
 
 	# /verify the validation service from & action
-	'HANDLE_VERIFY': 'das2server.handlers.verify',
+	'HANDLE_VERIFY': 'dasflex.handlers.verify',
 
 	# Helophysics API substem
-	'HANDLE_H_API_NONE':         'das2server.h_api.root',
-	'HANDLE_H_API_CAPS':         'das2server.h_api.caps',
-	'HANDLE_H_API_CATALOG' :     'das2server.h_api.catalog',
-	'HANDLE_H_API_INFO':         'das2server.h_api.info',
-	'HANDLE_H_API_DATA':         'das2server.h_api.data'
+	'HANDLE_H_API_NONE':         'dasflex.h_api.root',
+	'HANDLE_H_API_CAPS':         'dasflex.h_api.caps',
+	'HANDLE_H_API_CATALOG' :     'dasflex.h_api.catalog',
+	'HANDLE_H_API_INFO':         'dasflex.h_api.info',
+	'HANDLE_H_API_DATA':         'dasflex.h_api.data'
 }
 
 ##############################################################################
@@ -239,7 +239,7 @@ def getConf():
 
 def setModulePath(dConf):
 	if 'MODULE_PATH' not in dConf:
-		preLoadError("Set MODULE_PATH = /dir/containing/das2server_python_module")
+		preLoadError("Set MODULE_PATH = /dir/containing/dasflex_python_module")
 		return False	
 	
 	lDirs = dConf['MODULE_PATH'].split(':') # No mater the os.pathsep setting
@@ -330,17 +330,17 @@ def main(form):
 		
 	# Load the webutil module
 	try:
-		mTmp = __import__('das2server', globals(), locals(), ['webutil'], 0)
+		mTmp = __import__('dasflex', globals(), locals(), ['webutil'], 0)
 	except ImportError as e:
 		preLoadError(
-			"Error importing module 'das2server': %s\r\nsys.path is:\r\n%s\r\n"%(
+			"Error importing module 'dasflex': %s\r\nsys.path is:\r\n%s\r\n"%(
 			str(e), sys.path
 		))
 		return 19
 	try:
 		U = mTmp.webutil
 	except AttributeError:
-		preLoadError('No module named das2server.webutil under %s'%dConf['MODULE_PATH'])
+		preLoadError('No module named dasflex.webutil under %s'%dConf['MODULE_PATH'])
 		return 20
 		
 	U.misc.envPathMunge("PATH", dConf['BIN_PATH'])

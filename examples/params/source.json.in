@@ -245,9 +245,9 @@
 
       // Add in our special stuff for all the data options.
       "read.opts":     {
-        "required": false, "type": "flag_set",
+        "required": false, "type": "flagSet",
         "flagSep": " ",
-        "flagList": [
+        "flags": [
           "complex","BxBx","ByBy","BzBz","BxBy", "BxBz", "ByBz", "ExEx",
           "EyEy", "EzEz", "ExEy", "ExEz", "EyEz", "BxEx", "BxEy", "BxEz",
           "ByEx", "ByEy", "ByEz", "BzEx", "BzEy", "BzEz"

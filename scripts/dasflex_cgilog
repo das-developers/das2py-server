@@ -95,7 +95,7 @@ def preLoadError(sOut):
 
 def setModulePath(dConf):
 	if 'MODULE_PATH' not in dConf:
-		preLoadError(u"Set MODULE_PATH = /dir/containing/das2server_python_module")
+		preLoadError(u"Set MODULE_PATH = /dir/containing/dasflex_python_module")
 		return False	
 	
 	lDirs = dConf['MODULE_PATH'].split(os.pathsep)
@@ -132,14 +132,14 @@ def main():
 		
 	# Load the webutil module
 	try:
-		mTmp = __import__('das2server', globals(), locals(), ['webutil'], 0)
+		mTmp = __import__('dasflex', globals(), locals(), ['webutil'], 0)
 	except ImportError as e:
-		preLoadError(u"Error importing module 'das2server'\r\n: %s"%(str(e)))
+		preLoadError(u"Error importing module 'dasflex'\r\n: %s"%(str(e)))
 		return 19
 	try:
 		U = mTmp.webutil
 	except AttributeError:
-		preLoadError(u'No module named das2server.webutil under %s'%dConf['MODULE_PATH'])
+		preLoadError(u'No module named dasflex.webutil under %s'%dConf['MODULE_PATH'])
 		return 20
 	
 	if 'LOG_PATH' not in dConf:
@@ -201,17 +201,17 @@ def main():
 	if 'STYLE_SHEET' in dConf:
 		dReplace['css-link'] = "%s/static/%s"%(sMainSrvUrl, dConf['STYLE_SHEET'])
 	else:
-		dReplace['css-link'] = "%s/static/das2server.css"%sMainSrvUrl
+		dReplace['css-link'] = "%s/static/dasflex.css"%sMainSrvUrl
 		
 	if 'CONTACT_EMAIL' in dConf:
 		dReplace['contact-email'] = dConf['CONTACT_EMAIL']
 	else:
-		dReplace['contact-email'] = "update&#45;das2server&#46;conf&#64;nowhere&#45;ed&#117;"
+		dReplace['contact-email'] = "update&#45;dasflex&#46;conf&#64;nowhere&#45;ed&#117;"
 
 	if 'CONTACT_url' in dConf:
 		dReplace['contact-url'] = dConf['CONTACT_URL']
 	else:
-		dReplace['contact-url'] = "https://update-das2server.conf.nowhere.edu/~someone/"
+		dReplace['contact-url'] = "https://update-dasflex.conf.nowhere.edu/~someone/"
 	
 	pout("Content-Type: text/html; charset=utf-8\r\n")
 	pout("Cache-Control: no-cache\r\n\r\n")

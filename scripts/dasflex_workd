@@ -64,11 +64,11 @@ def perr(item):
 # Default Task handler dictionary
 
 g_dDefHandlers = {
-	'TASK_CACHE':    'das2server.tasks.cachetask',
-	'TASK_USAGE':    'das2server.tasks.debugtask',
-	'TASK_COVERAGE': 'das2server.tasks.covertask',
-	'TASK_LIST':     'das2server.tasks.listtask',
-	'HAPI_INFO_CACHE': 'das2server.h_api.infotask'
+	'TASK_CACHE':    'dasflex.tasks.cachetask',
+	'TASK_USAGE':    'dasflex.tasks.debugtask',
+	'TASK_COVERAGE': 'dasflex.tasks.covertask',
+	'TASK_LIST':     'dasflex.tasks.listtask',
+	'HAPI_INFO_CACHE': 'dasflex.h_api.infotask'
 }
 
 g_dLoadedModules = {
@@ -182,7 +182,7 @@ def getConf():
 
 def setModulePath(dConf):
 	if 'MODULE_PATH' not in dConf:
-		perr(u"Set MODULE_PATH = /dir/containing/das2server_python_module")
+		perr(u"Set MODULE_PATH = /dir/containing/dasflex_python_module")
 		return False	
 	
 	lDirs = dConf['MODULE_PATH'].split(os.pathsep)
@@ -381,14 +381,14 @@ The current version can't process more than one job at a time.
 		
 	# Load the webutil module
 	try:
-		mTmp = __import__('das2server', globals(), locals(), ['webutil'], 0)
+		mTmp = __import__('dasflex', globals(), locals(), ['webutil'], 0)
 	except ImportError as e:
-		perr(u"Error importing module 'das2server'\r\n: %s\n"%(str(e)))
+		perr(u"Error importing module 'dasflex'\r\n: %s\n"%(str(e)))
 		return 19
 	try:
 		U = mTmp.webutil
 	except AttributeError:
-		perr(u'No module named das2server.webutil under %s\n'%dConf['MODULE_PATH'])
+		perr(u'No module named dasflex.webutil under %s\n'%dConf['MODULE_PATH'])
 		return 20
 		
 		

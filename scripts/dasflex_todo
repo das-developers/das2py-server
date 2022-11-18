@@ -110,7 +110,7 @@ def getConf():
 
 def setModulePath(dConf):
 	if 'MODULE_PATH' not in dConf:
-		perr(u"Set MODULE_PATH = /dir/containing/das2server_python_module")
+		perr(u"Set MODULE_PATH = /dir/containing/dasflex_python_module")
 		return False	
 	
 	lDirs = dConf['MODULE_PATH'].split(os.pathsep)
@@ -602,16 +602,16 @@ def main(argv):
 		perr("Error importing module 'das2'\r\n: %s\n"%(str(e)))
 		return 19
 	
-	# Load the das2server.webutil module
+	# Load the dasflex.webutil module
 	try:
-		mTmp = __import__('das2server', globals(), locals(), ['webutil'], 0)
+		mTmp = __import__('dasflex', globals(), locals(), ['webutil'], 0)
 	except ImportError as e:
-		perr(u"Error importing module 'das2server'\r\n: %s\n"%(str(e)))
+		perr(u"Error importing module 'dasflex'\r\n: %s\n"%(str(e)))
 		return 19
 	try:
 		U = mTmp.webutil
 	except AttributeError:
-		perr(u'No module named das2server.webutil under %s\n'%dConf['MODULE_PATH'])
+		perr(u'No module named dasflex.webutil under %s\n'%dConf['MODULE_PATH'])
 		return 20
 
 	fLog = StderrLog()

@@ -122,7 +122,7 @@ $ cd ../
 
 Now build and install the python module and example configuration files.
 Set `--install-lib` and `--prefix` as indicated, unless you want to hand
-edit das2server.conf after installation.  There is no need to run `build`
+edit dasflex.conf after installation.  There is no need to run `build`
 before this step.
 
 ```bash
@@ -136,7 +136,7 @@ Copy over the example configuration file:
 
 ```bash
 $ cd $PREFIX/etc
-$ cp das2server.conf.example das2server.conf
+$ cp dasflex.conf.example dasflex.conf
 ```
 
 We are done with server software installation, lock down the install area (if desired). 
@@ -214,7 +214,7 @@ $ sudo ln -s $PREFIX/bin/das2_srv_cgilog log
 
 The main server script needs to be able to find the main log reader
 script and vice versa.  If you use something other than the default
-values above update the following config entries in your `das2server.conf`.
+values above update the following config entries in your `dasflex.conf`.
 ```ini
 VIEW_LOG_URL = "log"
 MAIN_SRV_URL = "server"
@@ -255,13 +255,13 @@ The CGI scripts and worker programs read thier configuration data from the
 file:
 
 ```bash
-$PREFIX/etc/das2server.conf
+$PREFIX/etc/dasflex.conf
 ```
 
 Take time to customize a few items in your config file such as the 
 `site_title` and the `contact_email`.   You may also want change the file
 `${PREFIX}/static/logo.png` or even the style sheet at 
-`${PREFIX}/static/das2server.css` to something a little nicer.
+`${PREFIX}/static/dasflex.css` to something a little nicer.
 
 **Das2-pyserver** is a caching and web-transport layer for das2 readers.  Readers
 are the programs that generate the initial full resolution data streams.  The

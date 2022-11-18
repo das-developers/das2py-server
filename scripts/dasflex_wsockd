@@ -5,7 +5,6 @@ source definition parsing to determine what command to run.
 
 The trio websocket library handles ping/pong automatically for us (yay!)
 """
-g_sConfPath = None
 
 import sys
 import argparse
@@ -15,6 +14,8 @@ import ssl
 import subprocess # For defintions only
 from functools import partial as delegate
 
+g_sConfPath = REPLACED_ON_BUILD
+
 import trio
 from trio_websocket import serve_websocket, ConnectionClosed
 import contextvars
@@ -22,13 +23,137 @@ import contextvars
 # ########################################################################## #
 g_log = None
 
-InternalServerError = "InternalServerError"
-NoSuchDataSource    = "NoSuchDataSource"
-QueryError          = "QueryError"
-BadRequest          = "BadRequest"
+g_dConfigCache = {} # A cache of json configs, the key is the filesystem path
+
+ServerError       = "InternalServerError"
+NoSuchDataSource  = "NoSuchDataSource"
+QueryError        = "QueryError"
+BadRequest        = "BadRequest"
 
 c_dClient = contextvars.ContextVar("c_dClient")
 
+# ########################################################################## #
+
+def loadConf(sConfPath = None):
+	"""Load the dasflex server configuration file.  
+
+	This boiler plate that has to be re-included in each script since the config
+	itself cannot be read my module code, since the location of the modules is
+	determined by the configuration file.
+
+	The config file is stored with a key of None.  This makes it a singleton.
+
+	Unlike most of the other options, this is not an async function, it's 
+	supposed to run to completion when invoked.
+
+	Args:
+		sOverRide (str): Read the config from this location instead of the 
+			compiled in default
+
+	Returns (dict): Returns the configuration dictionary, and also caches it
+		in the Configuration Cache to prevent re-reads for each incomming
+		request.
+	"""
+
+	global g_dConfigCache
+
+	if not sConfPath: sConfPath = g_sConfPath
+
+	if not os.path.isfile(sConfPath):
+		if os.path.isfile(sConfPath + ".example"):
+			sMsg = "Move\n     %s.example\nto\n     %s\nto enable your site"%(
+			      sConfPath, sConfPath)
+		else:
+			sMsg = "%s is missing\n"%sConfPath
+		
+		raise EnvironmentError(sMsg)
+
+	fIn = open(g_sConfPath, 'r')
+	
+	dConf = {}
+	nLine = 0
+	for sLine in fIn:
+		nLine += 1
+		iComment = sLine.find('#')
+		if iComment > -1:
+			sLine = sLine[:iComment]
+	
+		sLine = sLine.strip()
+		if len(sLine) == 0:
+			continue
+		
+		iEquals = sLine.find('=')
+		if iEquals < 1 or iEquals > len(sLine) - 2:
+			preLoadError("Error in %s line %d"%(g_sConfPath, nLine))
+			fIn.close()
+			return None
+		
+		sKey = sLine[:iEquals].strip()
+		sVal = sLine[iEquals + 1:].strip(' \t\v\r\n\'"')
+		dConf[sKey] = sVal
+	
+	fIn.close()
+	
+	# As finial steps, inclued a reference to the config file itself
+	dConf['__file__'] = sConfPath
+
+	# Some replacement text
+	if 'SERVER_ID' not in dConf:
+		dConf['SERVER_ID'] = "unknown"
+
+	if 'SERVER_NAME' not in dConf:
+		dConf['SERVER_NAME'] = "Unknown"
+
+	if 'SITE_CATALOG_TAG' not in dConf:
+		dConf['SITE_CATALOG_TAG'] = "tag:unknown.site.org,2021"
+	
+	g_dConfigCache[None] = dConf
+
+	return g_dConfigCache[None]
+
+##############################################################################
+class AsyncLogFile(object):
+	"""Replicates the functionality of the prepender script for the perl server
+	using trio calls
+	"""
+
+	def __init__(self, sDir=None, sRmtAddr="direct_invoke"):
+		"""Arguments: Log directory and remote client address"""
+		
+		if sDir == None or not os.path.isdir(sDir):
+			self._file = sys.stderr
+		else:
+			nSuffix = (int(time.time()) / 86400) % 3
+			sLogFile = 'das2.%s_%d.log'%(sRmtAddr, nSuffix)
+			sLogPath = pjoin( sDir, sLogFile)
+			self._file = open(sLogPath, 'a')
+			
+		self.sPrefix = "%s %d"%(time.asctime(), os.getpid())
+		self.nLine = 0
+		
+	def newPrefix(self):
+		self.sPrefix = "%s %d"%(time.asctime(), os.getpid())
+		self.nLine = 0
+		
+	def fileno(self):
+		return self._file.fileno()
+		
+	def write(self, sMsg):
+	
+		lMsg = sMsg.split(u'\n')
+			
+		for sLine in lMsg:
+			if len(sLine.strip()) > 0:
+
+				sOut = '[%s %4d] %s\n'%(self.sPrefix, self.nLine, sLine)
+				self._file.buffer.write(sOut.encode('utf-8'))
+				self.nLine += 1
+
+		self._file.flush()
+		
+	def close(self):
+		if self._file != sys.stderr:
+			self._file.close()
 
 # ########################################################################## #
 
@@ -59,14 +184,13 @@ class RequestError(Exception):
 
 # ########################################################################## #
 
-def getReaderCmd(request):
+async def getReaderCmd(request):
 	"""Return the reader command line, or throw a connection exception"""
-	sDir = '/home/cwp/git/socops/l1tracers/test/'
-	lCmd = ["cat", "%s/tra-preflight_L0_msc-em1_x242_20220309_v1.0.0.d3s"%sDir]
-
-	#lCmd = ['cat','/home/cwp/git/das2py/test/ex05_waveform_extra.d3t']
+	
+	dConf = g_dConfigCache[None]
 
 	sSrc = request.path
+
 	dQuery = {}
 	i = sSrc.find('?')
 	if i > 2:
@@ -81,10 +205,28 @@ def getReaderCmd(request):
 				if j > 2:
 					dQuery[ sPair[:j].strip() ] = sPair[j+1:].strip()
 		
-	if len(sSrc) > 64: sSrc = sSrc[:64]
+	if len(sSrc) > 128: sSrc = sSrc[:128]
+
+	# Check to see that this is one of ours
+	for sTmp in ('WEBSOCKET_URI','DATASRC_ROOT'):
+	if sTmp not in dConf:
+		raise RequestError(ServerError, "%s missing in config file"%sTmp);
+	
+	sRootUri = dConf['WEBSOCKET_URI']
+	if sRootUri[-1] != '/': sRootUri = sRootUri + '/'
+	if not sSrc.startswith(sRootUri):
+		raise RequestError(NoSuchDataSource, "Data source %s is not defined on this server"%sSrc);
+	sSrc = sSrc.replace(sRootUri,'')
 
 	# '/tracers/l0/msc/em1/sci/data':
 	lSrc = sSrc.split('/')
+	if (len(lSrc) < 2) or (lSrc[-1] != 'flexRT'):
+		raise RequestError(NoSuchDataSource, "Data source %s is not defined on this server"%sSrc);		
+
+	sLocalId = '/'.join(lSrc[:-1])
+
+	dIntern = getInternal(sLocalId)
+
 	g_log.info("Read from: %s"%lSrc)
 	if (len(lSrc) == 7) and sSrc.startswith('/tracers/l0'):
 		sInst = lSrc[3]
@@ -114,6 +256,19 @@ Hint: the following paths are defined:
 """%sSrc);
 
 	return (" ".join(lCmd), False)  # Standard read-to-end sources for now
+
+def setModulePath(dConf):
+	if 'MODULE_PATH' not in dConf:
+		preLoadError("Set MODULE_PATH = /dir/containing/dasflex_python_module")
+		return False	
+	
+	lDirs = dConf['MODULE_PATH'].split(':') # No mater the os.pathsep setting
+	for sDir in lDirs:
+		if os.path.isdir(sDir):
+				if sDir not in sys.path:
+					sys.path.insert(0, sDir)
+		
+	return True
 
 # ########################################################################## #
 
@@ -187,36 +342,58 @@ async def HandleAny(request):
 def main(argv):
 	global g_log
 
-	psr = argparse.ArgumentParser(description='Das2 Websocket Server')
+	psr = argparse.ArgumentParser(description='''DasFlex Websocket Server
+This is a companion program for the main HTTP GET server that provides 
+data via websockets.  It only handles data request.  Other requests such 
+as data discovery are handled by the main server.
+''')
 
-	psr.add_argument('--ssl', action='store_true', help='Use SSL')
+	psr.add_argument(
+		'-s', '--ssl', action='store_true', help='Comminicate within an SSL contex.'+\
+		"  This option essentially makes this a 'wss' (Web Secure Socket) server "+\
+		"instead of just 'ws'."
+	)
+	sDef = '/etc/ssl/certs/ssl-cert-snakeoil.pem'
+	psr.add_argument(
+		'-p', '--pem', metavar='PEM_FILE', dest="sCertFile", default=sDef,
+		help="Certificate file used to validate SSL connections to the server."+\
+		"  Defaults to "+sDef+"."
+	)
+	psr.add_argument(
+		'-c', '--config', metavar="FILE", dest="sConfFile", default=g_sConfPath,
+		help="Use a custom configuration file instead of %s ."%g_sConfPath
+	)
 
 	psr.add_argument(
 		'host', help='Host interface to bind. If omitted, then bind all interfaces.', 
 		nargs='?'
 	)
-	psr.add_argument('port', type=int, help='Port to bind.')
+	psr.add_argument(
+		'port', type=int, help='Port to bind, for WSS port 443 is recommended.'
+	)
 	
 	opts = psr.parse_args()
 
 	logging.basicConfig(level=logging.DEBUG)
 	g_log = logging.getLogger()
 
-	here = pathlib.Path(__file__).parent
-
 	if opts.ssl:
 		ctxSsl = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
 		try:
-			ctxSsl.load_cert_chain(here / 'fake.server.pem')
+			ctxSsl.load_cert_chain(opts.sCertFile)
 		except FileNotFoundError:
 			logging.error(
-				'Did not find file "fake.server.pem". You need to run generate-cert.py'
+				"Did not find file '%s', please specifiy an \"HTTPS\" certificate."
 			)
+			return 7
 	else:
 		ctxSsl = None
 	sHost = None if opts.host == '*' else opts.host
+
+	# Load the configuration as item 0, load others on demand
+
 	
-	logging.info('das3 websocket server...')
+	logging.info('dasflex websocket server...')
 	try:
 		trio.run(delegate(serve_websocket, HandleAny, sHost, opts.port, ctxSsl))
 

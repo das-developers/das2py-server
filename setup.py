@@ -315,8 +315,8 @@ class install_data_wconf(install_data):
 ##############################################################################
 
 lPkg = [
-	'das2server','das2server.webutil','das2server.util','das2server.handlers', 
-	'das2server.tasks', 'das2server.h_api'
+	'dasflex','dasflex.webutil','dasflex.util','dasflex.handlers', 
+	'dasflex.tasks', 'dasflex.h_api'
 ]
 
 lScripts = [ 'scripts/%s'%s for s in [
@@ -338,7 +338,7 @@ lDataFiles = [
 	('static', [
 		'static/das2logo.png',    'static/das2server.xsl', 
 		'static/magnetosphere.jpg', 'static/das2logo_rv.png',
-		'static/das2server.css', 'static/hapi_sm.png',
+		'static/dasflex.css', 'static/hapi_sm.png',
 		'static/logo.png', 'static/flowdiagram.svg',
 		'static/folder20.png', 'static/plot20.png', 'static/globe22.png',
 		'static/blank.gif', 'static/up22.png', 'static/form20.png'
@@ -407,9 +407,9 @@ else:
 g_lKeepDest = ['passwd', 'group']
 
 setup(
-   name="das2server",
-	version="2.3-proto",
-	description="Das2 pyserver - a das2 stream caching and reduction CGI service",
+   name="dasflex",
+	version="0.4-pre1",
+	description="Das Flexible Server - a multiformat stream caching and reduction web service",
 	author="Chris Piker",
 	packages=lPkg,
 	scripts=lScripts,

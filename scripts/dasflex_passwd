@@ -81,7 +81,7 @@ def getConf():
 
 def setModulePath(dConf):
 	if not 'MODULE_PATH' in dConf:
-		perr(u"Set MODULE_PATH = /dir/containing/das2server_python_module")
+		perr(u"Set MODULE_PATH = /dir/containing/dasflex_python_module")
 		return False	
 	
 	lDirs = dConf['MODULE_PATH'].split(os.pathsep)
@@ -177,14 +177,14 @@ Create or update the das2 server password file whose located is defined in
 		
 	# Load the webutil module
 	try:
-		mTmp = __import__('das2server', globals(), locals(), ['webutil'], 0)
+		mTmp = __import__('dasflex', globals(), locals(), ['webutil'], 0)
 	except ImportError as e:
-		perr(u"Error importing module 'das2server'\r\n: %s"%(str(e)))
+		perr(u"Error importing module 'dasflex'\r\n: %s"%(str(e)))
 		return 19
 	try:
 		U = mTmp.webutil
 	except AttributeError:
-		perr(u'No module named das2server.webutil under %s'%dConf['MODULE_PATH'])
+		perr(u'No module named dasflex.webutil under %s'%dConf['MODULE_PATH'])
 		return 20
 	
 	if 'USER_PASSWD' not in dConf:
