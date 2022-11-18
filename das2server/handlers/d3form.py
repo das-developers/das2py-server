@@ -975,10 +975,10 @@ def prnOptGroupForm(
 			sChecked = ""
 			if dProp['value'] == True: 
 				sChecked = "checked"
-				# If I'm checked by default and this is not a required value then don't
-				# send it just because I'm checked
-				if ('required' not in dSet) or (not dSet['required']): 
-					_addInIfCtrlNotVal(dTargParam, sCtrlVal)
+			#	# If I'm checked by default and this is not a required value then don't
+			#	# send it just because I'm checked
+			#	if ('required' not in dSet) or (not dSet['required']): 
+			#		_addInIfCtrlNotVal(dTargParam, sCtrlVal)
 			
 			# Some boolean options are part of a radio group	
 			if 'xorGroup' in dProp:
@@ -1342,7 +1342,7 @@ def prnHttpSource(U, fLog, dConf, dSrc, fOut):
 			sout(fOut, '<fieldset><legend>Coordinate Options:</legend>')
 			
 			sStyle = ''
-			if len(lMod) > 12: sStyle = 'class="srcopts_scroll_div"'
+			if len(lMod) > 12: sStyle = 'class="yScroll"'
 			sout(fOut, '<div %s>'%sStyle)
 
 			lMod.sort()
@@ -1372,21 +1372,19 @@ def prnHttpSource(U, fLog, dConf, dSrc, fOut):
 		lMod = []
 		
 		# See if the any of the data items have settable parameters
-		nDatOpts = 0
 		lModVars = []
 		for sVar in dData:
 			for sProp in dData[sVar]['props']:
 				if 'set' in dData[sVar]['props'][sProp]:
 					if sVar not in lModVars: lModVars.append(sVar)
-					nDatOpts += 1
-					break
-				
-		if nDatOpts > 0:
+					
+		if len(lModVars) > 0:
 			sout(fOut, '<fieldset><legend><b>Data Options:</b></legend>')
 			
 			sStyle = ''
-			if nDatOpts > 12: sStyle = 'class="srcopts_scroll_div"'
+			if len(lModVars) > 12: sStyle = 'class="yScroll"'
 			sout(fOut, '<div %s>'%sStyle)
+			
 			
 			lModVars.sort()
 			for sVar in lModVars:
@@ -1397,33 +1395,6 @@ def prnHttpSource(U, fLog, dConf, dSrc, fOut):
 			sout(fOut, "</div>")
 			sout(fOut, "</fieldset>")
 			sout(fOut, '<br>')
-		
-		for sVar in dData:
-			for sProp in ('units','enabled'):
-				if sProp in dData[sVar]['props']:
-					if 'set' in dData[sVar]['props'][sProp]:
-						if sProp == 'enabled':	bEnable = True
-						else: bUnits = True
-						if sVar not in lMod: lMod.append(sVar)
-					
-		if bEnable or bUnits:
-		
-			if bEnable:
-				sout(fOut, '<fieldset><legend><b>Toggle Data Output:</b></legend>')
-			else:
-				sout(fOut, '<fieldset><legend><b>Set Data Units:</b></legend>')
-			
-			sStyle = ''
-			if len(lMod) > 12: sStyle = 'class="srcopts_scroll_div"'
-			sout(fOut, '<div %s>'%sStyle)
-		
-			# Probably need to return id's to use in javascript here
-			lMod.sort()
-			for sVar in lMod:
-				nSettables += _prnVarForm(fOut, sBaseUri, dParams, sVar, dData[sVar])
-				
-			sout(fOut, "</div>")
-			sout(fOut, "</fieldset>")
 	
 	# Handle setting general options, these are handled as a single property
 	# group
@@ -1444,7 +1415,7 @@ def prnHttpSource(U, fLog, dConf, dSrc, fOut):
 
 		if len(lMod) > 0:				
 			sout(fOut, "<fieldset><legend><b>Options:</b></legend>")
-			if len(lMod) > 12: sout(fOut, '<div class="srcopts_scroll_div">')
+			if len(lMod) > 12: sout(fOut, '<div class="yScroll">')
 				
 			nSettables += prnOptGroupForm(fLog, fOut,
 				sBaseUri, dParams, 'options', dIface['options'], sSrcUrl, False, True
@@ -1493,7 +1464,7 @@ def prnHttpSource(U, fLog, dConf, dSrc, fOut):
 			))
 
 			sStyle = ''
-			if nFmtOpts > 10: sStyle = 'class="srcopts_scroll_div"'
+			if nFmtOpts > 10: sStyle = 'class="yScroll"'
 			sout(fOut, '<div %s>'%sStyle)
 
 			#lModFmts.sort()

@@ -157,8 +157,8 @@ def _subForPtrn(fLog, sTemplate, dParams):
 	# Break replacement sections into a selector, pattern if present, pattern if not
 	mFull = re.fullmatch(r'''
 		(\#\[[a-zA-Z][a-zA-Z0-9_:\.\\\-\(\)=\ |]*) # Manditory primary GET parameter
-		(\#[ a-zA-Z0-9_:\.\-@ ]+)?                 # optional substitution if present
-		(\#[a-zA-Z0-9_:\.\-@ ]*)?                  # optional substitution if not present
+		(\#[ a-zA-Z0-9_:,\.\-@ ]+)?                 # optional substitution if present
+		(\#[a-zA-Z0-9_:,\.\-@ ]*)?                  # optional substitution if not present
 		(\])                                       # Manditory end bracket
 	''', sTemplate, flags=nFlags)
 

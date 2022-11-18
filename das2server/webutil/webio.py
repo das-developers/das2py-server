@@ -103,17 +103,22 @@ def httpNextYear():
 # I wish there was a more reliable way to do this, for example if all
 # das2 apps set a user agent string that could be known to the server.
 
-g_lNotDas2App = ['firefox','explorer', 'safari', 'chrome', 'edge', 'konqueror']
+# g_lNotDas2App = ['firefox','explorer', 'safari', 'chrome', 'edge', 'konqueror']
 
 def isBrowser():
-	if "HTTP_USER_AGENT" not in os.environ:
+	#if "HTTP_USER_AGENT" not in os.environ:
+	#	return False
+	
+	#sAgent = os.environ['HTTP_USER_AGENT'].lower()
+	#
+	#for sTest in g_lNotDas2App:
+	#	if sAgent.find(sTest) != -1:
+	#		return True
+
+	if "HTTP_ACCEPT" not in os.environ:
 		return False
-	
-	sAgent = os.environ['HTTP_USER_AGENT'].lower()
-	
-	for sTest in g_lNotDas2App:
-		if sAgent.find(sTest) != -1:
-			return True
+	if os.environ['HTTP_ACCEPT'].find("text/html") >= 0:
+		return True
 	
 	return False
 

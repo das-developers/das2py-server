@@ -189,7 +189,7 @@ p.error {
 
 /* Styles used by the data download form ********************************** */
 
-.srcopts_scroll_div{
+div.yScroll{
 	height: 20em;
 	overflow-y: scroll;
 	padding: 0.5em;

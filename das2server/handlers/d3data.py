@@ -171,15 +171,24 @@ def handleReq(modUtil, sReqType, dConf, fLog, form, sPathInfo):
 	except U.errors.DasError as exc:
 		U.webio.dasErr2HttpMsg(fLog, exc)
 		return 17
+	except Exception as exAll:
+		U.webio.serverError(fLog, str(exAll))
+		return 18
 
+	if 'output' not in lCmds[-1]:
+		sLocalId = _localId(fLog, sPathInfo)
+		U.webio.serverError(fLog, "Output definition missing for command in %s"%sLocalId)
+		return 19
+	
 	dTargOut = lCmds[-1]['output'] # output of last command is our type
+
 
 	if ('files' in dSrc) and ('baseName' in dSrc['files']):
 		(sMimeType, sContentDis, sOutFile) = U.command.filename(
 			fLog, dConf, dParams, dSrc['files']['baseName'], dTargOut
 		)
 	else:
-		sLocalId = _localId(U, fLog, sPathInfo)
+		sLocalId = _localId(fLog, sPathInfo)
 		(sMimeType, sContentDis, sOutFile) = _defaultName(
 			fLog, dConf, dParams, sLocalId, dTargOut
 		)

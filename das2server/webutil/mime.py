@@ -87,7 +87,7 @@ def get(dMimes, sType, sVersion, sSerial):
 	sTitle = None
 
 	if sType not in dMimes:
-		return (None, None, None)
+		return ("application/binary", "bin", "Unknown Data Type")
 
 	dType = dMimes[sType]
 
