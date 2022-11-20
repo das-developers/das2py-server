@@ -599,6 +599,14 @@ async def GetReaderCmd(request):
 
 	dSrc = await GetInternal(sSrc)
 
+	# If the source has default parameters for the query convertion 'flexRT'
+	# then add them in before solving for a command line.
+	if ('parameters' in dSrc) and ('defaults' in dSrc['parameters']) \
+		and ('flexRT' in dSrc['parameters']['defaults']):
+		dInsert = dSrc['parameters']['defaults']['flexRT']
+		for sParam in dInsert:
+			dQuery[sParam] = dInsert[sParam]
+
 	lTmp = [ "%s=%s"%(sKey, dQuery[sKey]) for sKey in dQuery]
 	g_log.info("Solving command-line for params: %s"%(" ".join(lTmp)))
 

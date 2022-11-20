@@ -54,15 +54,25 @@ def main(args):
 	)
 
 	psr.add_argument(
-		'URL', help="The data source query.  This can take many forms, an"+\
-		" example to get you started:  "+\
-		"ws://localhost:52245/dasws/examples/random?read.time.min=2023-01-01&read.time.max=2023-01-02"
+		'SOURCE_URL', help="The base socket data source URL without query options,"+\
+		" for example: ws://localhost:52245/dasws/examples/random"
+	)
+
+	psr.add_argument(
+		"PARAMS", nargs="*", help="Any number of query key=value pairs.  For example: "+\
+		"read.time.min=2022-09-15 read.time.max=2022-09-16"
 	)
 
 	opts = psr.parse_args()
 
+	sUrl = opts.SOURCE_URL
+	if len(opts.PARAMS) > 0:
+		sUrl = "%s?%s"%(sUrl, "&".join(opts.PARAMS))
+
+	perr("Data request is: %s"%sUrl)
+
 	try:
-		trio.run(ConnectAndRead, opts.URL)
+		trio.run(ConnectAndRead, sUrl)
 		return 0
 	except ConnectionRejected as ex:
 		perr("Connection rejected with status %d, full content follows"%ex.status_code)
