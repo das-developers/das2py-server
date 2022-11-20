@@ -19,10 +19,10 @@ DATASRC_ROOT = "%(PREFIX)s/catalog"
 SERVER_URL = "http://localhost/das/server"
 
 # This server can send das streams over websocket frames.  To enable this
-# functionality set the value of the WEBSOCKET_ROOT below to the *external*
+# functionality set the value of the WEBSOCKET_URI below to the *external*
 # address of your websocket server.  For example:
 # 
-#   wss://jupiter.physics.uiowa.edu:/dasws/juno/wav/survey 
+#   wss://jupiter.physics.uiowa.edu/dasws/juno/wav/survey 
 #
 # The das2 websocket will typically sit behind a more secure webserver
 # such as apache.  To do this first enable the apache2 proxy_wstunnel
@@ -37,11 +37,15 @@ SERVER_URL = "http://localhost/das/server"
 #     ProxyPass "ws://localhost:52242/"
 #  </Location>
 #
-# Where the apache URI path and local server location match the
-# WEBSOCKET_PATH and WEBSOCKET_CONN below.  The 
-#
-#  Note: Re-run dasflex_sdef on your source definitions if this is changed
-WEBSOCKET_URI = "ws://localhost/dasws"
+# This assumes the web-socket server is running on port 52245
+WEBSOCKET_URI = wss://localhost:52245/dasws
+
+
+# Provide the external websocket URL.  This is used to filter incomming
+# requests that may be spam.  If you proxy the websocket server use the
+# external proxy address here
+
+
 
 # Contact email.  You can use replacement characters to obscure the address
 # a bit, for example:

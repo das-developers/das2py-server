@@ -4,6 +4,14 @@ A websocket server for das streams.  Written in python so we can ride off the
 source definition parsing to determine what command to run.
 
 The trio websocket library handles ping/pong automatically for us (yay!)
+
+A Note on Capitalization:
+   
+   Async functions in python are actually objects in the classic sense. Calling
+   one actually instantiates an object and registers it with the main event
+   loop.  Thus ALL async functions in this code are capitalized so that the
+   reader thinks of them as the objects that they are instead of the direct
+   call functions that they emulate.
 """
 
 import sys
@@ -11,6 +19,8 @@ import argparse
 import logging
 import pathlib
 import ssl
+import re
+import os
 import subprocess # For defintions only
 from functools import partial as delegate
 
@@ -33,6 +43,7 @@ BadRequest        = "BadRequest"
 c_dClient = contextvars.ContextVar("c_dClient")
 
 # ########################################################################## #
+# Blocking Server Config loader #
 
 def loadConf(sConfPath = None):
 	"""Load the dasflex server configuration file.  
@@ -68,7 +79,9 @@ def loadConf(sConfPath = None):
 		
 		raise EnvironmentError(sMsg)
 
-	fIn = open(g_sConfPath, 'r')
+
+	g_log.info("Server settings defined by: %s"%sConfPath)
+	fIn = open(sConfPath, 'r')
 	
 	dConf = {}
 	nLine = 0
@@ -111,51 +124,8 @@ def loadConf(sConfPath = None):
 
 	return g_dConfigCache[None]
 
-##############################################################################
-class AsyncLogFile(object):
-	"""Replicates the functionality of the prepender script for the perl server
-	using trio calls
-	"""
-
-	def __init__(self, sDir=None, sRmtAddr="direct_invoke"):
-		"""Arguments: Log directory and remote client address"""
-		
-		if sDir == None or not os.path.isdir(sDir):
-			self._file = sys.stderr
-		else:
-			nSuffix = (int(time.time()) / 86400) % 3
-			sLogFile = 'das2.%s_%d.log'%(sRmtAddr, nSuffix)
-			sLogPath = pjoin( sDir, sLogFile)
-			self._file = open(sLogPath, 'a')
-			
-		self.sPrefix = "%s %d"%(time.asctime(), os.getpid())
-		self.nLine = 0
-		
-	def newPrefix(self):
-		self.sPrefix = "%s %d"%(time.asctime(), os.getpid())
-		self.nLine = 0
-		
-	def fileno(self):
-		return self._file.fileno()
-		
-	def write(self, sMsg):
-	
-		lMsg = sMsg.split(u'\n')
-			
-		for sLine in lMsg:
-			if len(sLine.strip()) > 0:
-
-				sOut = '[%s %4d] %s\n'%(self.sPrefix, self.nLine, sLine)
-				self._file.buffer.write(sOut.encode('utf-8'))
-				self.nLine += 1
-
-		self._file.flush()
-		
-	def close(self):
-		if self._file != sys.stderr:
-			self._file.close()
-
 # ########################################################################## #
+# Exception to das packet converter #
 
 def _xmlEscape(sMsg):
 	sMsg = sMsg.replace(u'\n', u'&#13;&#10;').replace(u'"', u"'")
@@ -165,7 +135,7 @@ def _xmlEscape(sMsg):
 class RequestError(Exception):
 	def __init__(self, sType, sMsg):
 		self.status = None
-		self.headers = [('Content-Type','text/vnd.das2.stream')]
+		self.headers = [('Content-Type','text/vnd.das.stream')]
 		self.body = None
 		if sType == NoSuchDataSource:
 			self.status = 404
@@ -183,9 +153,405 @@ class RequestError(Exception):
 		self.body = b''.join( [s.encode('utf-8') for s in ll ])
 
 # ########################################################################## #
+# Command Solver #
 
-async def getReaderCmd(request):
-	"""Return the reader command line, or throw a connection exception"""
+def cmdTriggered(dCmd, dParams):
+	"""Determine if a particular command has been triggered by the given
+	http parms.  If the command does not have a 'trigger' section the default
+	is to auto-trigger.
+	Args:
+		dCmd (dict) - A command object
+		dParams (dict) - A key value dictionaly, presumably from a form submission
+	"""
+
+	if 'triggers' not in dCmd:
+		g_log.info("Command %s always runs"%dCmd['label'])
+		return True
+
+	lTriggers = dCmd['triggers']
+
+	# Using implicit AND for now, so all triggers must be tripped
+
+	nRequired = len(lTriggers)
+	nTripped = 0
+	for dTrig in lTriggers:
+		if 'key' not in dTrig:
+			g_log.error("'key' missing from command object trigger")
+			continue
+
+		if dTrig['key'] not in dParams: continue
+
+		if 'value' not in dTrig:
+			if dTrig['key'] in dParams:
+				nTripped += 1
+		else:
+			if dTrig['value'] == dParams[dTrig['key']]:
+				nTripped += 1
+
+	sStatus = "does not run."
+	if (nTripped == nRequired):
+		sStatus = "added to pipeline."
+
+	g_log.info(" %d of %d conditions met for command %s, %s"%(
+		nTripped, nRequired, dCmd['label'], sStatus
+	))
+
+	return (nTripped == nRequired)
+
+def triggered(dSrc, dParams):
+	"""Look through the commands section of an internal source description
+	and determine the commands that should be enabled.   Each command has an
+	order in the internal.json file.  If two commands of the same order are
+	triggered then the query solution is inconclusive.
+
+	Args:
+		dSrc (dict): An internal source dictionary (aka an internal.json)
+		dParam (dict): A key = value dictionary of request parameters
+
+	Returns (list, None):
+		A list of command objects in the order in which they should be invoked
+		in a command pipeline.  If two or more objects are to be invoked in
+		the same order then and error is logged, and None is returned.
+
+	Exceptions:
+		ServerError - Raised if required information is missing from source def
+
+		QueryError  - Raised if the given parameter set can't resolve to a 
+		  unique command line.
+
+	If a single category has more then one triggered command: None is returned
+	and a message is logged to 
+	"""
+
+	if 'commands' not in dSrc:
+		raise RequestError(ServerError, "No command section present in source definition.")
+
+	lCmds = dSrc['commands']
+
+	# First check that at least one of the commands does not contain in input
+	# (aka it's a true data source)
+	bHaveSrc = False
+	for dCmd in lCmds:
+		if 'input' not in dCmd:
+			bHaveSrc = True
+			break
+
+	if not bHaveSrc:
+		raise RequestError(ServerError, 
+			"No upstream data source (aka reader) present in source definition"
+		)
+
+	# Each item is a list, keys are the order.  To be valid, the first command
+	# to run must not require an input, and there must be no more then one
+	# command by order.
+	dTrig = {}  
+
+	for dCmd in lCmds:
+		if 'order' not in dCmd:
+			raise RequentError(ServerError, 
+				"'order' parameter missing in command definition"
+			)
+
+		if cmdTriggered(dCmd, dParams):
+			nOrder = int(dCmd['order'])
+			if nOrder in dTrig: dTrig[nOrder].append(dCmd)
+			else:               dTrig[nOrder] = [dCmd]
+
+	# Check uniqueness
+	lOrder = list(dTrig.keys())
+	lOrder.sort()
+	for nOrder in lOrder:
+		if len(dTrig[nOrder]) > 1:
+			RequestError(QueryError, 
+				"Query did not resolve to a unique pipeline. Multiple commands"+\
+				" at order %d."%nOrder
+			)
+
+	lOut = [ dTrig[nOrder][0] for nOrder in lOrder]
+
+	if len(lOut) == 0:
+		raise RequestError(QueryError, "Query did not trigger any local processing")
+
+	if 'input' in lOut[0]:
+		raise RequestError(QueryError, 
+			"Invalid query, upstream data producer not triggered, command"+\
+			" pipeline is '%s'"%("'->'".join(d['label'] for d in lOut))
+		)
+
+	return lOut
+
+# ########################################################################## #
+# Command Pipeline Producer #
+
+def _subForPtrn(sTemplate, dParams):
+	"""
+	Args:
+		sTemplate (str) - The template guiding the replacement procedure
+		dParms (dict) - An HTTP GET query dictionary
+
+	Returns (str): A string to substitue for the pattern.  A length 0 string
+		is as valid output, but None is not.
+	"""
+
+	nFlags = re.ASCII | re.VERBOSE
+
+	# Break replacement sections into a selector, pattern if present, pattern if not
+	mFull = re.fullmatch(r'''
+		(\#\[[a-zA-Z][a-zA-Z0-9_:\.\\\-\(\)=\ |]*) # Manditory primary GET parameter
+		(\#[ a-zA-Z0-9_:,\.\-@ ]+)?                 # optional substitution if present
+		(\#[a-zA-Z0-9_:,\.\-@ ]*)?                  # optional substitution if not present
+		(\])                                       # Manditory end bracket
+	''', sTemplate, flags=nFlags)
+
+	if mFull == None:
+		raise RequestError(ServerError, "Match error in subsitution pattern '%s'"%sTemplate)
+
+	lSub = list(mFull.groups())
+	lSub[0] = lSub[0][2:]   # knock off '#['
+	(sSelector, sPresent, sAbsent) = (lSub[0], None, None)
+
+	if (len(lSub) > 1) and lSub[1]: 
+		sPresent = lSub[1][1:] # knock off the #
+	else:
+		sPresent = '@'
+	if len(lSub) > 2 and lSub[2]: 
+		sAbsent  = lSub[2][1:] # knock off the #
+
+	# lacking an if-absent output means param is manditory
+	
+	# Break out the sub-selector
+	mParam = re.fullmatch(r'''
+		([a-zA-Z][a-zA-Z0-9:_\.\-]*)         # Manditory primary GET parameter
+		(\([a-zA-Z0-9= ,:;_\.\\\-\|]*?\))?   # optional sub-selection if present
+		''', sSelector, flags=nFlags
+	)
+
+	lSelector = list(mParam.groups())
+	(sSubSep, sSubSel, sSubValSep) = (None, None, None) 
+
+	if (len(lSelector) > 1) and lSelector[1]:
+		# Have sub-selector, parse it
+		mSubSel = re.fullmatch(r'''
+			(?:\()                  # match but ignore paren
+			([:;,_\.\+\- ]*)        # key,value pair separator 
+			(?:\|)                  # match but ignore pipe
+			([a-zA-Z0-1=_\-]+)      # sub key to watch for
+			(\|[=:;,_\.\+\- ]*)?    # optional sub-key to sub-val separator
+			(?:\))                  # match but ignore close paren
+		''', lSelector[1], flags=nFlags)
+
+		lSubSel = list(mSubSel.groups())
+		if len(lSubSel) < 2:
+			raise RequestError(ServerError, 
+				"Malformed sub param selector parameter in '%s'"%sSelector
+			)
+		sSubSep = lSubSel[0]
+		sSubSel = lSubSel[1]
+
+		if len(lSubSel) > 2: sSubValSep = lSubSel[2]
+
+		sSelector = lSelector[0] # Only the first part is the outer parameter
+
+	# Now that I have all the parts, find my parameter
+	if sSelector not in dParams:
+		if sAbsent != None:
+			return sAbsent
+		else:
+			g_log.error(
+				"Command template '%s' requires parameter '%s' which was not supplied"%(
+				sTemplate, sSelector
+			))
+			raise RequestError(QueryError, "Missing query parameter '%s'"%sSelector)
+
+	sValue = dParams[sSelector]  # Empty string is okay, None is not
+
+	# If I have a sub-selector, break down the param value and do sub-parsing
+	# Just look for the value of interest, don't create sub parsing dictionary.
+	if sSubSel:
+	
+		sSubVal = None
+		if sValue:
+			if sSubSep:  # I can tokenize the value
+				lSub = sValue.split(sSubSep)
+
+				for sChunk in lSub:
+					if sChunk.startswith(sSubParam):  # I have the start of it
+						if sSubValSep:
+							lChunk = sChunk.split(sSubValSep)
+							if len(lChunk)	> 0:
+								sSubVal = sSubValSep.join(lChunk[1:])
+						else:
+							sSubVal = sSubParam  # Treat as a flag
+						break
+
+			else: # I cannot tokenize the value, use the param itself as the value
+				if sValue.find(sSubParam) != -1:
+					sSubVal = sSubParam
+
+		if sSubVal == None:
+			if sAbsent != None:
+				return sAbsent
+			else:
+				g_log.error(
+					"Command template '%s' requires sub-parameter '%s' which was not supplied"%(
+					sTemplate, sSubParam
+				))
+				raise RequestError(QueryError, "Missing sub-query parameter '%s'"%sSubParam)
+		else:
+			sValue = sSubValue
+			sSelector = sSubParam
+		
+	# Should have a value now
+	if len(sValue) > 0:
+		return sPresent.replace( '@', '%s'%sValue)
+		
+	return ""
+
+# ########################################################################## #
+
+def substitute(sFullTplt, dParams):
+	"""Subtitute query parameters into a command template to generate a
+	single command.  Used by the pipeline creator.
+
+	In general the parameter intepretation is complex enough that it can handle
+	sub-parameters cammed into a single GET parameter. See:
+	
+	  docs/CmdTemplates.md
+
+	in the general source distribution for a full description.
+
+	Args:
+		sTemplate - The command template to substitute
+		dParams - A key=value dictionary of parameters.
+
+	Returns (str): A string with with all subtitutions inserted, or None
+		if an error occured.  Specific error message is logged.
+	"""
+
+	lAccum = []
+
+	# Tired of regex...
+	sRemain = sFullTplt
+	while len(sRemain) > 0:
+		i = sRemain.find('#[')
+		if i == -1:
+			lAccum.append(sRemain)
+			break
+		else:
+			lAccum.append(sRemain[:i])
+			sRemain = sRemain[i:]
+
+		# At this point start of string should be a selector sub pattern
+		i = sRemain.find(']')
+		if i == -1:
+			raise RequestError(ServerError,
+				"Param substitution section not closed in '%s'"%sTemplate
+			)
+
+		sPtrn = sRemain[:i+1]
+		sRemain = sRemain[i+1:]
+
+		lAccum.append( _subForPtrn(sPtrn, dParams) )
+
+	return ''.join(lAccum)
+
+
+def pipeline(lCmds, dParams):
+	"""Substitue query parameters into command templates to generate a shell
+	pipeline.  A wrapper around substitute makes a single pipelined command
+
+	Args:
+		lCmds - A *ordered* command list
+		dParams - The HTTP GET params dictionary.
+	"""
+	lOut = []
+	for dCmd in lCmds:
+		if 'template' not in dCmd:
+			raise RequestError(ServerError, 
+				"Invalid source definition, 'template' section missing"
+			)
+
+		if isinstance(dCmd['template'], list):
+			sTemplate = ' '.join(dCmd['template'])
+		elif isinstance(dCmd['template'], str):
+			sTemplate = dCmd['template']
+		else:
+			raise RequestError(ServerError, 
+				"Invaild data type for 'template' section, exected list or string"
+			)
+
+		sSub = substitute(sTemplate, dParams)
+		if len(sSub) > 0:
+			lOut.append( sSub )
+
+	sPipeline = ' | '.join(lOut)
+	#g_log.debug("   EXEC: %s"%sPipeline)
+	return sPipeline
+
+
+# ########################################################################## #
+# Data Source Loader Objects #
+
+async def GetInternal(sSrc):
+	"""Get the interal source definition, either from memory or from disk.
+	The source definition will be stored by the localID, which is basically
+	sSrc, minus the '/flexRT' ending.
+
+	Args:
+		sSrc (str): The local ID source to return, may optionally end in '/flexRT'
+			which is ignored.
+
+	Returns (dict):
+		The source defitition
+	"""
+	global g_dConfigCache
+
+	dConf = g_dConfCache[None]
+
+	# '/quicklook/preflight/msc/em1/flexRT'
+	if sSrc.endswith('/flexRT'):
+		sSrc = sSrc.replace('/flexRT','')
+
+	if sSrc not in g_dConfigCache:
+		sPath = "%s/root/%s/internal.json"%(dConf['DATASRC_ROOT'], sSrc.lower())
+		path = trio.Path(sPath)
+
+		if not path.is_file():
+			raise RequestError(NoSuchDataSource, "There is no data source at '%s'"%sSrc)
+		try:
+			async with  await trio.open_file(sPath) as fIn:
+				g_log.info("Loading %s"%sPath)
+				dSrc = json.load(fIn)
+		except Exception as e:
+			g_log.error(str(e))
+		sContact = ''
+		if 'CONTACT_URL' in dConf:
+			sContact = ' at <a href="%s">%s</a'%(dConf['CONTACT_URL'],dConf['CONTACT_URL'])
+		elif 'CONTACT_EMAIL' in dConf:
+			sContact = ' at <a href="mailto: %s">%s</a>'%(dConf['CONTACT_EMAIL'],dConf['CONTACT_EMAIL'])
+		raise RequestError(
+			"There is an internal problem with this data source, please contact "+\
+			"the server administrator%s"%sContact
+		)
+
+		g_dConfCache[sSrc] = dSrc
+	
+	return g_dConfCache[sSrc]
+
+# ########################################################################## #
+
+async def GetReaderCmd(request):
+	"""Return the reader command line, or throw a connection exception
+
+	Args:
+		request (A trio-websocket connection object):
+		This is usually provided by trio_socket.serve_websocket() or similar
+
+	Returns (str, bool):
+		The string is the command to run.  The boolean states if keep-alive
+		messages should be sent because the command will continue to send
+		more data.  Typically this is indicated by a end-time in the future.
+	"""
 	
 	dConf = g_dConfigCache[None]
 
@@ -209,8 +575,8 @@ async def getReaderCmd(request):
 
 	# Check to see that this is one of ours
 	for sTmp in ('WEBSOCKET_URI','DATASRC_ROOT'):
-	if sTmp not in dConf:
-		raise RequestError(ServerError, "%s missing in config file"%sTmp);
+		if sTmp not in dConf:
+			raise RequestError(ServerError, "%s missing in config file"%sTmp);
 	
 	sRootUri = dConf['WEBSOCKET_URI']
 	if sRootUri[-1] != '/': sRootUri = sRootUri + '/'
@@ -218,59 +584,22 @@ async def getReaderCmd(request):
 		raise RequestError(NoSuchDataSource, "Data source %s is not defined on this server"%sSrc);
 	sSrc = sSrc.replace(sRootUri,'')
 
-	# '/tracers/l0/msc/em1/sci/data':
-	lSrc = sSrc.split('/')
-	if (len(lSrc) < 2) or (lSrc[-1] != 'flexRT'):
-		raise RequestError(NoSuchDataSource, "Data source %s is not defined on this server"%sSrc);		
+	dSrc = await GetInternal(dConf, sSrc)
 
-	sLocalId = '/'.join(lSrc[:-1])
+	lTmp = [ "%s=%s"%(sKey, dQuery[sKey]) for sKey in dQuery]
+	g_log.info("Solving command-line for params: %s"%(" ".join(lTmp)))
 
-	dIntern = getInternal(sLocalId)
+	lCmds = triggered(dSrc, dQuery)
 
-	g_log.info("Read from: %s"%lSrc)
-	if (len(lSrc) == 7) and sSrc.startswith('/tracers/l0'):
-		sInst = lSrc[3]
-		sModel = lSrc[4]
-		sKind  = lSrc[5]	
-		g_log.info("Kind = %s, Instrument = %s, Model = %s"%(sKind, sModel, sKind))
-		
-		for sExpect in ('read.time.min', 'read.time.max'):
-			if sExpect not in dQuery:
-				raise RequestError(QueryError, "Expected query key %s missing"%sExpect)
-		
-		sCmd = "tis_l1db_das -k %s %s %s %s %s"%(
-			sKind, sInst, sModel, dQuery['read.time.min'], dQuery['read.time.max']
-		)
-		return (sCmd, False) # False = no keepalive
-	
-	elif sSrc == '/tracers/l0/msc/em1/sci-psd/data':
-		sFile = 'tra-preflight_L0_msc-em1_x242-psd_20220309_v1.0.0.d3s'
-		return ("cat %s/%s"%(sDir, sFile), False)
-		
-	else:
-		raise RequestError(NoSuchDataSource, 
-"""Data source %s does not exist on this server. 
-Hint: the following paths are defined:
-	/tracers/l0/msc/em1/sci/data
-   /tracers/l0/msc/em1/sci-psd/data
-"""%sSrc);
+	if 'output' not in lCmds[-1]:
+		RequestError(ServerError, "Output definition missing for command in %s"%sSrc)
 
-	return (" ".join(lCmd), False)  # Standard read-to-end sources for now
+	sCmd  = pipeline(lCmds, dParams)
 
-def setModulePath(dConf):
-	if 'MODULE_PATH' not in dConf:
-		preLoadError("Set MODULE_PATH = /dir/containing/dasflex_python_module")
-		return False	
-	
-	lDirs = dConf['MODULE_PATH'].split(':') # No mater the os.pathsep setting
-	for sDir in lDirs:
-		if os.path.isdir(sDir):
-				if sDir not in sys.path:
-					sys.path.insert(0, sDir)
-		
-	return True
+	return sCmd
 
 # ########################################################################## #
+# Async Request Handler #
 
 async def DelClientMsg(ws):
 	while True:
@@ -296,8 +625,6 @@ async def SendStdOut(source, dest, bKeepAlive, done):
 		raise ValueError("Keep-alive not yet implemented")
 
 
-# ########################################################################## #
-
 async def HandleAny(request):
 	'''Assume for now that all requests are data requests.  Others may be
 	supported in the future, though most of the informational items are ment
@@ -310,7 +637,7 @@ async def HandleAny(request):
 	#g_log.info('The _event sub-object is: %s', dir(request._event))
 
 	try:
-		(sCmd, bKeepAlive) = getReaderCmd(request)
+		(sCmd, bKeepAlive) = await GetReaderCmd(request)
 	except RequestError as e:
 		await request.reject(e.status, extra_headers=e.headers, body=e.body)
 		return
@@ -339,6 +666,8 @@ async def HandleAny(request):
 	g_log.info('Handler exiting')
 
 # ########################################################################## #
+# Main # 
+
 def main(argv):
 	global g_log
 
@@ -376,6 +705,9 @@ as data discovery are handled by the main server.
 
 	logging.basicConfig(level=logging.DEBUG)
 	g_log = logging.getLogger()
+
+	# Load the config file once instead of once per connection
+	loadConf(opts.sConfFile)
 
 	if opts.ssl:
 		ctxSsl = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)

@@ -1,82 +1,81 @@
 #!/usr/bin/env python3
+"""
+A websocket client for server testing
 
-"""A websocket client for server testing"""
+A Note on Capitalization:
+   
+   Async functions in python are actually objects in the classic sense. Calling
+   one actually instantiates an object and registers it with the main event
+   loop.  Thus ALL async functions in this code are capitalized so that the
+   reader thinks of them as the objects that they are instead of the direct
+   call functions that they emulate.
+"""
 
 import sys
+import argparse
+from functools import partial as delegate
+from urllib.parse import urlparse
 import trio
-from trio_websocket import open_websocket_url, ConnectionRejected, ConnectionClosed
+from trio_websocket import open_websocket_url, ConnectionRejected
 
+def perr(sMsg):
+	sys.stderr.write("%s\n"%sMsg)
 
 # ########################################################################## #
-# Packet Generator Object # 
 
 async def ReadPkt(ws):
 	await ws.send_message("howdy")
 	while True:
-		try:
-			pkt = await ws.get_message()
-			sys.stdout.buffer.write(pkt)
-		except ConnectionClosed as ex:
-			break
+		pkt = await ws.get_message()
+		sys.stdout.buffer.write(pkt)
+
+async def ConnectAndRead(sUrl):
+	
+	async with open_websocket_url(sUrl) as ws:
+		#await ws.send_message('hello world!')
+		await ReadPkt(ws)
 
 # ########################################################################## #
-def helpText():
-	print("""
-Das web socket test client.  Usage:
 
-  ws_test_client URL > your_file.d3b
-  
-The exact URL depends on the server and resource you're trying to test.
-Here's an example to get you started:
+def main(args):
 
-   ws://oberon.physics.uiowa.edu:52245/tracers/l0/msc/em1/sci/data?read.time.min=2022-03-09&read.time.max=2022-03-10
-	  
-enter the URL above all as one line in QUOTES.  All output is to
-standard out, so redirect it if you don't want to spew to the terminal.
-""")
+	psr = argparse.ArgumentParser(
+		description="""A simple test program for the dasflex websocket interface.
+		It issues a single datasource request and send the resulting data to
+		standard output.
 
-# ########################################################################## #
-# Main Generator Object # 
+		To test the output of a server operation pipe the output of this program
+		into das_valid.
+		"""
+	)
 
-async def Main(args):
+	psr.add_argument(
+		'URL', help="The data source query.  This can take many forms, an"+\
+		" example to get you started:  "+\
+		"ws://localhost:52245/dasws/examples/random?read.time.min=2023-01-01&read.time.max=2023-01-02"
+	)
 
-	# Some paths that will work:
-	#
-	# /tracers/preflight/msc_em1/l0_sci/data
-	# /tracers/preflight/msc_em1/l0_sci_psd/data
-	# /juno/waves/burst/lfrl/data
-	# /mars_express/marsis/ais/data
-	
-	for arg in args:
-		if (arg == '-h') or (arg == '--help'):
-			helpText()
-			return
-	
-	sUrl = None
-	if len(args) > 1:
-		sUrl = args[1]
-	else:
-		sBase = 'ws://oberon.physics.uiowa.edu:52245/tracers/l0/msc/em1/sci/data'
-		sQuery = "read.time.min=2022-03-09&read.time.max=2022-03-10"
-		sUrl = "%s?%s"%(sBase, sQuery)
-	
-	#print("Requesting socket for: %s"%sDest)
+	opts = psr.parse_args()
+
 	try:
-		async with open_websocket_url(sUrl) as ws:
-			#await ws.send_message('hello world!')
-			await ReadPkt(ws)
-
+		trio.run(ConnectAndRead, opts.URL)
+		return 0
 	except ConnectionRejected as ex:
-		print("Connection rejected with status %d, body follows"%ex.status_code)
-		print("-------")
+		perr("Connection rejected with status %d, body follows"%ex.status_code)
+		perr("-------")
 		for t in ex.headers:
-			print("%s: %s"%(t[0].decode('utf-8'), t[1].decode('utf-8')))
-		print()
-		print(ex.body.decode('utf-8'))
+			perr("%s: %s"%(t[0].decode('utf-8'), t[1].decode('utf-8')))
+		perr("")
+		perr(ex.body.decode('utf-8'))
 
-	except OSError as ose:
-		print('Connection attempt failed: %s' % ose)
+	except OSError as ex:
+		perr('Connection attempt failed: %s'%ex)
+
+	except KeyboardInterrupt:
+		perr('CTRL-C recieved, shutting down')
+
+	return 3
 
 # ########################################################################## #
 if __name__ == "__main__":
-	trio.run(Main, sys.argv)
+	sys.exit(main(sys.argv))
