@@ -16,7 +16,7 @@ import argparse
 from functools import partial as delegate
 from urllib.parse import urlparse
 import trio
-from trio_websocket import open_websocket_url, ConnectionRejected
+from trio_websocket import open_websocket_url, ConnectionRejected, ConnectionClosed
 
 def perr(sMsg):
 	sys.stderr.write("%s\n"%sMsg)
@@ -31,9 +31,13 @@ async def ReadPkt(ws):
 
 async def ConnectAndRead(sUrl):
 	
-	async with open_websocket_url(sUrl) as ws:
-		#await ws.send_message('hello world!')
-		await ReadPkt(ws)
+	try:
+		async with open_websocket_url(sUrl) as ws:
+			#await ws.send_message('hello world!')
+			await ReadPkt(ws)
+
+	except ConnectionClosed as ex:
+		perr("Data source read complete")
 
 # ########################################################################## #
 
@@ -61,7 +65,7 @@ def main(args):
 		trio.run(ConnectAndRead, opts.URL)
 		return 0
 	except ConnectionRejected as ex:
-		perr("Connection rejected with status %d, body follows"%ex.status_code)
+		perr("Connection rejected with status %d, full content follows"%ex.status_code)
 		perr("-------")
 		for t in ex.headers:
 			perr("%s: %s"%(t[0].decode('utf-8'), t[1].decode('utf-8')))

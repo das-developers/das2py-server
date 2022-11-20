@@ -21,7 +21,9 @@ import pathlib
 import ssl
 import re
 import os
-import subprocess # For defintions only
+import json
+import subprocess # For defintions only (uses trio.run_process for cmds)
+from urllib.parse import urlparse
 from functools import partial as delegate
 
 g_sConfPath = REPLACED_ON_BUILD
@@ -33,7 +35,7 @@ import contextvars
 # ########################################################################## #
 g_log = None
 
-g_dConfigCache = {} # A cache of json configs, the key is the filesystem path
+g_dConfCache = {} # A cache of json configs, the key is the filesystem path
 
 ServerError       = "InternalServerError"
 NoSuchDataSource  = "NoSuchDataSource"
@@ -66,7 +68,7 @@ def loadConf(sConfPath = None):
 		request.
 	"""
 
-	global g_dConfigCache
+	global g_dConfCache
 
 	if not sConfPath: sConfPath = g_sConfPath
 
@@ -97,7 +99,7 @@ def loadConf(sConfPath = None):
 		
 		iEquals = sLine.find('=')
 		if iEquals < 1 or iEquals > len(sLine) - 2:
-			preLoadError("Error in %s line %d"%(g_sConfPath, nLine))
+			raise ValueError(ServerError, "Error in %s line %d"%(g_sConfPath, nLine))
 			fIn.close()
 			return None
 		
@@ -119,10 +121,18 @@ def loadConf(sConfPath = None):
 
 	if 'SITE_CATALOG_TAG' not in dConf:
 		dConf['SITE_CATALOG_TAG'] = "tag:unknown.site.org,2021"
-	
-	g_dConfigCache[None] = dConf
 
-	return g_dConfigCache[None]
+	# Finally, add the sub-component to strip from the front of all
+	# data requests:
+	if 'WEBSOCKET_URI' not in dConf:
+		raise KeyError("WEBSOCKET_URI not provided in %s"%sConfPath)
+
+	o = urlparse(dConf['WEBSOCKET_URI'])
+	dConf['_WEBSRV_PATH_'] = o.path
+	
+	g_dConfCache[None] = dConf
+
+	return g_dConfCache[None]
 
 # ########################################################################## #
 # Exception to das packet converter #
@@ -504,7 +514,7 @@ async def GetInternal(sSrc):
 	Returns (dict):
 		The source defitition
 	"""
-	global g_dConfigCache
+	global g_dConfCache
 
 	dConf = g_dConfCache[None]
 
@@ -512,27 +522,28 @@ async def GetInternal(sSrc):
 	if sSrc.endswith('/flexRT'):
 		sSrc = sSrc.replace('/flexRT','')
 
-	if sSrc not in g_dConfigCache:
+	if sSrc not in g_dConfCache:
 		sPath = "%s/root/%s/internal.json"%(dConf['DATASRC_ROOT'], sSrc.lower())
 		path = trio.Path(sPath)
 
-		if not path.is_file():
+		if not await path.is_file():
 			raise RequestError(NoSuchDataSource, "There is no data source at '%s'"%sSrc)
 		try:
 			async with  await trio.open_file(sPath) as fIn:
 				g_log.info("Loading %s"%sPath)
-				dSrc = json.load(fIn)
+				sWholeThing = await fIn.read();
+				dSrc = json.loads(sWholeThing)
 		except Exception as e:
 			g_log.error(str(e))
-		sContact = ''
-		if 'CONTACT_URL' in dConf:
-			sContact = ' at <a href="%s">%s</a'%(dConf['CONTACT_URL'],dConf['CONTACT_URL'])
-		elif 'CONTACT_EMAIL' in dConf:
-			sContact = ' at <a href="mailto: %s">%s</a>'%(dConf['CONTACT_EMAIL'],dConf['CONTACT_EMAIL'])
-		raise RequestError(
-			"There is an internal problem with this data source, please contact "+\
-			"the server administrator%s"%sContact
-		)
+			sContact = ''
+			if 'CONTACT_URL' in dConf:
+				sContact = ' at <a href="%s">%s</a'%(dConf['CONTACT_URL'],dConf['CONTACT_URL'])
+			elif 'CONTACT_EMAIL' in dConf:
+				sContact = ' at <a href="mailto: %s">%s</a>'%(dConf['CONTACT_EMAIL'],dConf['CONTACT_EMAIL'])
+			raise RequestError(ServerError,
+				"There is an internal problem with this data source, please contact "+\
+				"the server administrator%s"%sContact
+			)
 
 		g_dConfCache[sSrc] = dSrc
 	
@@ -553,7 +564,7 @@ async def GetReaderCmd(request):
 		more data.  Typically this is indicated by a end-time in the future.
 	"""
 	
-	dConf = g_dConfigCache[None]
+	dConf = g_dConfCache[None]
 
 	sSrc = request.path
 
@@ -578,13 +589,15 @@ async def GetReaderCmd(request):
 		if sTmp not in dConf:
 			raise RequestError(ServerError, "%s missing in config file"%sTmp);
 	
-	sRootUri = dConf['WEBSOCKET_URI']
-	if sRootUri[-1] != '/': sRootUri = sRootUri + '/'
-	if not sSrc.startswith(sRootUri):
-		raise RequestError(NoSuchDataSource, "Data source %s is not defined on this server"%sSrc);
-	sSrc = sSrc.replace(sRootUri,'')
+	# Strike server sub-path from incomming request
+	if len(dConf['_WEBSRV_PATH_']) > 0:
+		if not sSrc.startswith(dConf['_WEBSRV_PATH_']):
+			raise RequestError(
+				NoSuchDataSource, "Data source %s is not defined on this server"%sSrc
+			);
+		sSrc = sSrc[len(dConf['_WEBSRV_PATH_']):]
 
-	dSrc = await GetInternal(dConf, sSrc)
+	dSrc = await GetInternal(sSrc)
 
 	lTmp = [ "%s=%s"%(sKey, dQuery[sKey]) for sKey in dQuery]
 	g_log.info("Solving command-line for params: %s"%(" ".join(lTmp)))
@@ -592,11 +605,13 @@ async def GetReaderCmd(request):
 	lCmds = triggered(dSrc, dQuery)
 
 	if 'output' not in lCmds[-1]:
-		RequestError(ServerError, "Output definition missing for command in %s"%sSrc)
+		RequestError(
+			ServerError, "Output definition missing for command in %s"%sSrc
+		)
 
-	sCmd  = pipeline(lCmds, dParams)
+	sCmd  = pipeline(lCmds, dQuery)
 
-	return sCmd
+	return (sCmd, False)  #TODO Change to TRUE if time in future
 
 # ########################################################################## #
 # Async Request Handler #
