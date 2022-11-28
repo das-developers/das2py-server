@@ -13,6 +13,24 @@ from . import mime
 
 # ########################################################################## #
 
+def _sameType(paramVal, trigVal):
+	"""Helper for cmdTriggered.  Handles type coersion for comparison purposes.
+
+	returns (varies, varies)
+		Always tries for non-string types if possible, default to strings if
+		float does not work.
+	"""
+	
+	try:
+		_retParam = float(paramVal)
+		_retTrig  = float(trigVal)
+	except:
+		_retParam = str(paramVal)
+		_retTrig = str(trigVal)
+
+	return (_retParam, _retTrig)
+
+
 def cmdTriggered(fLog, dCmd, dParams):
 	"""Determine if a particular command has been triggered by the given
 	http parms.  If the command does not have a 'trigger' section the default
@@ -44,8 +62,30 @@ def cmdTriggered(fLog, dCmd, dParams):
 			if dTrig['key'] in dParams:
 				nTripped += 1
 		else:
-			if dTrig['value'] == dParams[dTrig['key']]:
-				nTripped += 1
+			# Try type coersion
+			value, trigger = _sameType(dParams[dTrig['key']], dTrig['value'])
+
+			if ('compare' not in dTrig) or (dTrig['compare'] == 'eq'):
+				if value == trigger:
+					nTripped += 1
+			else:
+				if dTrig['compare'] == 'gt':
+					if value > trigger:
+						nTripped += 1
+				elif dTrig['compare'] == 'lt':
+					if value < trigger:
+						nTripped += 1
+				elif dTrig['compare'] == 'ge':
+					if value >= trigger:
+						nTripped += 1
+				elif dTrig['compare'] == 'le':
+					if value <= trigger:
+						nTripped += 1
+				elif dTrig['compare'] == 'ne':
+					if value != trigger:
+						nTripped += 1
+				else:
+					fLog.write("   INFO: Command trigger comparison '%s' is unknown"%dTrig['compare'])
 
 	sStatus = "does not run."
 	if (nTripped == nRequired):
