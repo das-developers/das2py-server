@@ -94,7 +94,8 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	pout('<div class="article">')
 			
 	pout("""
-<h1><i>das</i> Flexible Server</i></h1>
+<!-- <h1><i>das</i> Flexible Server</i></h1> -->
+<h1>Multistream Server</i></h1>
 <p>
 This server provids data streams in a variety of formats using a variety of 
 Application Programming Interfaces (APIs).  In addition to fixed APIs such
@@ -104,12 +105,14 @@ full-resolution data stream generators, processes the flow, and optionally
 caches the results.  Almost all processing steps are optional.
 </p>
 
+<!--
 <div class="flowdiagram_parent">
 <img src="%(script)s/static/flowdiagram.svg"
   alt="das2-pyserver data flow diagram" class="flowdiagram"
 />
 <center><i><span style="font-size: 80%%">Stream Processing</span></i></center>
 </div>
+-->
 <p>
 The core server itself generates no primary data.  That tasks falls to readers
 which may output:
@@ -119,7 +122,7 @@ which may output:
 <li> <i>das3</i> display streams</li>
 </ul>
 or any other format so long as some set of HTTP query parameters can be mapped
-to some data supply by a reader program.
+to some data supplied by a reader program.
 </p>
 <!-- 
 <h4><span style="color: #993300"><i>This is an <b>beta version</b> of the server and not all
@@ -144,7 +147,7 @@ via the <a href="https://github.com/das-developers/das2dlm">das2dlm</a> module.<
 </ul>
 <p>Programs which can parse <i>das3</i> real-time streams include:</p>
 <ul>
-<li> <a href="https://research-git.uiowa.edu/space-physics/tracers/soc/dasoc">DASOC</a>
+<li> <a href="https://space-physics.git-pages.research.uiowa.edu/tracers/soc/dasoc/">DASOC</a>
 </li>
 </ul>
 
@@ -189,12 +192,9 @@ or <a href="%(script)s/nodes.csv">nodes.csv</a> is sufficent.</p>
   |             |- <i>source-set</i>/     - A data source set directory
   |                  |
   |                  |- das2.d2t    - A das2 data source definition (if das2 query compatable)
-  |                  |- das3.json   - An general HttpStreamSrc definiton
-  |                  |- form.html   - A web form for querying the HttpStreamSrc
+  |                  |- flex.json   - An general HttpStreamSrc definiton
+  |                  |- flexRT.json - A real-time source definition (if real-time capable)
   |                  |- vo.xml      - An IVOA <a href="https://www.ivoa.net/documents/DataLink/20150617/index.html">DataLink</a> definition (optional)
-  |                  |- das3rt.json - A real-time source definition (if real-time capable)
-  |                  |
-  |                  |- data - form action handler (hidden)
   |
   |- <a href="%(script)s/catalog.json">catalog.json</a> - A combined catalog of all data sources
   |     local to this server.  May be provided to <b>new_RootNode_url()</b> in das2C or

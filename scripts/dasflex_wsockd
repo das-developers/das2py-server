@@ -21,6 +21,7 @@ import pathlib
 import ssl
 import re
 import os
+from os.path import dirname as dname
 import json
 import subprocess # For defintions only (uses trio.run_process for cmds)
 from urllib.parse import urlparse
@@ -705,12 +706,18 @@ as data discovery are handled by the main server.
 		"  This option essentially makes this a 'wss' (Web Secure Socket) server "+\
 		"instead of just 'ws'."
 	)
-	sDef = '/etc/ssl/certs/ssl-cert-snakeoil.pem'
+	#sDef = '/etc/ssl/certs/ssl-cert-snakeoil.pem'
+	sDef = "%s/server.pem"%dname(g_sConfPath)
 	psr.add_argument(
 		'-p', '--pem', metavar='PEM_FILE', dest="sCertFile", default=sDef,
 		help="Certificate file used to validate SSL connections to the server."+\
 		"  Defaults to "+sDef+"."
 	)
+	#sDef = "%s/.ssh/ssl-cert-snakeoil.key"%os.environ['HOME']
+	#psr.add_argument(
+	#	'-k', '--key', metavar='KEY_FILE', dest="sKeyFile", default=sDef,
+	#	help="Key file used to read the PEM file, defaults to "+sDef+"."
+	#)
 	psr.add_argument(
 		'-c', '--config', metavar="FILE", dest="sConfFile", default=g_sConfPath,
 		help="Use a custom configuration file instead of %s ."%g_sConfPath
@@ -735,6 +742,8 @@ as data discovery are handled by the main server.
 	if opts.ssl:
 		ctxSsl = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
 		try:
+			g_log.info("Loading certificat chain using %s"%opts.sCertFile)
+			#ctxSsl.load_verify_locations(opts.sCertFile)
 			ctxSsl.load_cert_chain(opts.sCertFile)
 		except FileNotFoundError:
 			logging.error(
