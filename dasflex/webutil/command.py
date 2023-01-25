@@ -406,12 +406,13 @@ def _isorange(fLog, lArgs):
 	dtBeg = das2.DasTime(lArgs[0])
 
 	lName = []
-	if (len(lArgs) == 1) or lArgs[1] == 'forever':
+	if (len(lArgs) == 1) or (lArgs[1] == 'forever'):
 		lName.append(_fileDasTime(dtBeg))
 	else:
-		# If we get two arguments, 
+		# If we get two arguments
+		lName.append(_fileDasTime(dtBeg))
 		dtEnd = das2.DasTime(lArgs[1])
-		if (dtEnd - dtEnd) != 86400.0:  # Just a daily coverage file
+		if (dtEnd - dtBeg) != 86400.0:  # Just a daily coverage file
 			lName.append('_')
 			lName.append(_fileDasTime(dtEnd))
 
