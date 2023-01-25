@@ -74,7 +74,7 @@ def _getInternal(fLog, dConf, sPathInfo):
 	sInternal = "%s/root/%s/internal.json"%(dConf['DATASRC_ROOT'], sLocalId.lower())
 
 	if not os.path.isfile(sInternal):
-		U.webio.notFoundError(fLog, "There is no data source at '%s'"%sPathInfo)
+		U.webio.notFoundError(fLog, "There is no data source at '%s'"%sInternal)
 		return (None, None)
 
 	try:
@@ -200,12 +200,23 @@ def handleReq(modUtil, sReqType, dConf, fLog, form, sPathInfo):
 		fLog, sCmd, sMimeType, sContentDis, sOutFile
 	)
 
+	# Make sure the standard error output of the command shows up in the log
+	for sLine in sStdErr.split('\n'):
+		fLog.write(sLine.strip())
+
+	# Code below ASSUMES that errors can be sent in either das2 or das3 format.
+	# Don't make than assumption!  If the format is a das stream send data in
+	# band, otherwise, don't send a message body
+
 	if nRet != 0:
+		sVer = ""
+		if 'format.version' in dParams: sVer = dParams['format.version']
+
 		U.webio.serverError(
 			fLog, 
 			"exec: %s\n%s\nNon-zero exit value, %d from pipeline"%(sCmd, sStdErr, nRet ), 
 			bHdrSent,
-			dParams['format.version']
+			sVer
 		)
 	
 	return nRet

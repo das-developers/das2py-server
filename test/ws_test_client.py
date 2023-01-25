@@ -11,7 +11,9 @@ A Note on Capitalization:
    call functions that they emulate.
 """
 
+import os
 import sys
+import ssl
 import argparse
 from functools import partial as delegate
 from urllib.parse import urlparse
@@ -29,10 +31,19 @@ async def ReadPkt(ws):
 		pkt = await ws.get_message()
 		sys.stdout.buffer.write(pkt)
 
-async def ConnectAndRead(sUrl):
+async def ConnectAndRead(sUrl, sCAFile=None):
 	
+	if sUrl.startswith('wss'):
+		if sCAFile == None:
+			perr("ERROR: Certificate authority needed for wss connections, use -p")
+			return
+		ssl_context = ssl.create_default_context()
+		ssl_context.load_verify_locations(sCAFile)
+	else:
+		ssl_context = None
+
 	try:
-		async with open_websocket_url(sUrl) as ws:
+		async with open_websocket_url(sUrl, ssl_context) as ws:
 			#await ws.send_message('hello world!')
 			await ReadPkt(ws)
 
@@ -51,6 +62,13 @@ def main(args):
 		To test the output of a server operation pipe the output of this program
 		into das_valid.
 		"""
+	)
+
+	sDef = "%s/client.pem"%os.environ['PWD']
+	psr.add_argument(
+		"-p", '--pem', metavar="PEM_FILE", dest="sCAFile", default=sDef,
+		help="Certificate file used to validate SSL connections to the server. "+\
+		"defaults to "+sDef+" ."
 	)
 
 	psr.add_argument(
@@ -72,7 +90,7 @@ def main(args):
 	perr("Data request is: %s"%sUrl)
 
 	try:
-		trio.run(ConnectAndRead, sUrl)
+		trio.run(ConnectAndRead, sUrl, opts.sCAFile)
 		return 0
 	except ConnectionRejected as ex:
 		perr("Connection rejected with status %d, full content follows"%ex.status_code)

@@ -7,6 +7,8 @@ import fcntl
 import os
 import re
 
+import das2
+
 from . import webio
 from . import errors as E
 from . import mime
@@ -380,21 +382,49 @@ def pipeline(fLog, lCmds, dParams):
 	return sPipeline
 
 # ########################################################################## #
-def _isorange(lArgs):
+
+def _fileDasTime(dt):
+	lName = []
+	
+	lName.append("%04d-%02d-%02d"%(dt.year(), dt.month(), dt.dom() ))
+	if (dt.hour() > 0) or (dt.minute() > 0) or (dt.sec() > 0.0):
+		lName.append('T')
+		lName.append("%02d-%02d"%(dt.hour(), dt.minute()))
+		if dt.sec() > 0.0:
+			lName.append("-%02d"%(dt.sec()))	
+
+	return "".join(lName)
+
+def _isorange(fLog, lArgs):
 	"""Given arguments that are supposedly start time and stop time output
 	a time stamp suitable for use in a filename.
 	"""
 
-	return "FixMeIsoRng"
+	if len(lArgs) == 0:
+		return ""
 
-def _normparams(lArgs):
+	dtBeg = das2.DasTime(lArgs[0])
+
+	lName = []
+	if (len(lArgs) == 1) or lArgs[1] == 'forever':
+		lName.append(_fileDasTime(dtBeg))
+	else:
+		# If we get two arguments, 
+		dtEnd = das2.DasTime(lArgs[1])
+		if (dtEnd - dtEnd) != 86400.0:  # Just a daily coverage file
+			lName.append('_')
+			lName.append(_fileDasTime(dtEnd))
+
+	return "".join(lName)
+
+def _normparams(fLog, lArgs):
 	"""Normalize a set of arguments in a way that's suitable for use in a 
 	filename
 	"""
 
 	return "FixMeParams"
 
-def _timeres(lArgs):
+def _timeres(fLog, lArgs):
 	"""Given arguments that supposedly set a time range in seconds, provide
 	a filename token representing the range
 	"""
@@ -416,7 +446,7 @@ def filename(fLog, dConf, dParams, lTranslate, dTarg):
 
 		dParams (dict) - A query parameter dictionary
 
-		lTranslate (list,dict) - A translation list
+		lTranslate (list of dict) - A translation list
 
 		dTarg (dict) - A data type dictionary, here's an example   
 		       {'type':'das','version':'2.2','variant':'text'}
@@ -433,24 +463,29 @@ def filename(fLog, dConf, dParams, lTranslate, dTarg):
 		if ('function' not in dCall) or ('args' not in dCall):
 			raise E.ServerError("Invalid filename creation procedure")
 
-		lArgs = [
-			substitute(fLog, sTplt, dParams) for sTplt in dCall['args']
-		]
+		lArgs = []
+		for sArg in dCall['args']:
+			if len(sArg) == 0: continue
+
+			if sArg[0] == "#":
+				lArgs.append(substitute(fLog, sArg, dParams))
+			else:
+				lArgs.append(sArg)
 
 		sFunc = dCall['function']
 
 		if sFunc == 'echo':
 			lName.append("".join(lArgs))
 		elif sFunc == 'isorange':
-			lName.append(_isorange(lArgs))
+			lName.append(_isorange(fLog, lArgs))
 		elif sFunc == 'normparams':
-			lName.append(_normparams(lArgs))
+			lName.append(_normparams(fLog, lArgs))
 		elif sFunc == 'timeres':
-			lName.append(_timeres(lArgs))
+			lName.append(_timeres(fLog, lArgs))
 		else:
 			raise E.ServerError("Unknown text transform function '%s' in source definition"%sFunc)
 
-	sName = "_".join(lName)
+	sName = "".join(lName)
 
 	# Now get the mime type
 	dMimes = mime.load(dConf)
@@ -467,7 +502,7 @@ def filename(fLog, dConf, dParams, lTranslate, dTarg):
 	else:
 		sDisp = 'attachment'
 
-	return (sMime, sDisp, "%s.%s"%(sName, sExt))
+	return (sMime, sDisp, sName)
 
 
 ##############################################################################

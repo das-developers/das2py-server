@@ -625,6 +625,7 @@ def _inputItemEnum(fOut, dParams, dItem, sMsg, sCtrlId, sDisabled):
 	each selection can set a different flag.
 
 	"""
+
 	if 'set' not in dItem: return 0
 	dSet = dItem['set']
 	if 'enum' not in dSet: return 0
@@ -677,6 +678,8 @@ def _inputItemEnum(fOut, dParams, dItem, sMsg, sCtrlId, sDisabled):
 	#			}
 	#		}
    #   }
+
+	#sout(fOut, "<p>Handle enum</p>")
 	
 	sout(fOut, sMsg)
 	sout(fOut, '<select id=%s %s>'%(sCtrlId, sDisabled))
@@ -839,6 +842,8 @@ def prnOptGroupForm(
 			groups, such a putting mix,max,resolution in a single line and looking
 			around for units strings.
 
+		bSingleGroup (bool): Line break control??
+
 	Returns (int): 
 		The number of HTML form controls generated.
 
@@ -847,6 +852,8 @@ def prnOptGroupForm(
 	   setting.
 	"""
 	nCtrls = 0
+
+	#sout(fOut, "<pre>debug opt group: %s</pre>"%sGroup)
 	
 	dProps = dGroup['props']
 	lProps = list(dProps.keys())
@@ -897,6 +904,10 @@ def prnOptGroupForm(
 		sProp = lProps[iProp]
 		dProp = dProps[sProp]
 		curval = None
+
+		#sout(fOut, """<pre>debug property: %s which has elements: %s</pre>"""%(
+		#	sProp, list(dProp.keys())
+		#))
 		
 		sPropUnits = None
 		if 'units' in dProp: sPropUnits = dProp['units']
@@ -908,14 +919,16 @@ def prnOptGroupForm(
 		else:
 			sDataType = _getPropDataType(dProp, dParams)
 
+		#sout(fOut, "<pre>debug property type: %s</pre>"%sDataType)
+
 		# Note: The type of curval is unknown at this point
 		if 'value' in dProp: curval = dProp['value']
 		else:
 			_missingKeyError(fOut, '%s:%s:value'%(sGroup, sProp), sSrcUrl)
 			return 0
 		
-		if ('set' not in dProp) or ('param') not in dProp['set']:
-			#sout(fOut, "%s: %s &nbsp"%(sProp, curval))
+		if ('set' not in dProp) or ('param' not in dProp['set']):
+			#sout(fOut, "<pre>Debug property %s is not settable, skipping</pre>"%sProp)
 			continue
 		
 		if (bSingleGroup):
@@ -1010,7 +1023,7 @@ def prnOptGroupForm(
 			elif 'label' in dProp: sMsg = dProp['label']
 			else:                 sMsg = sProp[0].upper() + sProp[1:]
 			
-			if 'enum' in dSet:  # True enums... 
+			if 'enum' in dSet:  # True enums...
 				_inputItemEnum(fOut, dParams, dProp, sMsg, sCtrlId, sDisabled)
 				
 			else:

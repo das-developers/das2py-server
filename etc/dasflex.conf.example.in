@@ -38,7 +38,7 @@ SERVER_URL = "http://localhost/das/server"
 #  </Location>
 #
 # This assumes the web-socket server is running on port 52245
-WEBSOCKET_URI = wss://localhost:52245/dasws
+WEBSOCKET_URI = ws://localhost/dasws
 
 
 # Provide the external websocket URL.  This is used to filter incomming
