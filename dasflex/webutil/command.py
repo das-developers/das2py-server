@@ -427,10 +427,44 @@ def _normparams(fLog, lArgs):
 
 def _timeres(fLog, lArgs):
 	"""Given arguments that supposedly set a time range in seconds, provide
-	a filename token representing the range
+	a filename token representing the range.
+
+	The expected args are:  
+		[ 
+			prefix if successful, requested resolution, option units
+		]
 	"""
 
-	return "FixMeTimeRes"
+	if len(lArgs) < 2:
+		return ""
+
+	if (len(lArgs[1]) == 0) or (not lArgs[1]):
+		return ""
+
+	try:
+		f = float(lArgs[1])
+	except Exception as e:
+		fLog.write(
+			"ERROR: couldn't convert %s to a float in text function _timeres()"%lArgs[1]
+		)
+		return "binned"
+
+	if f > 2*86400:
+		s = "bin-%.2f"%(f/86400)
+		sUnit = 'day'
+	elif f > 2*3600:
+		s = "bin-%.2f"%(f/3600)
+		sUnit = 'hr'
+	elif f > 2*60:
+		s = "bin-%.2f"%(f/60)
+		sUnit = 'min'
+	else:
+		s = "bin-%.2f"%f
+		sUnit = "s"
+
+	if s[-3:] == ".00": s = s[:-3]
+
+	return "%s%s%s"%(lArgs[0], s, sUnit)
 
 
 # ########################################################################## #
