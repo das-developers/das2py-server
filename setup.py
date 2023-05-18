@@ -23,7 +23,6 @@ from distutils.command.install import install
 
 from distutils.errors import DistutilsFileError
 
-
 g_sPrefix = os.getenv('PREFIX')
 
 if not g_sPrefix:
@@ -31,7 +30,15 @@ if not g_sPrefix:
 	sys.exit(7)
 
 g_sEtc	= pjoin(g_sPrefix, 'etc')
+if os.getenv('INST_ETC'):
+	g_sEtc = os.getenv('INST_ETC')
+
 g_sConfig = pjoin(g_sEtc, 'dasflex.conf')
+
+# Handle putting template bin's in native architecture directory
+g_sNatBin = 'bin'
+if os.getenv('N_ARCH') and (os.getenv('N_ARCH') != '/'):
+	g_sNatBin = 'bin/%s'%os.getenv('N_ARCH')
 
 g_bInstExamples = True
 
@@ -50,7 +57,7 @@ class build_scripts_wconf(build_scripts):
 	
 	def embed_config(self, lLines, encoding):
 		r"""Convert lines that start with g_sConfPath (no proceeding whitespace)
-		and change them to g_sConfPath = $SERVER_ETC/dasflex.conf
+		and change them to g_sConfPath = $INST_ETC/dasflex.conf
 		"""
 		
 		# Not efficient, don't care, it's easy to read and this is just install
@@ -327,8 +334,8 @@ lScripts = [ 'scripts/%s'%s for s in [
 ]]
 
 lDataFiles = [
-	('bin', ['scripts/das_startup.sh.in']),
-	('etc', [
+	(g_sNatBin, ['scripts/das_startup.sh.in']),
+	(g_sEtc, [
 		'etc/dasflex.conf.example.in','etc/das2peers.ini.example.in',
 		'etc/group', 'etc/passwd', 'etc/ReadMe-Passwords.txt.in',
 		'etc/mime.json.example'
@@ -353,7 +360,6 @@ if '--no-examples' in sys.argv:
 	sys.argv.remove('--no-examples')
 	g_bInstExamples = False
 else:
-	
 	# For now only use *.dsdf as the input source
 	#lDataFiles.append(
 	#	# Include files for data source definitions

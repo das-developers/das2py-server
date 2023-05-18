@@ -16,7 +16,7 @@ DATASRC_ROOT = "%(PREFIX)s/catalog"
 # Provide the server URL, this is for self referential items
 #
 #  Note: Re-run dasflex_sdef on your source definitions if this is changed
-SERVER_URL = "http://localhost/das/server"
+SERVER_URL = "http://localhost/dasflex"
 
 # This server can send das streams over websocket frames.  To enable this
 # functionality set the value of the WEBSOCKET_URI below to the *external*
