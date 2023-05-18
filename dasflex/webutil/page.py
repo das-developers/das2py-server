@@ -2,6 +2,7 @@
 
 import os
 import sys
+import os.path
 from os.path import join as pjoin
 import json
 
@@ -122,6 +123,9 @@ def pullNavItems(dConf):
 	PROV_MIME_0 = 5
 
 	sNodes = pjoin(dConf['DATASRC_ROOT'], 'nodes.csv')
+	if not os.path.isfile(sNodes):
+		return []
+		
 	with open(sNodes, 'r') as fIn:
 		lRows = [s.strip() for s in fIn.read().split('\n')]
 	
@@ -231,8 +235,16 @@ def sidenav(dConf, fLog, bAddExtra=False):
 	pout('<hr>\n<i>Data Sources</i>')
 
 	if len(lItems) == 0:
-		pout("<br><br><b>None Defined!</b><i><br>Use <tt>dasflex_sdef</tt>"+\
-		     "<br>to import<br>definitions.</i><br><br>")
+		pout("""
+<br><br><b>None Defined!</b><br>
+<i>1) Use <tt>dasflex_sdef</tt><br>
+to import<br>
+definitions.<br>
+2) Then <tt>dasflex_cupdate</tt><br>
+to update the<br>
+catalog.</i><br><br>"""
+		)
+
 	else:
 		pout('<ul>')
 		for i in range(len(lItems)):
@@ -260,7 +272,7 @@ def sidenav(dConf, fLog, bAddExtra=False):
 	if bAddExtra:
 		pout('''<hr>
 <a href="http://das2.org">
-<img src="%s/static/das2logo_rv.png" alt="das2" width="65" height="65">
+<img src="%s/static/dasflex_rv.png" alt="das2" width="65" height="65">
 </a>'''%sScriptUrl)
 
 	pout('</div>')

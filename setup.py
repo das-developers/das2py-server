@@ -345,6 +345,7 @@ lDataFiles = [
 	('static', [
 		'static/das2logo.png',    'static/das2server.xsl', 
 		'static/magnetosphere.jpg', 'static/das2logo_rv.png',
+		'static/dasflex_rv.png',
 		'static/dasflex.css', 'static/hapi_sm.png',
 		'static/logo.png', 'static/flowdiagram.svg',
 		'static/folder20.png', 'static/plot20.png', 'static/globe22.png',

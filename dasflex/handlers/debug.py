@@ -53,9 +53,9 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 
 	print("""<!DOCTYPE html>
 <html>
-<title>Das2 PyServer Enviroment</title>
+<title>DasFlex Enviroment</title>
 <body>
-<h1>Das2 PyServer Environment</h1>
+<h1>DasFlex Environment</h1>
 
 <p>Server is defined by config file: %s</p>
 <p>Here's the config values</p>

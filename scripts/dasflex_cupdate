@@ -4,6 +4,8 @@
 import sys
 import json
 import os.path
+from os.path import join as pjoin
+from os.path import dirname as dname
 import optparse
 from io import StringIO
 
@@ -139,6 +141,22 @@ def getSrcSets(sRoot, dSrcSets, nMaxDepth=20, _n=0):
 		elif os.path.isdir(sPath):
 			getSrcSets(sPath, dSrcSets, nMaxDepth, nCurDepth)
 	
+# ########################################################################## #
+
+def _writeFile(sPath, sOutput):
+	#perr("Writing: %s"%sPath)
+	sDir = dname(sPath)
+
+	if not os.path.isdir(sDir):
+		os.makedirs(sDir)
+
+	with open(sPath, 'w') as f:
+		f.write(sOutput)
+
+def _writeJsonFile(sPath, dOutput):
+	sOutput = json.dumps(dOutput, indent="  ");
+	_writeFile(sPath, sOutput)
+
 
 # ########################################################################## #
 
@@ -219,6 +237,20 @@ def main(argv):
 
 	if not opts.sCatDir:
 		opts.sCatDir = dConf['DATASRC_ROOT']
+
+	sDir = pjoin(opts.sCatDir,'root')
+	sRoot = pjoin(opts.sCatDir, 'root.json')
+	if not os.path.isfile(sRoot):
+		perr("Creating empty catalog root at %s"%sRoot)
+		os.makedirs(sDir, 0o755, exist_ok=True)
+		dRoot = {
+			"version":"0.5","type":"Catalog","label":"Sources",
+			"catalog":{}, "title":"Local Root Catalog",
+			"seperator":":/"
+		}
+		_writeJsonFile(sRoot, dRoot)
+		perr("Run dasflex_sdef, the examples/define.sh or equivalent to define sources")
+		return 0
 
 	# Load the dasflex.util module
 	try:

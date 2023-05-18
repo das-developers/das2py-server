@@ -1273,11 +1273,11 @@ def prnHttpSource(U, fLog, dConf, dSrc, fOut):
 			elif dContact['type'] == 'scientific':
 				lSci.append(dContact['name'])
 
-		if len(lTech) > 0:
+		if (len(lTech) > 0) and not (None in lTech):
 			sout(fOut, "<p>Technical problems using this data source should be "
 		   	  "directed to: <i>%s</i><p>"%(", ".join(lTech)))
 		
-		if len(lSci) > 0:
+		if (len(lSci) > 0) and not (None in lSci):
 			sout(fOut, "<p>Questions concerning the content or usefulness of "
 		   	  "these data should be directed to: <i>%s</i><p>"%(", ".join(lSci)))
 
@@ -1678,7 +1678,7 @@ function %s(sActionUrl) {
 	elForm.action = sActionUrl;
 }
 </script>
-	"""%(sFuncName, sJson, sNamePrefix, sFormId))
+		"""%(sFuncName, sJson, sNamePrefix, sFormId))
 		
 		# Make one submit function per base url that starts with https
 		sout(fOut, '<div class="center">')
