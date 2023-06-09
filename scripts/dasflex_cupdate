@@ -249,8 +249,12 @@ def main(argv):
 			"seperator":":/"
 		}
 		_writeJsonFile(sRoot, dRoot)
-		perr("Run dasflex_sdef, the examples/define.sh or equivalent to define sources")
-		return 0
+
+		# Note, just because root.json was missing doesn't mean that
+		# there is nothing else in the catalog.  Go ahead and try
+		# to read the rest and thus re-write the root just generated. 
+		#perr("Run dasflex_sdef, the examples/define.sh or equivalent to define sources")
+		#return 0
 
 	# Load the dasflex.util module
 	try:
