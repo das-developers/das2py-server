@@ -60,7 +60,7 @@ def preLoadError(sOut):
 	emitted.
 	"""
 	
-	sType = 'InternalServerError'
+	sType = 'ServerError'
 	
 	bClientIsBrowser = False
 	if "HTTP_USER_AGENT" in os.environ:

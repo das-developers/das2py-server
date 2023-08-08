@@ -184,7 +184,7 @@ def dasExcept(sType, uOut, fLog=None, bHdrSent=False, sDasVer="2"):
 def serverError(fLog, uOut, bHdrSent=False, sDasVer="2"):
 	if not bHdrSent:
 		pout("Status: 500 Internal Server Error\r\n")
-	return dasExcept('InternalServerError', uOut, fLog, bHdrSent, sDasVer)
+	return dasExcept('ServerError', uOut, fLog, bHdrSent, sDasVer)
 
 def todoError(fLog, uOut, bHdrSent=False, sDasVer="2"):
 	if not bHdrSent:

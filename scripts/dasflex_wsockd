@@ -38,7 +38,7 @@ g_log = None
 
 g_dConfCache = {} # A cache of json configs, the key is the filesystem path
 
-ServerError       = "InternalServerError"
+ServerError       = "ServerError"
 NoSuchDataSource  = "NoSuchDataSource"
 QueryError        = "QueryError"
 BadRequest        = "BadRequest"
