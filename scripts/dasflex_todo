@@ -12,7 +12,7 @@ import pwd
 g_sConfPath = REPLACED_ON_BUILD
 
 
-das2 = None  # Namespace anchor for das2 module, loaded afte sys.path is set
+das2 = None  # Namespace anchor for das2 module, loaded after sys.path is set
              # via the config file
 
 

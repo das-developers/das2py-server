@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
+"""Test that das2 compatable data sources for this server work, and are 
+compatable with autoplot.
+"""
 
 import sys
 import urllib
 import urllib.parse
 import urllib.request
 import optparse
+import datetime
 import logging
 import subprocess
 import os
@@ -16,29 +20,86 @@ import time
 import smtplib
 
 from os.path import join as pjoin
+from os.path import basename as bname
+from os.path import dirname as dname
 
-import das2
+g_sConfPath = "REPLACED_ON_BUILD"
 
+das2 = None  # Namespace anchor for das2 module, loaded after sys.path is set
+             # via the config file
 
-# On Jenkins Server this is:  
-#
-#  ../../../autoplot-release/lastSuccessful/archive/autoplot/Autoplot/dist/autoplot.jar
-g_sJenkinsAutoplot = 'autoplot'
+##############################################################################
+def perr(sMsg):
+	"""Minor output before regular logging is setup"""
+	sys.stderr.write("ERROR: %s\n"%sMsg)
 
 
 ##############################################################################
-# A generic version reporting block
+# Get my config file, boiler plate that has to be re-included in each script
+# since the location of the modules can be configured in the config file
 
-def stripSVNkey(s):
-	if s.find(':') == -1:
-		return s.strip(" $") + ": unknown"
+def getConf(sConfPath):
+	
+	if not os.path.isfile(sConfPath):
+		if os.path.isfile(sConfPath + ".example"):
+			perr(u"Move\n   %s.example\nto\n   %s\nto enable your site\n"%(
+				  sConfPath, sConfPath))
+		else:
+			perr(u"%s is missing\n"%sConfPath)
+			
+		return None
+
+	# Yes, the Das2 server config files can contain unicode characters
+	if sys.version_info[0] == 2:
+		fIn = codecs.open(sConfPath, 'rb', encoding='utf-8')
 	else:
-		return s.strip(' $')
+		fIn = open(sConfPath, 'r')
+	
+	dConf = {}
+	nLine = 0
+	for sLine in fIn:
+		nLine += 1
+		iComment = sLine.find('#')
+		if iComment > -1:
+			sLine = sLine[:iComment]
+	
+		sLine = sLine.strip()
+		if len(sLine) == 0:
+			continue
+		
+		iEquals = sLine.find('=')
+		if iEquals < 1 or iEquals > len(sLine) - 2:
+			preLoadError(u"Error in %s line %d"%(sConfPath, nLine))
+			fIn.close()
+			return None
+		
+		sKey = sLine[:iEquals].strip()
+		sVal = sLine[iEquals + 1:].strip(' \t\v\r\n\'"')
+		dConf[sKey] = sVal
+	
+	fIn.close()
+	
+	# As a finial step, inclued a reference to the config file itself
+	dConf['__file__'] = g_sConfPath
+	
+	return dConf
+	
+##############################################################################
+# Update sys.path, boiler plate code that has to be re-included in each script
+# since config file can change module path
 
-g_sRev = stripSVNkey("$Rev: 11571 $")
-g_sURL = stripSVNkey("$URL: https://saturn.physics.uiowa.edu/svn/das2/servers/devel/pyserver/scripts/das2_srv_ap_check.py $")
-g_sWho = stripSVNkey("$LastChangedBy: cwp $")
-g_sWhen = stripSVNkey("$LastChangedDate: 2019-06-20 18:24:51 -0500 (Thu, 20 Jun 2019) $")	
+def setModulePath(dConf):
+	if 'MODULE_PATH' not in dConf:
+		perr(u"Set MODULE_PATH = /dir/containing/dasflex_python_module")
+		return False	
+	
+	lDirs = dConf['MODULE_PATH'].split(os.pathsep)
+	for sDir in lDirs:
+		if os.path.isdir(sDir):
+				if sDir not in sys.path:
+					sys.path.insert(0, sDir)
+		
+	return True
 
 
 ##############################################################################
@@ -210,7 +271,7 @@ java.lang.System.exit(0)
 '''
 
 def makePlot(log, sServer, sSource, sRange, sInterval, sParams, sJavaBin, 
-             sAltAutoplot=None):
+             sAutoplot):
 	'''Returns:  The 2-tuple (nRetCode, sMsg)
 	then return codes are:
 	
@@ -257,10 +318,6 @@ def makePlot(log, sServer, sSource, sRange, sInterval, sParams, sJavaBin,
 	fOut.write(sScript)
 	fOut.close()
 	
-	sAutoplot = g_sJenkinsAutoplot
-	if sAltAutoplot != None:
-		sAutoplot = sAltAutoplot
-	
 	sScriptPath = pjoin(os.getcwd(), sScriptName)
 	
 	sCmd = '%s -cp %s -Djava.awt.headless=true org.autoplot.AutoplotUI --script "%s"'%(
@@ -296,10 +353,11 @@ def makePlot(log, sServer, sSource, sRange, sInterval, sParams, sJavaBin,
 	return (0, "%s tested okay"%sSource)
 
 ##############################################################################
-def setupLogging(sLogLevel, sFile=None, bStderr=True):
+def setupLogging(sLogLevel, sLogFile=None):
 	"""Utility to setup standard python logger.
 	sLogLevel - Logging level, starts with one of: C,c,E,e,W,w,I,i,D,d 
 	           [critical,error,warning,info,debug]
+	sLogFile - THe file to log to, if None, use stderr
 	"""
 	sLevel = sLogLevel.lower()
 	nLevel = logging.WARNING
@@ -323,7 +381,11 @@ def setupLogging(sLogLevel, sFile=None, bStderr=True):
 	rootLogger = logging.getLogger('')
 	rootLogger.setLevel(nLevel)
 	
-	conHdlr = logging.StreamHandler(sys.stderr)
+	if not sLogFile:
+		conHdlr = logging.StreamHandler(sys.stderr)
+	else:
+		conHdlr = logging.StreamHandler( open(sLogFile,'w') )
+
 	formatter = logging.Formatter(sConFmt, sDateFmt)
 	conHdlr.setFormatter(formatter)
 	rootLogger.addHandler(conHdlr)
@@ -490,97 +552,195 @@ Subject: %s
 	return nMsgs
 
 ##############################################################################
+def workDir(dConf, sDas2Srv):
+
+	# Now make a file name based of the host
+	sHost = sDas2Srv.replace('http://','').replace('https://','')
+	if sHost.find('/') > 3:
+		sHost = sHost[:sHost.find('/')]
+
+	nDayMod3 = datetime.datetime.now().day() % 3
+	sWorkDir = pjoin(dConf['CACHE_ROOT'], 'd2check', 'server_%s.%d'%(sHost, nDayMod3))
+
+	if not os.path.isdir(sWorkDir):
+		os.mkdirs(sWorkDir)
+
+	return sWorkDir
+
+##############################################################################
 def main(argv):
 	
+	global das2 # To be replaced with the loaded module
+
 	psr = optparse.OptionParser(
-		usage="%prog [options] DAS2_SERVER_URL SMTP_HOST FROM",
-		prog="das2_dsdf_test.py",
-		version=" \n".join( [g_sRev, g_sWho, g_sWhen, g_sURL] ),
+		usage="%prog [options]",
+		prog="dasflex_apcheck.py",
 		description="""
 Checks all data sources on a das2 server to determine if data from the 
 example range can be plotted by autoplot.  Returns non-zero if one or more 
-data sources cannot plot.  The DAS2_SERVER_URL argument is manditory, the contact argument is optional.  SERVER - 
-The URL of the server to connect to, MAILHOST - the SMTP server to contact,
-and FROM - the email address to use in the 'from:' field for any messages
-that are generated.
+data sources cannot plot.  All configuration defaults are read from the
+dasflex.conf file, for use as a no-arg cron job, but command-line overrides
+are available.
 """)
-		
-	psr.add_option('-l', "--log-level", dest="sLevel", metavar="LOG_LEVEL",
-	               help="Logging level one of [critical, error, warning, "+\
-	               "info, debug].  The default is warning, ONLY set the level "+\
-	               "lower than this for testing, not production.", 
-	               type="string", action="store", default="warning")
-												
-	psr.add_option('-s', '--skip-plots', dest="bSkipPlots", action="store_true",
-	               default=False, help="By default autoplot is called to generate "+\
-						"plots using the example range, this option just tests that "+\
-						"any data are output by the data source") 
-						
-	psr.add_option('-a','--autoplot', dest="sAutoplot", metavar="AUTOPLOT",
-	               default=None, type="string", action="store", 
-	               help="Specify an alternate autoplot executable.  The "+\
-						"first executable file named 'autoplot' on the PATH is "+\
-						"used by default.")
-		               
+
+	sConfFile = bname(g_sConfPath)
+
+	psr.add_option(
+		'-C', '--no-config', dest="bNoConfig", default=False, action="store_true",
+		help="Don't try to read a server config file at all.  This requires that "+\
+		"the das2 module is on your python path."
+	)
+	psr.add_option(
+		'-D', '--no-data-src', dest="sExSource", metavar="STR1,STR2,STR3",
+		default=None, type="string", help="The opposite of -d. Identifies source IDs "+\
+		"that should *not* be checked.  If the exclude and include lists overlap, "+\
+		"exclude wins."
+	)
+	psr.add_option(
+		'-L', '--no-log-file', dest="bLogStdErr", action="store_true", default=False,
+		help="Don't output to the server log area, instead send all processing "+\
+		"status messages to stderr."
+	)
+	psr.add_option(
+		'-M', '--no-mail', dest="bSendMail", action="store_false", default=True,
+		help="Don't actually send any mail regardless of the destination, just write "+\
+		"the messages to disk in *.msg files."
+	)					
+	psr.add_option(
+		'-N', '--no-op', dest="bListOnly", action="store_true", default=False, 
+		help="Just list the sources that would have been checked, but don't actually "+\
+		"download data"
+	)               
+	psr.add_option(
+		'-P', '--no-plots', dest="bSkipPlots", action="store_true", default=False,
+		help="By default autoplot is called to generate plots using the example range, "+\
+		"this option just tests that any data are output by the data source"
+	)
+	psr.add_option(
+		'-R', '--to-sender', dest="bTest", action="store_true",
+		help="Test the test.  Sends all messages that would have generated to the "+\
+		"senders email address instead of the tech contact."
+	)
+	psr.add_option(
+		'-T', '--not-tech', dest="sExContact", metavar="STR1,STR2,STR3",
+		default=None, type="string", help="The opposite of -t. Identifies contacts "+\
+		"who's sources should *not* be checked.  If the exclude and include lists "+\
+		"overlap, exclude wins."
+	)
+	
+	psr.add_option(
+		'-a','--autoplot', dest="sAutoplot", metavar="AUTOPLOT", default=None,
+		type="string", action="store", help="Specify an autoplot executable, by "+\
+		"default Autoplot is assumed to be on the server PATH specified in %s"%sConfFile
+	)
+	psr.add_option(
+		'-f', '--from', dest="sFrom", metavar="EMAIL", default=None, type="string", 
+		help="Send email from this address instead of CONTACT_EMAIL in the %s file"%sConfFile
+	)
+	psr.add_option(
+		'-m', '--mail-dest', dest="sSmtpSrv", metavar="HOST", default="localhost",
+		help="By default messages are sent via SMTP to localhost, which is typically "+\
+		"configured to forward them on.  Use this option to contact a specific SMTP "+\
+		"server instead."
+	)
+
+	psr.add_option(
+		'-l', "--log-level", dest="sLevel", metavar="LOG_LEVEL", type="string",
+		action="store", default="warning", help="Logging level one of [critical, "+\
+		"error, warning, info, debug].  The default is warning, ONLY set the level "+\
+		"lower than this for testing, not production." 
+	)
+																			               
 	sDef = '/usr/bin/java'
-	psr.add_option('-j','--java-bin', dest="sJavaBin", metavar="JAVA_BIN",
-	               default=sDef, type="string", action="store",
-	               help="Specify and alternate path to the java binary, the "+\
-	               "default is %s"%sDef)
-	               
-	psr.add_option('-m', '--mail-to-from', dest="bTest", action="store_true",
-	               help="Test the test.  Sends all messages that would have "+\
-	               "generated to the from address instead of the tech contact.")
+	psr.add_option(
+		'-j','--java-bin', dest="sJavaBin", metavar="JAVA_BIN", default=sDef,
+		type="string", action="store", help="Specify and alternate path to the "+\
+		"java binary, the default is %s"%sDef
+	)               
+	psr.add_option(
+		'-n', '--num-srcs', dest="nCheck", metavar="INTEGER", default=-1, type="int",
+		help="Limit the number of sources checked to INTEGER.  By default all "+\
+		"sources are checked"
+	)
+	psr.add_option(
+		'-s','--filter-src', dest="sInSource", metavar="STR1,STR2,STR3", default=None,
+		type="string", help="A comma separated list of strings.  The data source ID "+\
+		"must contain one of these string or the source is skipped.  For example "+\
+		"'Juno/WAV,Juno/FGM' will test only the magnetometer and Waves instrument "+\
+		"sources."
+	)
+	psr.add_option(
+		'-t','--filter-tech', dest="sInContact", metavar="STR1,STR2,STR3", default=None,
+		type="string", help="A comma separated list of strings.  The tech contact "+\
+		"string must contain at least one of these strings or the data source is "+\
+		"skipped. For example using 'chris,matt' will only check data sources"+\
+		"where the string chris or matt is present it the techContact field."
+	)
+	psr.add_option(
+		'-u', '--server-url', dest="sServer", metavar="URL", type="string", default=None,
+		help="Instead of reading from server defined in %s, check "%sConfFile+\
+		"a non-local das2 server instead."
+	)
+	psr.add_option(
+		'-c', '--config', dest="sConfig", metavar="FILE", type="string",
+		default=g_sConfPath, help="Override the built in config file path of %s"%g_sConfPath
+	)
+	psr.add_option(
+		'-w', '--work-dir', dest="sWorkDir", metavar="DIR", type="string",
+		default=None, help="Instead of writing data to the server's cache area, use "+\
+		"the given DIRectory instead.  Will be created if does not exist."
+	)
 	
-	psr.add_option('-M', '--no-mail', dest="bSendMail", action="store_false",
-	               default=True, help="Don't actually send any mail regardless "+\
-	               "of the destination, just write the messages to disk in "+\
-	               "*.msg files.")
-						
-	psr.add_option('-N', '--no-op', dest="bListOnly", action="store_true",
-	               default=False, help="Just list the sources that would have"+\
-						" been checked, but don't actually download data")
-	               
-	psr.add_option('-c','--contact', dest="sInContact", metavar="STR1,STR2,STR3", 
-	               default=None, type="string", help="A comma separated list "+\
-						"of strings.  The tech contact string must contain at least "+\
-						"one of these strings or the data source is skipped. For "+\
-						"example using 'chris,matt' will only check data sources"+\
-						"where the string chris or matt is present it the "+\
-						"techContact field.")
-						
-	psr.add_option('-C', '--no-contact', dest="sExContact", metavar="STR1,STR2,STR3",
-	               default=None, type="string", help="The opposite of -c. "+\
-						"Identifies contacts who's sources should *not* be checked."+\
-						"If the exclude and include lists overlap, exclude wins.")
-	               
-	psr.add_option('-d','--data-src', dest="sInSource", metavar="STR1,STR2,STR3",
-	               default=None, type="string", help="A comma separated list "+\
-						"of strings.  The data source ID must contain one of these "+\
-	               "string or the source is skipped.  For example "+\
-						"'Juno/WAV,Juno/FGM' will test only the magnetometer and "+\
-						"Waves instrument sources.")
-
-	psr.add_option('-D', '--no-data-src', dest="sExSource", metavar="STR1,STR2,STR3",
-	               default=None, type="string", help="The opposite of -d. "+\
-						"Identifies source IDs that should *not* be checked.  If "+\
-						"the exclude and include lists overlap, exclude wins.")
-
-	psr.add_option('-n', '--num-srcs', dest="nCheck", metavar="INTEGER",
-	               default=-1, help="Limit the number of sources checked to "+\
-	               "INTEGER.  By default all sources are checked", type="int")
-	               	
 	(opts, lParam) = psr.parse_args(argv[1:])
+
+	# Get the server definition (maybe)
+	dConf = {}
+	if not opts.bNoConfig:
+		perr("Server definition: %s\n"%opts.sConfig)
+		dConf = getConf(opts.sConfig)
+		if dConf == None:
+			return 17
+
+	if opts.sServer:
+		sDas2Srv = opts.sServer
+	else:
+		sDas2Srv = dConf['MAIN_SRV_URL']
+		if sDas2Srv.find('//') < 4:
+			perr("Use full URLs for MAIN_SRV_URL in %s, "%sConfFile +\
+				"or provide the server URL via the command line.")
+			return 20
+
+	if opts.sWorkDir:
+		sWorkDir = opts.sWorkDir
+		if not os.path.isdir(sWorkDir):
+			os.makedirs(sWorkDir)
+	else:
+		sWorkDir = workDir(dConf, sDas2Srv)
+
+	os.chdir(sWorkDir)
+
+	if opts.bLogStdErr:
+		log = setupLogging(opts.sLevel)
+	else:
+		log = setupLogging(opts.sLevel, pjoin(sWorkDir, 'd2check.log'))
+		
+	# Set the system path, if I have a config file
+	if not opts.bNoConfig:
+		if not setModulePath(dConf):
+			return 18
+		
+	try:
+		das2 = __import__('das2', globals(), locals(), [], 0)
+	except ImportError as e:
+		perr("Error importing module 'das2'\r\n: %s\n"%(str(e)))
+		return 19
+
 	
-	log = setupLogging(opts.sLevel)
-	
-	if len(lParam) < 3:
-		log.error("Script requires three command line parameters, use -h for help")
-		return 13
-	
-	sDas2Srv  = lParam[0].strip('" ')
-	sSmtpSrv  = lParam[1].strip('" ')
-	sFrom     = lParam[2].strip('" ')
+	# Get other key parameters from config
+	if opts.sFrom:
+		sFrom = opts.sFrom
+	else:
+		sFrom = dConf['CONTACT_EMAIL']
 
 	if len(lParam) > 3:	
 		log.error("Unknown cmdline params present %s, use -h for help"%lParam[4:])
@@ -603,7 +763,8 @@ that are generated.
 	if not os.path.isfile(opts.sAutoplot):
 		log.error("Can't find autoplot at %s"%opts.sAutoplot)
 		return 99
-		
+	
+			
 	# Setup the exclude and include lists for contacts and sources
 	opts.lInContacts = None
 	if opts.sInContact: 
@@ -619,7 +780,6 @@ that are generated.
 	if opts.sExSource:
 		opts.lExSources = [s.strip() for s in opts.sExSource.split(',')]
 		
-	
 	nTestedDsdfs = 0
 	
 	dMessages = {}  # Collection of failure messages to send out
@@ -766,7 +926,7 @@ that are generated.
 			
 	# Handle sending emails:	
 	nMsgs = sendMessages(
-		log, sSmtpSrv, sFrom, dMessages, opts.bTest, opts.bSendMail
+		log, opts.sSmtpSrv, sFrom, dMessages, opts.bTest, opts.bSendMail
 	)
 		
 	if nMsgs != 0:
