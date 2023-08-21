@@ -18,6 +18,7 @@ import fcntl
 import select
 import time
 import smtplib
+import glob
 
 from os.path import join as pjoin
 from os.path import basename as bname
@@ -559,13 +560,23 @@ def workDir(dConf, sDas2Srv):
 	if sHost.find('/') > 3:
 		sHost = sHost[:sHost.find('/')]
 
-	nDayMod3 = datetime.datetime.now().day() % 3
-	sWorkDir = pjoin(dConf['CACHE_ROOT'], 'd2check', 'server_%s.%d'%(sHost, nDayMod3))
+	nDayMod3 = datetime.datetime.now().day % 3
+	sWorkDir = pjoin(dConf['LOG_PATH'], 'd2check_%s.%d'%(sHost, nDayMod3))
 
-	if not os.path.isdir(sWorkDir):
-		os.mkdirs(sWorkDir)
-
-	return sWorkDir
+	nVer = 0
+	sVerDir = sWorkDir + ".%d"%nVer
+	while os.path.isdir(sVerDir) and nVer < 2:
+		nVer += 1
+	
+	sVerDir = sWorkDir + ".%d"%nVer
+	if not os.path.isdir(sVerDir):
+		os.makedirs(sVerDir)
+	else:
+		lFiles = glob.glob(pjoin(sVerDir, "*"))
+		for sFile in lFiles:
+			os.remove(sFile)
+		
+	return sVerDir
 
 ##############################################################################
 def main(argv):
