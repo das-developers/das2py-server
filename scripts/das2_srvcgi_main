@@ -218,7 +218,7 @@ def getHandler(U, fLog, dConf, sReqType):
 		sModule = dConf[sReqType]
 		
 	if sModule == None or sModule == '':
-		U.webio.queryError(fLog, u"No handler for requset type %s"%sReqType)
+		U.webio.queryError(fLog, "No handler for requset type %s"%sReqType)
 		return None
 	
 	if sModule.find('.') != -1:
@@ -302,7 +302,7 @@ def main(form):
 	
 	for sEnv in ['SCRIPT_NAME', 'SERVER_NAME', 'QUERY_STRING']:
 		if sEnv not in os.environ:
-			error(u"Wierd Error, %s is not set in the script environment\r\n"%sEnv)
+			U.webio.serverError(fLog, "Wierd Error, %s is not set in the script environment\r\n"%sEnv)
 			return 21
 	
 	sPathInfo = ''
@@ -310,7 +310,7 @@ def main(form):
 		sPathInfo = os.getenv("PATH_INFO")
 		
 	if sPathInfo.find('..') != -1:
-		U.webio.queryError(fLog, u"Bad Path")
+		U.webio.queryError(fLog, "Bad Path")
 		return 25
 	
 	# Don't log static resource requests, this just clutters up the logs
@@ -331,11 +331,11 @@ def main(form):
 	# Check to see that our resource path is sent and exist, or just 
 	# exit with an error
 	if not 'RESOURCE_PATH' in dConf:
-		U.webio.serverError(fLog, u"Set the RESOURCE_PATH keyword in %s"%g_sConfPath)
+		U.webio.serverError(fLog, "Set the RESOURCE_PATH keyword in %s"%g_sConfPath)
 		return 22
 	
 	if not os.path.isdir(dConf['RESOURCE_PATH']):
-		U.webio.serverError(fLog, u"Can't locate resources, server path "
+		U.webio.serverError(fLog, "Can't locate resources, server path "
 		      "%s doesn't exsit"%dConf['RESOURCE_PATH'])
 		return 23
 		
@@ -378,18 +378,18 @@ def main(form):
 		
 		elif sServer in ['id','authenticator']:
 			# 'authenticator' and 'id' are not yet handled
-			U.webio.todoError(fLog, u"The queries: server=authenticator and "+\
-			               u"server=id have not been implemented")
+			U.webio.todoError(fLog, "The queries: server=authenticator and "+\
+			               "server=id have not been implemented")
 		else:
-			U.webio.queryError(fLog, u"Bad server keyword.  Server must be "
+			U.webio.queryError(fLog, "Bad server keyword.  Server must be "
 	   	      "[dataset|dsdf|logo|list|discovery]\n")
 					
 	# If the path starts with '/hapi' send requests to subsystem handlers
 	elif sPathInfo.startswith('/hapi'):
 		sKey = "ENABLE_HAPI_SUBSYS"
 		if (sKey not in dConf) or (dConf[sKey].lower() not in ('true','yes','1')):
-			U.webio.queryError(fLog, u"Heliophysics API Subsystem not enabled, "+\
-			 u"contact the server administrator if this feature is needed")
+			U.webio.queryError(fLog, "Heliophysics API Subsystem not enabled, "+\
+			 "contact the server administrator if this feature is needed")
 		
 		else: 
 			dTmp = {'/hapi/capabilities': 'HANDLE_H_API_CAPS',

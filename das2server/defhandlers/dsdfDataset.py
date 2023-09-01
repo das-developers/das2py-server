@@ -248,5 +248,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 			u"exec: %s\n%s\nNon-zero exit value, %d from pipeline"%(uCmd, sStdErr, nRet ), 
 			bHdrSent
 		)
+
+	fLog.write(sStdErr)
 	
 	return nRet

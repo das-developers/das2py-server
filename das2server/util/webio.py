@@ -214,6 +214,8 @@ def dasExcept(sType, uOut, fLog=None, bHdrSent=False):
 		fLog.write(uOut)
 	
 	bClientIsBrowser = isBrowser()
+
+	uOut = uOut.strip()
 	
 	if not bHdrSent:
 		if bClientIsBrowser:
@@ -229,17 +231,17 @@ def dasExcept(sType, uOut, fLog=None, bHdrSent=False):
 	if bClientIsBrowser and (not bHdrSent):
 		pout(uOut)
 	else:
-		uOut = uOut.replace(u'\n', u'&#13;&#10;').replace(u'"', u"'")
+		uOut = uOut.replace('\n', '&#13;&#10;').replace('"', "'")
 		
 		# Handle replacement of < and >
-		uOut = uOut.replace(u'<', u'&lt;').replace(u'>',u'&gt;')
+		uOut = uOut.replace('<', '&lt;').replace('>','&gt;')
 		
-		uOut = u'<exception type="%s" message="%s" />\n'%(sType, uOut)
+		uOut = '<exception type="%s" message="%s" />\r\n'%(sType, uOut)
 		sOut = uOut.encode('utf-8')
 		pout("[00]%06d"%len(sOut))
 		pout(sOut)
 	
-	sys.stdout.flush()
+	#sys.stdout.flush()
 
 ##############################################################################
 # Error types
