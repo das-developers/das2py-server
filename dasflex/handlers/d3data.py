@@ -104,6 +104,110 @@ def _defaultName(fLog, dConf, dParams, sLocalId, dTargOut):
 
 	return "fixme_default_name.bin"
 
+# ########################################################################## #
+
+def _mkMsgBody(form, nCmdRet, bHdrSent):
+	"""The command did not output a message body, do something so apache doesn't 
+	freak out"""
+
+	bOutHtml = False
+	if not bHdrSent:
+		if nCmdRet == 0:
+			U.webio.pout('Status: 400 Bad Request\r\n')
+		else:
+			U.webio.pout('Status: 500 Internal Server Error\r\n')
+
+		if U.webio.isBrowser():
+			U.webio.pout("Content-Type: text/html\r\n\r\n")
+			bOutHtml = True
+		else:
+			U.webio.pout("Content-Type: text/plain\r\n\r\n")
+
+	sReferer = "the previous page"
+	if 'HTTP_REFERER' in os.environ:
+		sRef = os.environ['HTTP_REFERER']
+	
+	if bOutHtml:
+
+		lParams = ['<li>URL = %s</li>'%(U.webio.getUrl()) ]
+		for sKey in form.keys():
+			if form[sKey].file: continue
+			lParams.append("<li>%s = %s </li>"%(sKey, form.getfirst(sKey, None)))
+
+		if nCmdRet == 0:
+			U.webio.pout('''
+<!DOCTYPE html>
+<html><head><title>No Output</title></head>
+<body>
+<h3>Successfully Did Nothing</h3>
+<p>The program servicing your request ran sucessfully, but produced no output.
+Typically this happens when requesting a non-das format and there isn't any
+data available that would satisfy the following request parameters:</p>
+<ul>
+%s
+</ul>
+<p>You could try returning to %s and selecting a different parameter range, 
+or sending a message to the technical contact for this data source.</p>
+</body>
+</html>
+'''%('\n'.join(lParams), sReferer))
+
+		else:
+			U.webio.pout('''
+<!DOCTYPE html>
+<html><head><title>No Output</title></head>
+<body>
+<h3>Query Processing Error</h3>
+<p>The program servicing your request finished with an error code and produced
+no output.  Typically this happens when requesting a non-das data format and
+the server is misconfigured.<p>
+<p>That's a bummer, but lets get this fixed.  Please contact the server
+administrator and provide them with the following information:
+<ul>
+%s
+</ul>
+<p>Thanks for your help.</p>
+</body>
+</html>
+'''%('\n'.join(lParams)) )
+
+	else:
+		lParams = [ 'URL = %s'%(U.webio.getUrl()) ]
+		for sKey in form.keys():
+			if form[sKey].file: continue
+			lParams.append("%s = %s"%(sKey, form.getfirst(sKey, None)))
+
+		if nCmdRet == 0:
+			U.webio.pout('''
+# Successfully Did Nothing
+The program servicing your request ran sucessfully, but produced no output.
+Typically this happens when requesting a non-das format and there isn't any
+data available that would satisfy the following request parameters:
+
+```
+%s
+```
+You could try returning to %s and selecting a different parameter range, 
+or sending a message to the technical contact for this data source.
+'''%('\n'.join(lParams), sReferer))
+
+		else:
+			U.webio.pout('''
+# Query Processing Error
+The program servicing your request finished with an error code and produced
+no output.  Typically this happens when requesting a non-das data format and
+the server is misconfigured.
+
+That's a bummer, but lets get this fixed.  Please contact the server
+administrator and provide them with the following information:
+
+```
+%s
+```
+
+Thanks for your help.
+'''%('\n'.join(lParams)))
+
 
 # ########################################################################## #
 def handleReq(modUtil, sReqType, dConf, fLog, form, sPathInfo):
@@ -196,9 +300,15 @@ def handleReq(modUtil, sReqType, dConf, fLog, form, sPathInfo):
 	fLog.write("   Exec Host: %s"%platform.node())
 	fLog.write("   Exec Cmd: %s"%sCmd)
 		
-	(nRet, sStdErr, bHdrSent) = U.command.sendCmdOutput(
+	(nRet, sStdErr, bHdrSent, bMsgBody) = U.command.sendCmdOutput(
 		fLog, sCmd, sMimeType, sContentDis, sOutFile
 	)
+
+	# If no headers have been sent, default to html
+	if not bMsgBody:
+		_mkMsgBody(form, nRet, bHdrSent)
+
+	U.webio.flushOut()
 
 	# Make sure the standard error output of the command shows up in the log
 	for sLine in sStdErr.split('\n'):

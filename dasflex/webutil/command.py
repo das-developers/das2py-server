@@ -539,15 +539,14 @@ def filename(fLog, dConf, dParams, lTranslate, dTarg):
 
 	return (sMime, sDisp, sName)
 
-
-##############################################################################
+# ########################################################################## #
 def sendCmdOutput(fLog, uCmd, sMimeType, sContentDis, sOutFile):
 	"""Send the output of a command pipeline as an HTTP message body.
 	
 	Standard output is sent on as an http message body, standard error
 	output is spooled and send back to the caller.  Output is:
 	
-	   ( return_code,  stderr_output, hdrs_flag)
+	   ( return_code,  stderr_output, hdrs_flag, output_flag)
 		
 	return_code - The value returned by the sub-shell that can the command
 	
@@ -556,6 +555,8 @@ def sendCmdOutput(fLog, uCmd, sMimeType, sContentDis, sOutFile):
 	
 	hdrs_flag  - This is true if any HTTP headers have already been sent,
 	             false otherwise.
+
+	any_out - This is true if any message body output was generated at all
 	
 	NOTE: This handles writing HTTP Headers AND the response body.
 	"""
@@ -583,6 +584,7 @@ def sendCmdOutput(fLog, uCmd, sMimeType, sContentDis, sOutFile):
 	bBreakNext = False
 	bHttpHdrsSent = False
 	lStdErr = []
+	bAnyOutput = False
 		
 	while True:
 		lReads = [fdStdOut, fdStdErr]
@@ -608,6 +610,7 @@ def sendCmdOutput(fLog, uCmd, sMimeType, sContentDis, sOutFile):
 					
 					webio.pout(xRead)
 					webio.flushOut()
+					bAnyOutput = True
 				
 			if fd == fdStdErr:
 				xRead = proc.stderr.read()
@@ -622,7 +625,12 @@ def sendCmdOutput(fLog, uCmd, sMimeType, sContentDis, sOutFile):
 			# Go around again to make sure we have read everything
 			bBreakNext = True
 	
-	
+	if not bAnyOutput:  # If command could not send anything at least send hdrs
+		if proc.returncode == 0:
+			fLog.write("WARNING: Successful command did not produce any output")
+		else:
+			fLog.write("ERROR: Failed command did not produce any output")
+
 	fLog.write("Finished Read")
 	
 	if sys.version_info[0] == 2:
@@ -631,7 +639,7 @@ def sendCmdOutput(fLog, uCmd, sMimeType, sContentDis, sOutFile):
 		xStdErr = b''.join(lStdErr)
 		sStdErr = xStdErr.decode('utf-8')
 	
-	return (proc.returncode, sStdErr, bHttpHdrsSent)
+	return (proc.returncode, sStdErr, bHttpHdrsSent, bAnyOutput)
 
 ##############################################################################
 # Suitable for commands that should produce a few KB of output
