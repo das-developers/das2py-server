@@ -245,6 +245,7 @@ def main(argv):
 		os.makedirs(sDir, 0o755, exist_ok=True)
 		dRoot = {
 			"version":"0.5","type":"Catalog","label":"Sources",
+			"name":"sources",
 			"catalog":{}, "title":"Local Root Catalog",
 			"seperator":":/"
 		}

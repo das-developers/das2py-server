@@ -160,7 +160,7 @@ def makeSrcSet(dConf, sSet, lInput, sOutPath):
 		'catalog':{}
 	}
 	
-	for s in ('label','title'): 
+	for s in ('name', 'label','title'): 
 		if s in dDas3Src: dCat[s] = dDas3Src[s]
 
 	# There are many ways to advertise the coordinates and data for this source
