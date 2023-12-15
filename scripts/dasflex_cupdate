@@ -247,7 +247,7 @@ def main(argv):
 			"version":"0.5","type":"Catalog","label":"Sources",
 			"name":"sources",
 			"catalog":{}, "title":"Local Root Catalog",
-			"seperator":":/"
+			"separator":":/"
 		}
 		_writeJsonFile(sRoot, dRoot)
 
