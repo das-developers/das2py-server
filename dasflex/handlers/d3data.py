@@ -9,6 +9,7 @@ from os.path import basename as bname
 from os.path import join as pjoin
 from urllib.parse import quote_plus as urlEnc
 from urllib.parse import unquote_plus as urlDec
+from urllib.parse import parse_qsl as queryDec
 
 U = None # Namespace placeholder for the webutil module
 
@@ -262,9 +263,9 @@ def handleReq(modUtil, sReqType, dConf, fLog, form, sPathInfo):
 		if sVal:
 			if sKey in dTranslate:
 				if dTranslate[ sKey ]: # Some items map away to nothing
-					dParams[ dTranslate[ sKey ] ] = sVal
+					dParams[ dTranslate[ sKey ] ] = urlDec(sVal)
 			else:
-				dParams[sKey] = sVal
+				dParams[sKey] = urlDec(sVal)
 
 	# Get the triggered commands of each type
 	lTmp = [ "%s=%s"%(sKey, dParams[sKey]) for sKey in dParams]
