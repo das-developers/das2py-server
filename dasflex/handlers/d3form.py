@@ -932,7 +932,7 @@ def prnOptGroupForm(
 			continue
 		
 		if (bSingleGroup):
-			if (iProp > 0): sout(fOut, "<br>")
+			if (iProp > 0): sout(fOut, "<br><br>")
 		else:
 			if (iProp == 0): sout(fOut, "<p><b>%s: &nbsp;</b>"%sGrpName)
 			
