@@ -1042,7 +1042,7 @@ def prnOptGroupForm(
 				# Effective enum, binary choice
 				sout(fOut, sMsg)
 				sout(fOut, '<select id=%s %s>'%(sCtrlId, sDisabled))
-				sout(fOut, '  <option value="%s">%s</option>'%curval)
+				#sout(fOut, '  <option value="%s">%s</option>'%curval)
 				
 				if 'pval' in dSet: sVal = dSet['pval']
 				elif 'flag' in dSet: sVal = dSet['flag']
