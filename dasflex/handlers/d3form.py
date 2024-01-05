@@ -389,6 +389,10 @@ class UrlBldr:
 
 			# Enum items can alter the pass through value
 			if 'pval' in dEnum: value = dEnum['pval']
+
+			if 'flag' in dEnum: sFlag = dEnum['flag']
+			elif 'flag' in dSet: sFlag = dSet['flag']
+			else: sFlag = None
 		
 		else:
 			sFlag = None
@@ -411,10 +415,11 @@ class UrlBldr:
 
 		dFlag = dParams[sParam]['flags'][sFlag]
 
-		if 'prefix' in dFlag:
-			sFlagVal = "%s%s"%(dFlag['prefix'], dFlag['value'])
-		else:
-			sFlagVal = dFlag['value']
+		sTmp=""
+		if 'prefix' in dFlag: sTmp = dFlag['prefix']
+
+		if 'value' in dFlag:  sFlagVal = "%s%s"%(sTmp, dFlag['value'])
+		else:                 sFlagVal = "%s%s"%(sTmp, value)
 		
 		if sParam not in self.dQuery:
 			self.dQuery[sParam] = sFlagVal
@@ -608,7 +613,7 @@ def _inputItemBoolean(fOut, dParams, dItem, sMsg, sCtrlId):
 	return 1
 
 		
-def _inputItemEnum(fOut, dParams, dItem, sMsg, sCtrlId, sDisabled):
+def _inputItemEnum(fLog, fOut, dParams, dItem, sMsg, sCtrlId, sDisabled):
 	"""Create a select list control for an enum item with a 'set' member.
 	
 	This control generator is useful for both variables and options as it does
@@ -625,6 +630,11 @@ def _inputItemEnum(fOut, dParams, dItem, sMsg, sCtrlId, sDisabled):
 	each selection can set a different flag.
 
 	"""
+
+	if 'label' in dItem:
+		fLog.write("   DEBUG: Making enum input ctrl for %s"%dItem['label'])
+	else:
+		fLog.write("   DEBUG: Making enum input ctrl for unknown item")
 
 	if 'set' not in dItem: return 0
 	dSet = dItem['set']
@@ -688,7 +698,7 @@ def _inputItemEnum(fOut, dParams, dItem, sMsg, sCtrlId, sDisabled):
 	# information so it can't be sent
 	bAddDefault = True
 	for dMap in dSet['enum']:
-		if dMap['value'] == dItem['value']: 
+		if ('value' in dMap) and ('value' in dItem) and (dMap['value']==dItem['value']):
 			bAddDefault = False
 			break
 	
@@ -718,8 +728,8 @@ def _inputItemEnum(fOut, dParams, dItem, sMsg, sCtrlId, sDisabled):
 		if 'flag' in dMap:
 			dTarget = dParams[ dSet['param'] ]['flags'][ dMap['flag'] ]
 			_addInCtrlId(dTarget, sCtrlId)
-		elif 'flag' in dItem:
-			dTarget = dParams[ dSet['param'] ]['flags'][ dItem['flag'] ]
+		elif 'flag' in dSet:
+			dTarget = dParams[ dSet['param'] ]['flags'][ dSet['flag'] ]
 			_addInCtrlId(dTarget, sCtrlId)
 		else:
 			dTarget = dParams[ dSet['param'] ]
@@ -789,7 +799,7 @@ def _prnVarForm(fOut, sCtrlPre, dParams, sVarId, dVar):
 		
 	if 'units' in dProps:
 		sCtrlId = "%s_%s_units"%(sCtrlPre, sVarId)
-		_inputItemEnum(fOut, dParams, dProps['units'], "Set %s Units"%sName, sCtrlId)
+		_inputItemEnum(fLog, fOut, dParams, dProps['units'], "Set %s Units"%sName, sCtrlId)
 	
 	sout(fOut, "</p>")
 
@@ -947,6 +957,8 @@ def prnOptGroupForm(
 		else:
 			dTargParam = dParams[ dSet['param'] ]
 
+		fLog.write("   DEBUG: Target Param for control %s/%s is %s"%(sGroup, sProp, dTargParam))
+
 		if 'label' in dProp: sName = dProp['label']
 		else: sName = sProp[0].upper() + sProp[1:]
 
@@ -964,9 +976,9 @@ def prnOptGroupForm(
 		elif sDataType == 'enum':  sCtrlType = 'select'
 		else: sCtrlType = 'text'
 
-		#fLog.write("   Prop: %s.%s data_type: %s control_type: %s"%(
-		#	sGroup, sProp, sDataType, sCtrlType
-		#))
+		fLog.write("   DEBUG: Prop: %s.%s data_type: %s control_type: %s"%(
+			sGroup, sProp, sDataType, sCtrlType
+		))
 
 		if sCtrlType == 'bool':
 
@@ -1024,7 +1036,7 @@ def prnOptGroupForm(
 			else:                 sMsg = sProp[0].upper() + sProp[1:]
 			
 			if 'enum' in dSet:  # True enums...
-				_inputItemEnum(fOut, dParams, dProp, sMsg, sCtrlId, sDisabled)
+				_inputItemEnum(fLog, fOut, dParams, dProp, sMsg, sCtrlId, sDisabled)
 				
 			else:
 				# Effective enum, binary choice

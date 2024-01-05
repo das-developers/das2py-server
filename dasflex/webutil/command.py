@@ -247,7 +247,7 @@ def _subForPtrn(fLog, sTemplate, dParams):
 		sSubSep = lSubSel[0]
 		sSubSel = lSubSel[1]
 
-		if len(lSubSel) > 2: sSubValSep = lSubSel[2]
+		if len(lSubSel) > 2: sSubValSep = lSubSel[2][1:]
 
 		sSelector = lSelector[0] # Only the first part is the outer parameter
 
@@ -266,6 +266,7 @@ def _subForPtrn(fLog, sTemplate, dParams):
 	# If I have a sub-selector, break down the param value and do sub-parsing
 	# Just look for the value of interest, don't create sub parsing dictionary.
 	if sSubSel:
+		fLog.write("   INFO: Subselect of '%s' ('%s'|'%s'|'%s')"%(sSelector, sSubSep, sSubSel, sSubValSep))
 	
 		sSubVal = None
 		if sValue:
@@ -273,30 +274,30 @@ def _subForPtrn(fLog, sTemplate, dParams):
 				lSub = sValue.split(sSubSep)
 
 				for sChunk in lSub:
-					if sChunk.startswith(sSubParam):  # I have the start of it
+					if sChunk.startswith(sSubSel):  # I have the start of it
 						if sSubValSep:
 							lChunk = sChunk.split(sSubValSep)
 							if len(lChunk)	> 0:
 								sSubVal = sSubValSep.join(lChunk[1:])
 						else:
-							sSubVal = sSubParam  # Treat as a flag
+							sSubVal = sSubSel  # Treat as a flag
 						break
 
 			else: # I cannot tokenize the value, use the param itself as the value
-				if sValue.find(sSubParam) != -1:
-					sSubVal = sSubParam
+				if sValue.find(sSubSel) != -1:
+					sSubVal = sSubSel
 
 		if sSubVal == None:
 			if sAbsent != None:
 				return sAbsent
 			else:
 				fLog.write("Command template '%s' requires sub-parameter '%s' which was not supplied"%(
-					sTemplate, sSubParam)
+					sTemplate, sSubSel)
 				)
-				raise E.QueryError("Missing sub-query parameter '%s'"%sSubParam)
+				raise E.QueryError("Missing sub-query parameter '%s'"%sSubSel)
 		else:
-			sValue = sSubValue
-			sSelector = sSubParam
+			sValue = sSubVal
+			sSelector = sSubSel
 		
 	# Should have a value now
 	if len(sValue) > 0:
