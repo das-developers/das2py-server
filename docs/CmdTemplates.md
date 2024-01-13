@@ -1,6 +1,6 @@
 # das2-pyserver command templates
 
-The most important job of the das2py-server is to convert URLs into data
+The most important job of the dasflex server is to convert URLs into data
 streams.  Since actual data file reading is handled by sub-programs, the
 means URLs must be converted to command pipe lines. 
 ```
@@ -14,7 +14,7 @@ When data are requested, the URL GET parameters define how the source
 should operate.
 
 In older versions of the server there was a rather fixed translation between
-URL parameters and command lines.  The v2.3 server makes the translation
+URL parameters and command lines.  The v3.0 server makes the translation
 between HTTP GET parameters and command lines more flexible by defining each
 command to be run via a template.
 
@@ -173,7 +173,7 @@ which is equivalent to `#[ PARAM_SELECTOR # @ ]` above.
 
 ## Predefined Parameters
 
-When templates are evaluated by das2py-server, the following "parameters" are aways
+When templates are evaluated by dasflex server, the following "parameters" are aways
 defined and may be thus may always be used:
 
    * `_SERVER_` - The URL to the das2-pyserver root URL, for example https://jupiter.physics.uiowa.edu/das/server
