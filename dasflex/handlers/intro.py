@@ -97,7 +97,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 <!-- <h1><i>das</i> Flexible Server</i></h1> -->
 <h1>Multistream Server</i></h1>
 <p>
-This server provids data streams in a variety of formats using a variety of 
+This server provides data streams in a variety of formats using a variety of 
 Application Programming Interfaces (APIs).  In addition to fixed APIs such
 as <i>das2</i>, interface definition files are provided to allow for arbitrary
 query parameters linked to physical coordinates.  Internally the server runs
