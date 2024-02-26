@@ -103,7 +103,7 @@ $ sudo mkdir $PREFIX
 $ sudo chown $LOGNAME $PREFIX
 ```
 
-The following sequence will build, test, and install libdas2.3 and das2py
+The following sequence will build, test, and install das2C and das2py
 if you have all prerequisite libraries installed:
 
 ```bash
