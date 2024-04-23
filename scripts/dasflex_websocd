@@ -1,0 +1,632 @@
+#!/usr/bin/env python3
+"""
+A websocket server for das streams.  Written in python so we can ride off the 
+source definition parsing to determine what command to run.
+
+The trio websocket library handles ping/pong automatically for us (yay!)
+
+A Note on Async Function Capitalization:
+   
+   Async functions in python are actually objects in the classic sense. Calling
+   one actually instantiates an object and registers it with the main event
+   loop.  Thus ALL async functions in this code are capitalized so that the
+   reader thinks of them as the objects that they are instead of the direct
+   call functions that they emulate.
+"""
+
+import sys
+import argparse
+import logging
+import pathlib
+import ssl
+import re
+import os
+import os.path
+from os.path import dirname as dname
+from os.path import join as poin
+import json
+import subprocess # For defintions only (uses trio.run_process for cmds)
+from urllib.parse import urlparse
+from functools import partial as delegate
+
+g_sConfPath = REPLACED_ON_BUILD
+
+import trio
+from trio_websocket import serve_websocket, ConnectionClosed
+import contextvars
+
+# ########################################################################## #
+g_pyLog = None      # The python logger
+
+g_dConfCache = {} # A cache of json configs, the key is the filesystem path
+
+ServerError       = "ServerError"
+NoSuchDataSource  = "NoSuchDataSource"
+QueryError        = "QueryError"
+BadRequest        = "BadRequest"
+
+c_dClient = contextvars.ContextVar("c_dClient")
+
+U = None    # the dasflex webutil module, set in main
+
+# ########################################################################## #
+# Blocking Server Config loader #
+
+def loadConf(sConfPath = None):
+	"""Load the dasflex server configuration file.  
+
+	This boiler plate that has to be re-included in each script since the config
+	itself cannot be read my module code, since the location of the modules is
+	determined by the configuration file.
+
+	The config file is stored with a key of None.  This makes it a singleton.
+
+	Unlike most of the other options, this is not an async function, it's 
+	supposed to run to completion when invoked.
+
+	Args:
+		sOverRide (str): Read the config from this location instead of the 
+			compiled in default
+
+	Returns (dict): Returns the configuration dictionary, and also caches it
+		in the Configuration Cache to prevent re-reads for each incomming
+		request.
+	"""
+
+	global g_dConfCache, g_pyLog
+
+	if not sConfPath: sConfPath = g_sConfPath
+
+	if not os.path.isfile(sConfPath):
+		if os.path.isfile(sConfPath + ".example"):
+			sMsg = "Move\n     %s.example\nto\n     %s\nto enable your site"%(
+			      sConfPath, sConfPath)
+		else:
+			sMsg = "%s is missing\n"%sConfPath
+		
+		raise EnvironmentError(sMsg)
+
+
+	g_pyLog.info("Server settings defined by: %s"%sConfPath)
+	fIn = open(sConfPath, 'r')
+	
+	dConf = {}
+	nLine = 0
+	for sLine in fIn:
+		nLine += 1
+		iComment = sLine.find('#')
+		if iComment > -1:
+			sLine = sLine[:iComment]
+	
+		sLine = sLine.strip()
+		if len(sLine) == 0:
+			continue
+		
+		iEquals = sLine.find('=')
+		if iEquals < 1 or iEquals > len(sLine) - 2:
+			raise ValueError(ServerError, "Error in %s line %d"%(g_sConfPath, nLine))
+			fIn.close()
+			return None
+		
+		sKey = sLine[:iEquals].strip()
+		sVal = sLine[iEquals + 1:].strip(' \t\v\r\n\'"')
+		dConf[sKey] = sVal
+	
+	fIn.close()
+	
+	# As finial steps, inclued a reference to the config file itself
+	dConf['__file__'] = sConfPath
+
+	# Some replacement text
+	if 'SERVER_ID' not in dConf:
+		dConf['SERVER_ID'] = "unknown"
+
+	if 'SERVER_NAME' not in dConf:
+		dConf['SERVER_NAME'] = "Unknown"
+
+	if 'SITE_CATALOG_TAG' not in dConf:
+		dConf['SITE_CATALOG_TAG'] = "tag:unknown.site.org,2021"
+
+	# Finally, add the sub-component to strip from the front of all
+	# data requests:
+	if 'WEBSOCKET_URI' not in dConf:
+		raise KeyError("WEBSOCKET_URI not provided in %s"%sConfPath)
+
+	o = urlparse(dConf['WEBSOCKET_URI'])
+	dConf['_WEBSRV_PATH_'] = o.path
+	
+	g_dConfCache[None] = dConf
+
+	return g_dConfCache[None]
+
+##############################################################################
+# Update sys.path, boiler plate code that has to be re-included in each script
+# since config file can change module path
+
+def setModulePath(dConf):
+	if 'MODULE_PATH' not in dConf:
+		g_pyLog.error("Set MODULE_PATH = /dir/containing/dasflex_python_module")
+		return False	
+	
+	lDirs = dConf['MODULE_PATH'].split(':') # No mater the os.pathsep setting
+	for sDir in lDirs:
+		if os.path.isdir(sDir):
+				if sDir not in sys.path:
+					sys.path.insert(0, sDir)
+		
+	return True
+
+# ########################################################################## #
+class StderrLog(object):
+	def write(self, sThing):
+		perr(sThing)
+		perr('\n')
+	
+	def newPrefix(self):
+		pass
+
+# ########################################################################## #
+def daemonize(sPidFile):
+	"""Detach from the controlling terminal, and write the daemon process 
+	PID to sPidFile.  Returns 0 on success"""
+	
+	# Function only works in POSIX environments, need to probably switch
+	# to some external library in order to work on windows.
+	
+	# Taken from:
+	#  http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
+	# by Sander Marechal - Thanks!
+
+	global g_pyLog  # <--- This must be attached to a file! 
+	
+	sPidDir = dname(sPidFile)
+	if not os.path.isdir(sPidDir):
+		try:
+			os.makedirs(sPidDir, 0o750)
+		except OSError:
+			g_pyLog.error("Can't make dir %s\n"%sPidDir)
+			return 13
+	
+	# If our PID file already exists, refuse to start
+	if os.path.isfile(sPidFile):
+		g_pyLog.error("PID file %s already exists, remove "%sPidFile +\
+		                  "file before starting in daemon mode.\n")
+		return 13
+	
+	# do the UNIX double-fork magic, see Stevens' "Advanced Programming in 
+	# the UNIX Environment" for details (ISBN 0201563177) 
+	# http://www.erlenstar.demon.co.uk/unix/faq_2.html#SEC16
+	try:
+		pid = os.fork()
+		if pid > 0:            
+			sys.exit(0)   # exit first parent
+	except OSError as e:
+		g_pyLog.error("fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
+		return 13
+       
+	# decouple from parent environment
+	os.chdir("/")
+	os.setsid()
+	os.umask(0) 
+	
+	# do second fork
+	try:
+		pid = os.fork()
+		if pid > 0:
+			sys.exit(0)   # exit from second parent
+	except OSError as e:
+		g_pyLog.error("fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
+		return 13
+       
+	# redirect standard file descriptors
+	sys.stdout.flush()
+	sys.stderr.flush()
+	si = open('/dev/null', 'r')
+	so = open('/dev/null', 'a+')
+	
+	# Just incase we are accidentally writing to stdout/stderr somewhere
+	# in a library call...
+	os.dup2(si.fileno(), sys.stdin.fileno())
+	os.dup2(so.fileno(), sys.stdout.fileno())
+	os.dup2(fLog.fileno(), sys.stderr.fileno())
+
+	# write pidfile
+	atexit.register(delPid, sPidFile)
+	pid = str(os.getpid())
+	open(sPidFile,'w+').write("%s\n" % pid)
+	
+	g_pyLog.write("das2_srv_workd started, PID written to %s"%sPidFile)
+	return 0
+
+# ########################################################################## #
+def delPid(sPidFile):
+	if sPidFile != None and os.path.isfile(sPidFile):
+		os.remove(sPidFile)
+
+# ########################################################################## #
+# Exception to das packet converter #
+
+def _xmlEscape(sMsg):
+	sMsg = sMsg.replace(u'\n', u'&#13;&#10;').replace(u'"', u"'")
+	sMsg = sMsg.replace(u'<', u'&lt;').replace(u'>',u'&gt;')
+	return sMsg
+
+class RequestError(Exception):
+	def __init__(self, sType, sMsg):
+		self.status = None
+		self.headers = [('Content-Type','text/vnd.das.stream')]
+		self.body = None
+		if sType == NoSuchDataSource:
+			self.status = 404
+		elif sType == QueryError:  
+			self.status = 422            # Unprocessable entity
+		else:
+			self.status = 400
+
+		l = [('Sx', "\n<stream version=\"3.0\" type=\"das-basic-stream\"/>\n")]
+		l.append( ('Ex', "\n<exception type=\"%s\">\n\t%s\n</exception>\n"%(
+			_xmlEscape(sType), _xmlEscape(sMsg)
+		)))
+
+		ll = [ "%s||%d|%s"%(t[0], len(t[1].encode('utf-8')), t[1]) for t in l]
+		self.body = b''.join( [s.encode('utf-8') for s in ll ])
+
+# ########################################################################## #
+# Data Source Loader Objects #
+
+async def GetInternal(fLog, sSrc):
+	"""Get the interal source definition, either from memory or from disk.
+	The source definition will be stored by the localID, which is basically
+	sSrc, minus the '/flexRT' ending.
+
+	Args:
+		sSrc (str): The local ID source to return, may optionally end in '/flexRT'
+			which is ignored.
+
+	Returns (dict):
+		The source defitition
+	"""
+	global g_dConfCache, g_dasLog
+
+	dConf = g_dConfCache[None]
+
+	# '/quicklook/preflight/msc/em1/flexRT'
+	if sSrc.endswith('/flexRT'):
+		sSrc = sSrc.replace('/flexRT','')
+	if sSrc.startswith('/'):
+		sSrc = sSrc[1:]
+
+	if sSrc not in g_dConfCache:
+		sPath = "%s/root/%s/internal.json"%(dConf['DATASRC_ROOT'], sSrc.lower())
+		path = trio.Path(sPath)
+
+		if not await path.is_file():
+			raise RequestError(NoSuchDataSource, "There is no data source at '%s'"%sSrc)
+		try:
+			async with  await trio.open_file(sPath) as fIn:
+				fLog.write("   Caching: %s"%sPath)
+				sWholeThing = await fIn.read();
+				dSrc = json.loads(sWholeThing)
+		except Exception as e:
+			g_log.error(str(e))
+			sContact = ''
+			if 'CONTACT_URL' in dConf:
+				sContact = ' at <a href="%s">%s</a'%(dConf['CONTACT_URL'],dConf['CONTACT_URL'])
+			elif 'CONTACT_EMAIL' in dConf:
+				sContact = ' at <a href="mailto: %s">%s</a>'%(dConf['CONTACT_EMAIL'],dConf['CONTACT_EMAIL'])
+			raise RequestError(ServerError,
+				"There is an internal problem with this data source, please contact "+\
+				"the server administrator%s"%sContact
+			)
+
+		g_dConfCache[sSrc] = dSrc
+	
+	fLog.write("   Have source definition: %s"%sSrc)
+	
+	return g_dConfCache[sSrc]
+
+# ########################################################################## #
+
+async def GetReaderCmd(fLog, request):
+	"""Return the reader command line, or throw a connection exception
+
+	Args:
+		request (A trio-websocket connection object):
+		This is usually provided by trio_socket.serve_websocket() or similar
+
+	Returns (str, bool):
+		The string is the command to run.  The boolean states if keep-alive
+		messages should be sent because the command will continue to send
+		more data.  Typically this is indicated by a end-time in the future.
+	"""
+	
+	dConf = g_dConfCache[None]
+
+	sSrc = request.path
+
+	dQuery = {}
+	i = sSrc.find('?')
+	if i > 2:
+		#fLog.write("Query String is: %s"%(sSrc[i+1:].strip()))
+		sQuery = sSrc[i+1:].strip()
+		sSrc = sSrc[:i]
+		if len(sQuery) > 3:
+			lQuery = [s.strip() for s in sQuery.split('&')]
+			#fLog.write("Query pairs are: %s"%lQuery)
+			for sPair in lQuery:
+				j = sPair.find('=');
+				if j > 2:
+					dQuery[ sPair[:j].strip() ] = sPair[j+1:].strip()
+		
+	if len(sSrc) > 128: sSrc = sSrc[:128]
+
+	# Check to see that this is one of ours
+	for sTmp in ('WEBSOCKET_URI','DATASRC_ROOT'):
+		if sTmp not in dConf:
+			raise RequestError(ServerError, "%s missing in config file"%sTmp);
+	
+	# Strike server sub-path from incomming request
+	if len(dConf['_WEBSRV_PATH_']) > 0:
+		if not sSrc.startswith(dConf['_WEBSRV_PATH_']):
+			raise RequestError(
+				NoSuchDataSource, "Data source %s is not defined on this server"%sSrc
+			);
+		sSrc = sSrc[len(dConf['_WEBSRV_PATH_']):]
+
+	fLog.write("Source lookup")
+
+	dSrc = await GetInternal(fLog, sSrc)
+
+	# If the source has default parameters for the query convertion 'flexRT'
+	# then add them in before solving for a command line.
+	if ('parameters' in dSrc) and ('defaults' in dSrc['parameters']) \
+		and ('flexRT' in dSrc['parameters']['defaults']):
+		dDefault = dSrc['parameters']['defaults']['flexRT']
+		fLog.write("   FlexRT default params: %s"%(" ".join(
+			["%s=%s"%(sKey, dDefault[sKey]) for sKey in dDefault]
+		)))
+		for sParam in dDefault:
+			if sParam not in dQuery:   # Don't over-write user provided defaults
+				dQuery[sParam] = dDefault[sParam]
+
+	lTmp = [ "%s=%s"%(sKey, dQuery[sKey]) for sKey in dQuery]
+	fLog.write("Solving command line")
+	fLog.write("   Mapping parameters: %s"%(" ".join(lTmp)))
+
+	lCmds = U.command.triggered(fLog, dSrc, dQuery)
+
+	if 'output' not in lCmds[-1]:
+		RequestError(
+			ServerError, "Output definition missing for command in %s"%sSrc
+		)
+
+	sCmd  = U.command.pipeline(fLog, lCmds, dQuery)
+
+	return (sCmd, False)  #TODO Change to TRUE if time in future
+
+# ########################################################################## #
+# Async Request Handler #
+
+async def DelClientMsg(fLog, ws, done, closed):
+	while True:
+		try:
+			await ws.get_message();
+		except ConnectionClosed:
+			done.set()
+			closed.set()
+			break
+
+async def LogStdErr(fLog, source):
+	# Don't break out of logging to standard error, let it go
+	# till something else halts the pipeline
+	async for chunk in source:
+		fLog.write(chunk)
+
+async def SendStdOut(fLog, source, dest, bKeepAlive, done, closed):
+
+	# Doesn't it keep alive on it's own?
+	if not bKeepAlive:
+		nBytes = 0
+		async for chunk in source:
+			#log("Type: %s Len %s"%(type(chunk), len(chunk)))
+			nBytes += len(chunk)
+			try:
+				await dest.send_message(chunk)
+			except ConnectionClosed:
+				done.set()
+				closed.set()
+				break
+
+		fLog.write("Read %d bytes from command"%nBytes)
+		done.set()
+
+	else:
+		raise ValueError("Keep-alive not yet implemented")
+
+
+async def HandleAny(request):
+	'''Assume for now that all requests are data requests.  Others may be
+	supported in the future, though most of the informational items are ment
+	to be advertised using standard web requests not web sockets
+	'''
+
+	dConf = g_dConfCache[None]
+
+	if 'LOG_PATH' in g_dConfCache[None]:
+		fLog = U.webio.DasLogFile(dConf['LOG_PATH'], request.remote.address)
+		#fLog.write("INFO: Logging to %s"%dConf['LOG_PATH'])
+	else:
+		fLog = U.webio.DasLogFile()
+
+	#fLog.write('The object type is: %s', type(request))
+	fLog.write('New socket request')
+	sPath = request.path
+	sParams = ''
+	n = request.path.find('?')
+	if n > 0: 
+		sParams = sPath[n+1:]
+		sPath = sPath[:n]
+
+	fLog.write('   Path: %s'%sPath)
+	fLog.write('   Params: %s'%sParams)
+	#fLog.write('The full request object is: %s', dir(request))
+	#fLog.write('The _event sub-object is: %s', dir(request._event))
+
+	try:
+		(sCmd, bKeepAlive) = await GetReaderCmd(fLog, request)
+	except RequestError as e:
+		await request.reject(e.status, extra_headers=e.headers, body=e.body)
+		fLog.close()
+		return
+
+	ws = await request.accept()
+	c_dClient.set({'ip':ws.remote.address,'port': ws.remote.port,'url':ws.remote.url})
+
+	async with trio.open_nursery() as nursery:
+		fLog.write("Running pipeline")
+		fLog.write("   %s"%sCmd)
+
+		# start a subprocessing task
+		proc = await nursery.start(delegate(trio.run_process, 
+			sCmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
+		))
+
+		done = trio.Event()
+		closed = trio.Event()
+
+		nursery.start_soon(delegate(SendStdOut, fLog, proc.stdout, ws, bKeepAlive, done, closed))
+		nursery.start_soon(delegate(LogStdErr, fLog, proc.stderr))
+		nursery.start_soon(delegate(DelClientMsg, fLog, ws, done, closed))
+
+		await done.wait() # Pause here
+		nursery.cancel_scope.cancel()
+		
+		if closed.is_set():
+			proc.terminate()
+			fLog.write("Client closed connection, pipeline halted")
+		
+	fLog.write('Handler exiting')
+	fLog.close()
+
+# ########################################################################## #
+# Main # 
+
+def main(argv):
+	global U, g_dConfCache, g_pyLog
+
+	psr = argparse.ArgumentParser(description='''DasFlex Websocket Server
+This is a companion program for the main HTTP GET server that provides 
+data via websockets.  It only handles data request.  Other requests such 
+as data discovery are handled by the main server.
+''')
+
+	psr.add_argument(
+		'-s', '--ssl', action='store_true', help='Comminicate within an SSL contex.'+\
+		"  This option essentially makes this a 'wss' (Web Secure Socket) server "+\
+		"instead of just 'ws'."
+	)
+	#sDef = '/etc/ssl/certs/ssl-cert-snakeoil.pem'
+	sDef = "%s/server.pem"%dname(g_sConfPath)
+	psr.add_argument(
+		'-p', '--pem', metavar='PEM_FILE', dest="sCertFile", default=sDef,
+		help="Certificate file used to validate SSL connections to the server."+\
+		"  Defaults to "+sDef+"."
+	)
+	#sDef = "%s/.ssh/ssl-cert-snakeoil.key"%os.environ['HOME']
+	#psr.add_argument(
+	#	'-k', '--key', metavar='KEY_FILE', dest="sKeyFile", default=sDef,
+	#	help="Key file used to read the PEM file, defaults to "+sDef+"."
+	#)
+	psr.add_argument(
+		'-c', '--config', metavar="FILE", dest="sConfFile", default=g_sConfPath,
+		help="Use a custom configuration file instead of %s ."%g_sConfPath
+	)
+	psr.add_argument(
+		'-D', '--daemon', dest='sPidFile', metavar="PID_FILE", default=None, 
+		help='Detach from the controlling terminal and became a system daemon, '+\
+		'writing the process ID to the given PID_FILE.'
+	)
+	psr.add_argument(
+		'host', help='Host interface to bind. If omitted, then bind all interfaces.', 
+		nargs='?'
+	)
+	psr.add_argument(
+		'port', type=int, help='Port to bind, for WSS port 443 is recommended.'
+	)
+	opts = psr.parse_args()
+
+	# If we intend to daemonize, point the standard python logger at some file
+	# under the log area
+
+	logging.basicConfig(level=logging.INFO)
+	g_pyLog = logging.getLogger()  # Used initially
+
+	# Load the config file once instead of once per connection
+	# SideEffect: g_dConfCache[None] has the server config
+	loadConf(opts.sConfFile)
+	dConf = g_dConfCache[None]
+
+	# Now that we have the config, we know our log path, change the log setup
+	# if we're going to be a daemon
+	if opts.sPidFile:
+		if 'LOG_PATH' not in dConf:
+			g_pyLog.error("Set the value LOG_PATH in %s"%dConf['__file__'])
+			return 7
+
+		sLogPath = pjoin(dConf["LOG_PATH"], 'dasflex_websoc.log')
+		logging.basicConfig(filename=sLogPath, level=logging.INFO)
+		g_pyLog.info("dasflex websoc server defined by %s"%dConf['__file__'])
+
+	if not setModulePath(dConf):
+		return 7
+
+	# Load the webutil module
+	try:
+		mTmp = __import__('dasflex', globals(), locals(), ['webutil'], 0)
+	except ImportError as e:
+		g_pyLog.error("Error importing module dasflex\r\n: %s\n"%(str(e)))
+		return 7
+	try:
+		U = mTmp.webutil
+	except AttributeError:
+		g_pyLog.error('No module named dasflex.webutil under %s\n'%dConf['MODULE_PATH'])
+		return 7
+
+	U.misc.envPathMunge("PATH", dConf['BIN_PATH'])
+	U.misc.envPathMunge("LD_LIBRARY_PATH", dConf['LIB_PATH'])
+
+	if opts.ssl:
+		ctxSsl = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+		try:
+			g_pyLog.info("Loading certificate chain using %s"%opts.sCertFile)
+			#ctxSsl.load_verify_locations(opts.sCertFile)
+			ctxSsl.load_cert_chain(opts.sCertFile)
+		except FileNotFoundError:
+			g_pyLog.error(
+				"Did not find file '%s', please specifiy an \"HTTPS\" certificate."
+			)
+			return 7
+	else:
+		ctxSsl = None
+	sHost = None if opts.host == '*' else opts.host
+
+	# At this point we'd become a daemon...
+	if opts.sPidFile:
+		# daemonize uses g_pyLog, which MUST be pointed at a file, not the console
+		nRet = daemonize(opts.sPidFile)
+		if nRet != 0:
+			return nRet
+
+	
+	g_pyLog.info('dasflex websocket server startup complete')
+	try:
+		trio.run(delegate(serve_websocket, HandleAny, sHost, opts.port, ctxSsl))
+
+	except KeyboardInterrupt:
+		sys.stderr.write('CTRL-C recieved, shutting down\n')
+
+	return 0
+
+# ########################################################################## #
+if __name__ == '__main__':
+	sys.exit(main(sys.argv))

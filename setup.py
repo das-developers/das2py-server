@@ -327,7 +327,7 @@ lPkg = [
 ]
 
 lScripts = [ 'scripts/%s'%s for s in [
-	'dasflex_cgimain', 'dasflex_cgilog', 'dasflex_wsockd',
+	'dasflex_cgimain', 'dasflex_cgilog', 'dasflex_websocd',
 	'dasflex_workd', 'dasflex_passwd',  'dasflex_todo',
 	'dasflex_sdef', 'dasflex_cupdate', 'dasflex_d2check'
 	# 'das2_svr_cgiadm' someday we'll have an admin module
