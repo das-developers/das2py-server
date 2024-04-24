@@ -21,9 +21,10 @@ import pathlib
 import ssl
 import re
 import os
+import atexit
 import os.path
 from os.path import dirname as dname
-from os.path import join as poin
+from os.path import join as pjoin
 import json
 import subprocess # For defintions only (uses trio.run_process for cmds)
 from urllib.parse import urlparse
@@ -223,19 +224,21 @@ def daemonize(sPidFile):
 	sys.stderr.flush()
 	si = open('/dev/null', 'r')
 	so = open('/dev/null', 'a+')
-	
+
 	# Just incase we are accidentally writing to stdout/stderr somewhere
 	# in a library call...
 	os.dup2(si.fileno(), sys.stdin.fileno())
 	os.dup2(so.fileno(), sys.stdout.fileno())
-	os.dup2(fLog.fileno(), sys.stderr.fileno())
+	#os.dup2(so.fileno(), sys.stderr.fileno())
+
+	#os.dup2(g_pyLog.fileno(), sys.stderr.fileno())
 
 	# write pidfile
 	atexit.register(delPid, sPidFile)
 	pid = str(os.getpid())
 	open(sPidFile,'w+').write("%s\n" % pid)
 	
-	g_pyLog.write("das2_srv_workd started, PID written to %s"%sPidFile)
+	g_pyLog.info("das2_srv_workd started, PID %d written to %s"%(os.getpid(), sPidFile))
 	return 0
 
 # ########################################################################## #
@@ -327,12 +330,14 @@ async def GetInternal(fLog, sSrc):
 
 # ########################################################################## #
 
-async def GetReaderCmd(fLog, request):
+async def GetReaderCmd(fLog, request, sSubProto):
 	"""Return the reader command line, or throw a connection exception
 
 	Args:
+		fLog - Any object with at write method that adds a newline
 		request (A trio-websocket connection object):
-		This is usually provided by trio_socket.serve_websocket() or similar
+		   This is usually provided by trio_socket.serve_websocket() or similar
+		sSubProto - The server selected sub-protocol string
 
 	Returns (str, bool):
 		The string is the command to run.  The boolean states if keep-alive
@@ -377,6 +382,29 @@ async def GetReaderCmd(fLog, request):
 
 	dSrc = await GetInternal(fLog, sSrc)
 
+	# Pop items in dQuery that only I'm supposed to set
+	t = ('_REQUEST_','_SUBSCRIBE_')
+	for k in t:
+		if k in dQuery:
+			dQuery.pop(k)
+
+	if sSubProto == 'request': dQuery['_REQUEST_'] = "1"
+	elif sSubProto == 'subscribe': dQuery['_SUBSCRIBE_'] = "1"
+
+	# Some of our parameter keys can be translated to other keys
+	dTranslate = {}
+	if ('parameters' in dSrc) and ('translate' in dSrc['parameters']) \
+	   and ('flexRT' in dSrc['parameters']['translate']):
+		dTranslate = dSrc['parameters']['translate']['flexRT']
+	
+	dParams = {}
+	for sKey in dQuery:
+		if sKey in dTranslate:
+			if dTranslate[ sKey ]:
+				dParams[ dTranslate[ sKey ] ] = dQuery[sKey]
+		else:
+			dParams[ sKey ] = dQuery[ sKey ]
+
 	# If the source has default parameters for the query convertion 'flexRT'
 	# then add them in before solving for a command line.
 	if ('parameters' in dSrc) and ('defaults' in dSrc['parameters']) \
@@ -386,23 +414,23 @@ async def GetReaderCmd(fLog, request):
 			["%s=%s"%(sKey, dDefault[sKey]) for sKey in dDefault]
 		)))
 		for sParam in dDefault:
-			if sParam not in dQuery:   # Don't over-write user provided defaults
-				dQuery[sParam] = dDefault[sParam]
+			if sParam not in dParams:   # Don't over-write user provided defaults
+				dParams[sParam] = dDefault[sParam]
 
-	lTmp = [ "%s=%s"%(sKey, dQuery[sKey]) for sKey in dQuery]
+	lTmp = [ "%s=%s"%(sKey, dParams[sKey]) for sKey in dParams]
 	fLog.write("Solving command line")
 	fLog.write("   Mapping parameters: %s"%(" ".join(lTmp)))
 
-	lCmds = U.command.triggered(fLog, dSrc, dQuery)
+	lCmds = U.command.triggered(fLog, dSrc, dParams)
 
 	if 'output' not in lCmds[-1]:
 		RequestError(
 			ServerError, "Output definition missing for command in %s"%sSrc
 		)
 
-	sCmd  = U.command.pipeline(fLog, lCmds, dQuery)
+	sCmd  = U.command.pipeline(fLog, lCmds, dParams)
 
-	return (sCmd, False)  #TODO Change to TRUE if time in future
+	return sCmd
 
 # ########################################################################## #
 # Async Request Handler #
@@ -422,26 +450,21 @@ async def LogStdErr(fLog, source):
 	async for chunk in source:
 		fLog.write(chunk)
 
-async def SendStdOut(fLog, source, dest, bKeepAlive, done, closed):
+async def SendStdOut(fLog, source, dest, done, closed):
 
-	# Doesn't it keep alive on it's own?
-	if not bKeepAlive:
-		nBytes = 0
-		async for chunk in source:
-			#log("Type: %s Len %s"%(type(chunk), len(chunk)))
-			nBytes += len(chunk)
-			try:
-				await dest.send_message(chunk)
-			except ConnectionClosed:
-				done.set()
-				closed.set()
-				break
+	nBytes = 0
+	async for chunk in source:
+		#log("Type: %s Len %s"%(type(chunk), len(chunk)))
+		nBytes += len(chunk)
+		try:
+			await dest.send_message(chunk)
+		except ConnectionClosed:
+			done.set()
+			closed.set()
+			break
 
-		fLog.write("Read %d bytes from command"%nBytes)
-		done.set()
-
-	else:
-		raise ValueError("Keep-alive not yet implemented")
+	fLog.write("Read %d bytes from command"%nBytes)
+	done.set()
 
 
 async def HandleAny(request):
@@ -467,43 +490,62 @@ async def HandleAny(request):
 		sParams = sPath[n+1:]
 		sPath = sPath[:n]
 
+	tReqProtos = request.proposed_subprotocols
+
 	fLog.write('   Path: %s'%sPath)
 	fLog.write('   Params: %s'%sParams)
+	fLog.write('   Client Accepts: %s'%str(tReqProtos))
 	#fLog.write('The full request object is: %s', dir(request))
 	#fLog.write('The _event sub-object is: %s', dir(request._event))
+	sSubProto = 'request'
+	if ('request' not in tReqProtos) and ('subscribe' in tReqProtos):
+		sSubProto = 'subscribe'
+	fLog.write('   Server Selected: %s'%sSubProto)
 
 	try:
-		(sCmd, bKeepAlive) = await GetReaderCmd(fLog, request)
+		sCmd = await GetReaderCmd(fLog, request, sSubProto)
 	except RequestError as e:
 		await request.reject(e.status, extra_headers=e.headers, body=e.body)
 		fLog.close()
 		return
 
-	ws = await request.accept()
+	try:
+		ws = await request.accept(subprotocol=sSubProto)
+	except BaseException as e:
+		fLog.write("Request accept error: %s"%str(e))
+		fLog.close()
+		return
+
 	c_dClient.set({'ip':ws.remote.address,'port': ws.remote.port,'url':ws.remote.url})
 
-	async with trio.open_nursery() as nursery:
-		fLog.write("Running pipeline")
-		fLog.write("   %s"%sCmd)
+	try:
+		async with trio.open_nursery() as nursery:
+			fLog.write("Running pipeline")
+			fLog.write("   %s"%sCmd)
 
-		# start a subprocessing task
-		proc = await nursery.start(delegate(trio.run_process, 
-			sCmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
-		))
+			# start a subprocessing task
+			proc = await nursery.start(delegate(trio.run_process, 
+				sCmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
+				#,check=False # Or it throws ExceptionGroups which are unusable!
+			))
 
-		done = trio.Event()
-		closed = trio.Event()
+			done = trio.Event()
+			closed = trio.Event()
 
-		nursery.start_soon(delegate(SendStdOut, fLog, proc.stdout, ws, bKeepAlive, done, closed))
-		nursery.start_soon(delegate(LogStdErr, fLog, proc.stderr))
-		nursery.start_soon(delegate(DelClientMsg, fLog, ws, done, closed))
+			nursery.start_soon(delegate(SendStdOut, fLog, proc.stdout, ws, done, closed))
+			nursery.start_soon(delegate(LogStdErr, fLog, proc.stderr))
+			nursery.start_soon(delegate(DelClientMsg, fLog, ws, done, closed))
 
-		await done.wait() # Pause here
-		nursery.cancel_scope.cancel()
+			await done.wait() # Pause here
+			nursery.cancel_scope.cancel()
 		
-		if closed.is_set():
-			proc.terminate()
-			fLog.write("Client closed connection, pipeline halted")
+			if closed.is_set():
+				proc.terminate()
+				fLog.write("Client closed connection, pipeline halted")
+			else:
+				fLog.write("Reader finished")
+	except BaseException as damn_trio_ex:
+		fLog.write("Cmd run error: %s"%str(damn_trio_ex))
 		
 	fLog.write('Handler exiting')
 	fLog.close()
@@ -532,6 +574,11 @@ as data discovery are handled by the main server.
 		help="Certificate file used to validate SSL connections to the server."+\
 		"  Defaults to "+sDef+"."
 	)
+	psr.add_argument(
+		'-l', '--level', metavar='LEVEL', dest="sLevel", default="info",
+		help="Setting the central server logging level.  One of 'error',"+\
+		"'warning','info','debug' in order of increasing verbosity"
+	)
 	#sDef = "%s/.ssh/ssl-cert-snakeoil.key"%os.environ['HOME']
 	#psr.add_argument(
 	#	'-k', '--key', metavar='KEY_FILE', dest="sKeyFile", default=sDef,
@@ -558,8 +605,21 @@ as data discovery are handled by the main server.
 	# If we intend to daemonize, point the standard python logger at some file
 	# under the log area
 
-	logging.basicConfig(level=logging.INFO)
+	bFuss = False
+	nLevel = logging.INFO
+	sLvl = opts.sLevel.lower()
+	if sLvl == "error":  nLevel = logging.ERROR
+	elif sLvl.startswith("warn"): nLevel = logging.WARNING
+	elif sLvl == "info": nLevel = logging.INFO
+	elif sLvl == "debug": nLevel = logging.DEBUG
+	else:
+		bFuss = True
+
+	logging.basicConfig(level=nLevel)
 	g_pyLog = logging.getLogger()  # Used initially
+	if bFuss:
+		g_pyLog.error("Unknown logging level: %s")
+		return 7
 
 	# Load the config file once instead of once per connection
 	# SideEffect: g_dConfCache[None] has the server config
@@ -619,13 +679,20 @@ as data discovery are handled by the main server.
 
 	
 	g_pyLog.info('dasflex websocket server startup complete')
+	
 	try:
 		trio.run(delegate(serve_websocket, HandleAny, sHost, opts.port, ctxSsl))
+	except BaseException as e:
+		# Ah yes, ExceptionGroups, the new hotness. "I really like looping
+		# over all contained exceptions!"" ...said no one.
+		for subex in e.exceptions:
+			if isinstance(subex, KeyboardInterrupt):
+				g_pyLog.info('SIGINT received, shutting down')
+				return 0
 
-	except KeyboardInterrupt:
-		sys.stderr.write('CTRL-C recieved, shutting down\n')
+		raise e
 
-	return 0
+	return 7
 
 # ########################################################################## #
 if __name__ == '__main__':

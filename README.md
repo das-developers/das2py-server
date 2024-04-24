@@ -293,3 +293,17 @@ directory of the repository.
 
 All code in the examples directory (not including the temporary pycdf subdirectory)
 is release under the UNLICENSE and may be used without restrictions of any kind.
+
+
+## Experimental Features
+
+An initial websocket server is included in the package, but dependency handling 
+for it is not part of the setup (yet).  To install extra packages, such as trio_websocket
+the following custom test commands are handy if you're not using a virtual environment:
+
+```bash
+pip install --target=/your/custom/pylib/dir trio_websocket
+export PYTHONPATH=/your/custom/pylib/dir
+```
+Many of the old mission support software sets benefit from this install method.
+

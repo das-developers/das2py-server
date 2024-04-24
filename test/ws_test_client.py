@@ -28,10 +28,13 @@ def perr(sMsg):
 async def ReadPkt(ws):
 	await ws.send_message("howdy")
 	while True:
-		pkt = await ws.get_message()
-		sys.stdout.buffer.write(pkt)
+		try:
+			pkt = await ws.get_message()
+			sys.stdout.buffer.write(pkt)
+		except ConnectionClosed:
+			break
 
-async def ConnectAndRead(sUrl, sCAFile=None):
+async def ConnectAndRead(sUrl, sCAFile=None, bSubscribe=False):
 	
 	if sUrl.startswith('wss'):
 		if sCAFile == None:
@@ -41,9 +44,14 @@ async def ConnectAndRead(sUrl, sCAFile=None):
 		ssl_context.load_verify_locations(sCAFile)
 	else:
 		ssl_context = None
+		
+	if bSubscribe:
+		tSub = ('subscribe',)
+	else:
+		tSub = ('request',)
 
 	try:
-		async with open_websocket_url(sUrl, ssl_context) as ws:
+		async with open_websocket_url(sUrl, ssl_context, subprotocols=tSub) as ws:
 			#await ws.send_message('hello world!')
 			await ReadPkt(ws)
 
@@ -70,12 +78,15 @@ def main(args):
 		help="Certificate file used to validate SSL connections to the server. "+\
 		"defaults to "+sDef+" ."
 	)
-
+	psr.add_argument(
+		"-s", "--subscribe", dest="bSubscribe", action="store_true", default=False,
+		help="Instead of a download and quit, request a data subscription that "+\
+		"is held open allowing new data to come in"
+	)
 	psr.add_argument(
 		'SOURCE_URL', help="The base socket data source URL without query options,"+\
 		" for example: ws://localhost:52245/dasws/examples/random"
 	)
-
 	psr.add_argument(
 		"PARAMS", nargs="*", help="Any number of query key=value pairs.  For example: "+\
 		"read.time.min=2022-09-15 read.time.max=2022-09-16"
@@ -90,7 +101,7 @@ def main(args):
 	perr("Data request is: %s"%sUrl)
 
 	try:
-		trio.run(ConnectAndRead, sUrl, opts.sCAFile)
+		trio.run(ConnectAndRead, sUrl, opts.sCAFile, opts.bSubscribe)
 		return 0
 	except ConnectionRejected as ex:
 		perr("Connection rejected with status %d, full content follows"%ex.status_code)

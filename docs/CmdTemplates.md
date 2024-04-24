@@ -115,7 +115,7 @@ Here's the full syntax for a PARAM_SELECTOR:
 ```
 The SUB_SEP defaults to comma `,`.  By default the SUB_VAL_SEP is not defined and 
 everything between two sub-seperators is taken to be the parameter name.  Thus for 
-sub-parameters actin as flags, only the FLAG_NAME is needed.
+sub-parameters acting as flags, only the FLAG_NAME is needed.
 
 Here's a few examples demonstrating flag values of increasing complexity.
 
@@ -183,4 +183,14 @@ defined and may be thus may always be used:
    * `_FILENAME_` - The automatically calculated output filename in case the attachment
       disposititon should be used
 
-   * 
+When a reader is called by the dasflex websocket server, an additional parameter is
+defined
+
+   * `_REQUEST_` - This is set (to 1) if a request-response protocol was selected
+     by the client.
+   * `_SUBSCRIBE_` - This is set (to 1) of a subscription protocol was selected by
+     the client.
+   * `_STATUS_` - This is set (to 1) if a two-channel output is desired.  One 
+     channel of status information and another of the actual data bytes.
+
+     
