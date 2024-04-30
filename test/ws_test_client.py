@@ -34,7 +34,7 @@ async def ReadPkt(ws):
 		except ConnectionClosed:
 			break
 
-async def ConnectAndRead(sUrl, sCAFile=None, bSubscribe=False):
+async def ConnectAndRead(sUrl, sCAFile=None):#, bSubscribe=False):
 	
 	if sUrl.startswith('wss'):
 		if sCAFile == None:
@@ -45,13 +45,14 @@ async def ConnectAndRead(sUrl, sCAFile=None, bSubscribe=False):
 	else:
 		ssl_context = None
 		
-	if bSubscribe:
-		tSub = ('subscribe',)
-	else:
-		tSub = ('request',)
+	#if bSubscribe:
+	#	tSub = ('subscribe',)
+	#else:
+	#	tSub = ('request',)
 
 	try:
-		async with open_websocket_url(sUrl, ssl_context, subprotocols=tSub) as ws:
+		async with open_websocket_url(sUrl, ssl_context) as ws:
+		#async with open_websocket_url(sUrl, ssl_context, subprotocols=tSub) as ws:
 			#await ws.send_message('hello world!')
 			await ReadPkt(ws)
 
@@ -78,11 +79,11 @@ def main(args):
 		help="Certificate file used to validate SSL connections to the server. "+\
 		"defaults to "+sDef+" ."
 	)
-	psr.add_argument(
-		"-s", "--subscribe", dest="bSubscribe", action="store_true", default=False,
-		help="Instead of a download and quit, request a data subscription that "+\
-		"is held open allowing new data to come in"
-	)
+	#psr.add_argument(
+	#	"-s", "--subscribe", dest="bSubscribe", action="store_true", default=False,
+	#	help="Instead of a download and quit, request a data subscription that "+\
+	#	"is held open allowing new data to come in"
+	#)
 	psr.add_argument(
 		'SOURCE_URL', help="The base socket data source URL without query options,"+\
 		" for example: ws://localhost:52245/dasws/examples/random"
@@ -101,15 +102,22 @@ def main(args):
 	perr("Data request is: %s"%sUrl)
 
 	try:
-		trio.run(ConnectAndRead, sUrl, opts.sCAFile, opts.bSubscribe)
+		trio.run(ConnectAndRead, sUrl, opts.sCAFile)#, opts.bSubscribe)
 		return 0
-	except ConnectionRejected as ex:
-		perr("Connection rejected with status %d, full content follows"%ex.status_code)
-		perr("-------")
-		for t in ex.headers:
-			perr("%s: %s"%(t[0].decode('utf-8'), t[1].decode('utf-8')))
-		perr("")
-		perr(ex.body.decode('utf-8'))
+	except BaseException as grp:
+		# Yay! Exception groups, just what I didn't want.
+		
+		for subex in grp.exceptions:
+			if isinstance(subex, ConnectionRejected):
+				perr("Connection rejected with status %d, full content follows"%subex.status_code)
+				perr("-------")
+				for t in subex.headers:
+					perr("%s: %s"%(t[0].decode('utf-8'), t[1].decode('utf-8')))
+				perr("")
+				perr(subex.body.decode('utf-8'))
+				return 3
+				
+		perr('Connection attempt failed: %s'%grp)
 
 	except OSError as ex:
 		perr('Connection attempt failed: %s'%ex)

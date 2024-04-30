@@ -45,4 +45,5 @@ class NotFoundError(DasError):
 class RemoteServer(DasError):
 	"""With federated catalogs, server  aren't supposed to advertise other
 	servers stuff it's not thier job to worry about it"""
+	pass
 

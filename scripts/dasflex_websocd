@@ -382,14 +382,9 @@ async def GetReaderCmd(fLog, request, sSubProto):
 
 	dSrc = await GetInternal(fLog, sSrc)
 
-	# Pop items in dQuery that only I'm supposed to set
-	t = ('_REQUEST_','_SUBSCRIBE_')
-	for k in t:
-		if k in dQuery:
-			dQuery.pop(k)
 
-	if sSubProto == 'request': dQuery['_REQUEST_'] = "1"
-	elif sSubProto == 'subscribe': dQuery['_SUBSCRIBE_'] = "1"
+	if sSubProto not in ('', 'request'):
+		raise RequestError(QueryError, "Only the request subprotocol is implemented")
 
 	# Some of our parameter keys can be translated to other keys
 	dTranslate = {}
@@ -424,11 +419,18 @@ async def GetReaderCmd(fLog, request, sSubProto):
 	lCmds = U.command.triggered(fLog, dSrc, dParams)
 
 	if 'output' not in lCmds[-1]:
-		RequestError(
+		raise RequestError(
 			ServerError, "Output definition missing for command in %s"%sSrc
 		)
 
-	sCmd  = U.command.pipeline(fLog, lCmds, dParams)
+	try:
+		sCmd  = U.command.pipeline(fLog, lCmds, dParams)
+	except U.errors.DasError as e:
+		sType = "ServerError"
+		if isinstance(e, (U.errors.QueryError, U.errors.NotFoundError)):
+			sType = "QueryError"
+
+		raise RequestError(sType, str(e))
 
 	return sCmd
 
@@ -490,17 +492,16 @@ async def HandleAny(request):
 		sParams = sPath[n+1:]
 		sPath = sPath[:n]
 
-	tReqProtos = request.proposed_subprotocols
-
 	fLog.write('   Path: %s'%sPath)
 	fLog.write('   Params: %s'%sParams)
-	fLog.write('   Client Accepts: %s'%str(tReqProtos))
 	#fLog.write('The full request object is: %s', dir(request))
 	#fLog.write('The _event sub-object is: %s', dir(request._event))
-	sSubProto = 'request'
-	if ('request' not in tReqProtos) and ('subscribe' in tReqProtos):
-		sSubProto = 'subscribe'
-	fLog.write('   Server Selected: %s'%sSubProto)
+	tReqProtos = request.proposed_subprotocols
+	sSubProto = ''
+	if len(tReqProtos) > 0:
+		fLog.write('   Client Accepts: %s'%str(tReqProtos))
+		fLog.write('   Server selected: request')
+		sSubProto = 'request'
 
 	try:
 		sCmd = await GetReaderCmd(fLog, request, sSubProto)
@@ -510,7 +511,12 @@ async def HandleAny(request):
 		return
 
 	try:
-		ws = await request.accept(subprotocol=sSubProto)
+		# Tell trio not to worry about subprotocols if the client didn't send one
+		# just silently act as if 'request' was selected
+		if len(tReqProtos) == 0:
+			ws = await request.accept()
+		else:
+			ws = await request.accept(subprotocol=sSubProto)
 	except BaseException as e:
 		fLog.write("Request accept error: %s"%str(e))
 		fLog.close()
