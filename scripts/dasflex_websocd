@@ -270,7 +270,7 @@ class RequestError(Exception):
 			_xmlEscape(sType), _xmlEscape(sMsg)
 		)))
 
-		ll = [ "%s||%d|%s"%(t[0], len(t[1].encode('utf-8')), t[1]) for t in l]
+		ll = [ "|%s||%d|%s"%(t[0], len(t[1].encode('utf-8')), t[1]) for t in l]
 		self.body = b''.join( [s.encode('utf-8') for s in ll ])
 
 # ########################################################################## #
