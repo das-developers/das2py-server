@@ -148,7 +148,7 @@ $ sudo chown -R root:root $PREFIX
 $ sudo chown $LOGNAME $PREFIX/cache         # i.e. any non-apache, non-root account
 ```
 
-## Configure Apache
+## Configure Apache - CGI
 
 Apache configurations vary widely by Linux distribution and personal taste.
 The following procedure is provided as an example and has been tested on
@@ -232,6 +232,46 @@ Finally, trigger a re-read of the Apache's configuration data:
 ```bash
 $ sudo systemctl restart httpd.service
 $ sudo systemctl status httpd.service
+```
+
+## Configure Apache - WebSocket
+
+The dasFlex server includes a websocket daemon for communicating with real-time
+data sources.  This is not needed for standard server functionality, but it is
+very useful for supporting hardware development, since technicians want to see 
+instrument data immediately.  The assumption in the instructions below is that 
+Apache will serve as the front door to the included **dasflex_websocd** daemon and
+will handle encryption/decription.  The websocket daemon will only listen to the
+local host and all backend communication between Apache and dasflex_websocd will
+be unencrypted.
+
+First make sure mode the following apache modules are enabled:
+```bash
+a2enmod proxy proxy_wstunnel proxy_http rewrite
+```
+
+Second in your applicable SSL server add the following.  If you're using 
+the default SSL server on Ubuntu the file is located at `/etc/apache2/sites-enabled/default-ssl.conf`.
+```
+<Location "/dasws/" >
+  RewriteEngine on
+  RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+  ProxyPreserveHost on
+  ProxyPass "ws://localhost:52242/dasws/"
+  ProxyPassReverse "ws://localhost:52242/dasws/"
+</Location>
+```
+Here the value ws://localhost:52242/dasws/ should be whatever you've specifed 
+for the `WEBSOCKE_URI` in your **dasflex.conf** file.
+
+A client program is included for testing your websocket server.  An example of
+running it for the included spectra example would be:
+```
+python3 dasflex/test/ws_test_client.py \
+   wss://localhost/dasws/examples/spectra/flexRT \
+   read.time.min=1979-03-01T12:26:11 \
+   read.time.max=1979-03-01T12:29:24 \
+   format.serial=text
 ```
 
 ## Test the server

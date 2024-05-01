@@ -474,11 +474,25 @@ async def HandleAny(request):
 	supported in the future, though most of the informational items are ment
 	to be advertised using standard web requests not web sockets
 	'''
+	global g_pyLog
+	
+	#g_pyLog.info("It hand the headers: %s"%request.headers)
+
+	# If I'm behind a proxy, take the last x-forwarded-for as the original
+	# location
+	sAddress = request.remote.address
+	for tHdr in request.headers:
+		if tHdr[0] == b'x-forwarded-for':
+			sAddr = tHdr[1].decode('utf-8')
+			lAddr = sAddr.split(',')
+			sAddr = lAddr[-1]
+			break
+	g_pyLog.info("Connection request from: %s"%sAddress)
 
 	dConf = g_dConfCache[None]
 
 	if 'LOG_PATH' in g_dConfCache[None]:
-		fLog = U.webio.DasLogFile(dConf['LOG_PATH'], request.remote.address)
+		fLog = U.webio.DasLogFile(dConf['LOG_PATH'], sAddress)
 		#fLog.write("INFO: Logging to %s"%dConf['LOG_PATH'])
 	else:
 		fLog = U.webio.DasLogFile()
@@ -571,7 +585,8 @@ as data discovery are handled by the main server.
 	psr.add_argument(
 		'-s', '--ssl', action='store_true', help='Comminicate within an SSL contex.'+\
 		"  This option essentially makes this a 'wss' (Web Secure Socket) server "+\
-		"instead of just 'ws'."
+		"instead of just 'ws'.  Server certificate and key file locations are "+\
+		"taken from dasflex.conf"
 	)
 	#sDef = '/etc/ssl/certs/ssl-cert-snakeoil.pem'
 	sDef = "%s/server.pem"%dname(g_sConfPath)
@@ -624,7 +639,7 @@ as data discovery are handled by the main server.
 	logging.basicConfig(level=nLevel)
 	g_pyLog = logging.getLogger()  # Used initially
 	if bFuss:
-		g_pyLog.error("Unknown logging level: %s")
+		g_pyLog.error("Unknown logging level: %s"%sLvl)
 		return 7
 
 	# Load the config file once instead of once per connection
@@ -664,16 +679,19 @@ as data discovery are handled by the main server.
 	if opts.ssl:
 		ctxSsl = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
 		try:
-			g_pyLog.info("Loading certificate chain using %s"%opts.sCertFile)
-			#ctxSsl.load_verify_locations(opts.sCertFile)
-			ctxSsl.load_cert_chain(opts.sCertFile)
-		except FileNotFoundError:
+			#g_pyLog.info("Loading certificate chain using %s"%opts.sCertFile)
+			#ctxSsl.load_cert_chain(opts.sCertFile)
+			ctxSsl.load_cert_chain('/etc/ssl/certs/oberon.cer','/etc/ssl/private/oberon.key')
+			#ctxSsl.load_cert_chain('/etc/ssl/private/oberon.key')
+			#ctxSsl.load_cert_chain(opts.sCertFile)
+		except FileNotFoundError as e:
 			g_pyLog.error(
-				"Did not find file '%s', please specifiy an \"HTTPS\" certificate."
+				"Did not find file please specifiy an \"HTTPS\" certificate: %s"%repr(e)
 			)
 			return 7
 	else:
 		ctxSsl = None
+
 	sHost = None if opts.host == '*' else opts.host
 
 	# At this point we'd become a daemon...
@@ -687,7 +705,8 @@ as data discovery are handled by the main server.
 	g_pyLog.info('dasflex websocket server startup complete')
 	
 	try:
-		trio.run(delegate(serve_websocket, HandleAny, sHost, opts.port, ctxSsl))
+		#trio.run(delegate(serve_websocket, HandleAny, sHost, opts.port, ctxSsl))
+		trio.run(serve_websocket, HandleAny, sHost, opts.port, ctxSsl)
 	except BaseException as e:
 		# Ah yes, ExceptionGroups, the new hotness. "I really like looping
 		# over all contained exceptions!"" ...said no one.

@@ -22,7 +22,7 @@ SERVER_URL = "http://localhost/das/server"
 # functionality set the value of the WEBSOCKET_URI below to the *external*
 # address of your websocket server.  For example:
 # 
-#   wss://jupiter.physics.uiowa.edu/das/nert/juno/wav/survey 
+#   wss://jupiter.physics.uiowa.edu/dasws/juno/wav/survey 
 #
 # The das2 websocket will typically sit behind a more secure webserver
 # such as apache.  To do this first enable the apache2 proxy_wstunnel
@@ -34,11 +34,14 @@ SERVER_URL = "http://localhost/das/server"
 # your apache2 configuration:
 #
 #  <Location "/dasws/">
-#     ProxyPass "ws://localhost:52242/"
+#     RewriteEngine On
+#     ProxyPreserveHost on
+#     ProxyPass "ws://localhost:52242/dasws/"
+#     ProxyPassReverse "ws://localhost:52242/dasws/"
 #  </Location>
 #
-# This assumes the web-socket server is running on port 52245
-WEBSOCKET_URI = ws://localhost:52242/das/nert
+# This assumes the web-socket server is running on port 52242
+WEBSOCKET_URI = ws://localhost:52242/dasws/
 
 # Set a different stylesheet for your site
 STYLE_SHEET = dasflex.css
