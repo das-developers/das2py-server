@@ -28,16 +28,13 @@ from os.path import join as pjoin
 import json
 import subprocess # For defintions only (uses trio.run_process for cmds)
 from urllib.parse import urlparse
+
 from functools import partial as delegate
+import contextvars
 
 g_sConfPath = REPLACED_ON_BUILD
 
-import trio
-from trio_websocket import serve_websocket, ConnectionClosed
-import contextvars
-
 # ########################################################################## #
-g_pyLog = None      # The python logger
 
 g_dConfCache = {} # A cache of json configs, the key is the filesystem path
 
@@ -49,6 +46,10 @@ BadRequest        = "BadRequest"
 c_dClient = contextvars.ContextVar("c_dClient")
 
 U = None    # the dasflex webutil module, set in main
+T = None    # the trio module, set in main
+TWS = None  # the trio websocke module, set in main
+
+g_log = None
 
 # ########################################################################## #
 # Blocking Server Config loader #
@@ -74,7 +75,7 @@ def loadConf(sConfPath = None):
 		request.
 	"""
 
-	global g_dConfCache, g_pyLog
+	global g_dConfCache
 
 	if not sConfPath: sConfPath = g_sConfPath
 
@@ -88,7 +89,7 @@ def loadConf(sConfPath = None):
 		raise EnvironmentError(sMsg)
 
 
-	g_pyLog.info("Server settings defined by: %s"%sConfPath)
+	g_log.info("Server settings defined by: %s"%sConfPath)
 	fIn = open(sConfPath, 'r')
 	
 	dConf = {}
@@ -146,7 +147,7 @@ def loadConf(sConfPath = None):
 
 def setModulePath(dConf):
 	if 'MODULE_PATH' not in dConf:
-		g_pyLog.error("Set MODULE_PATH = /dir/containing/dasflex_python_module")
+		g_log.error("Set MODULE_PATH = /dir/containing/dasflex_python_module")
 		return False	
 	
 	lDirs = dConf['MODULE_PATH'].split(':') # No mater the os.pathsep setting
@@ -178,19 +179,17 @@ def daemonize(sPidFile):
 	#  http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
 	# by Sander Marechal - Thanks!
 
-	global g_pyLog  # <--- This must be attached to a file! 
-	
 	sPidDir = dname(sPidFile)
 	if not os.path.isdir(sPidDir):
 		try:
 			os.makedirs(sPidDir, 0o750)
 		except OSError:
-			g_pyLog.error("Can't make dir %s\n"%sPidDir)
+			g_log.error("Can't make dir %s\n"%sPidDir)
 			return 13
 	
 	# If our PID file already exists, refuse to start
 	if os.path.isfile(sPidFile):
-		g_pyLog.error("PID file %s already exists, remove "%sPidFile +\
+		g_log.error("PID file %s already exists, remove "%sPidFile +\
 		                  "file before starting in daemon mode.\n")
 		return 13
 	
@@ -202,7 +201,7 @@ def daemonize(sPidFile):
 		if pid > 0:            
 			sys.exit(0)   # exit first parent
 	except OSError as e:
-		g_pyLog.error("fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
+		g_log.error("fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
 		return 13
        
 	# decouple from parent environment
@@ -216,7 +215,7 @@ def daemonize(sPidFile):
 		if pid > 0:
 			sys.exit(0)   # exit from second parent
 	except OSError as e:
-		g_pyLog.error("fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
+		g_log.error("fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
 		return 13
        
 	# redirect standard file descriptors
@@ -231,14 +230,14 @@ def daemonize(sPidFile):
 	os.dup2(so.fileno(), sys.stdout.fileno())
 	#os.dup2(so.fileno(), sys.stderr.fileno())
 
-	#os.dup2(g_pyLog.fileno(), sys.stderr.fileno())
+	#os.dup2(g_log.fileno(), sys.stderr.fileno())
 
 	# write pidfile
 	atexit.register(delPid, sPidFile)
 	pid = str(os.getpid())
 	open(sPidFile,'w+').write("%s\n" % pid)
 	
-	g_pyLog.info("das2_srv_workd started, PID %d written to %s"%(os.getpid(), sPidFile))
+	g_log.info("das2_srv_workd started, PID %d written to %s"%(os.getpid(), sPidFile))
 	return 0
 
 # ########################################################################## #
@@ -289,7 +288,7 @@ async def GetInternal(fLog, sSrc):
 	Returns (dict):
 		The source defitition
 	"""
-	global g_dConfCache, g_dasLog
+	global T, g_dConfCache, g_dasLog
 
 	dConf = g_dConfCache[None]
 
@@ -301,12 +300,12 @@ async def GetInternal(fLog, sSrc):
 
 	if sSrc not in g_dConfCache:
 		sPath = "%s/root/%s/internal.json"%(dConf['DATASRC_ROOT'], sSrc.lower())
-		path = trio.Path(sPath)
+		path = T.Path(sPath)
 
 		if not await path.is_file():
 			raise RequestError(NoSuchDataSource, "There is no data source at '%s'"%sSrc)
 		try:
-			async with  await trio.open_file(sPath) as fIn:
+			async with  await T.open_file(sPath) as fIn:
 				fLog.write("   Caching: %s"%sPath)
 				sWholeThing = await fIn.read();
 				dSrc = json.loads(sWholeThing)
@@ -438,21 +437,24 @@ async def GetReaderCmd(fLog, request, sSubProto):
 # Async Request Handler #
 
 async def DelClientMsg(fLog, ws, done, closed):
+	global TWS
+
 	while True:
 		try:
 			await ws.get_message();
-		except ConnectionClosed:
+		except TWS.ConnectionClosed:
 			done.set()
 			closed.set()
 			break
 
 async def LogStdErr(fLog, source):
-	# Don't break out of logging to standard error, let it go
+	# Don't break out of log to standard error, let it go
 	# till something else halts the pipeline
 	async for chunk in source:
 		fLog.write(chunk)
 
 async def SendStdOut(fLog, source, dest, done, closed):
+	global TWS
 
 	nBytes = 0
 	async for chunk in source:
@@ -460,7 +462,7 @@ async def SendStdOut(fLog, source, dest, done, closed):
 		nBytes += len(chunk)
 		try:
 			await dest.send_message(chunk)
-		except ConnectionClosed:
+		except TWS.ConnectionClosed:
 			done.set()
 			closed.set()
 			break
@@ -474,26 +476,23 @@ async def HandleAny(request):
 	supported in the future, though most of the informational items are ment
 	to be advertised using standard web requests not web sockets
 	'''
-	global g_pyLog
 	
-	#g_pyLog.info("It hand the headers: %s"%request.headers)
-
 	# If I'm behind a proxy, take the last x-forwarded-for as the original
 	# location
 	sAddress = request.remote.address
 	for tHdr in request.headers:
 		if tHdr[0] == b'x-forwarded-for':
-			sAddr = tHdr[1].decode('utf-8')
-			lAddr = sAddr.split(',')
-			sAddr = lAddr[-1]
+			sAddress = tHdr[1].decode('utf-8')
+			lAddr = sAddress.split(',')
+			sAddress = lAddr[-1]
 			break
-	g_pyLog.info("Connection request from: %s"%sAddress)
+	g_log.info("Connection request from: %s"%sAddress)
 
 	dConf = g_dConfCache[None]
 
 	if 'LOG_PATH' in g_dConfCache[None]:
 		fLog = U.webio.DasLogFile(dConf['LOG_PATH'], sAddress)
-		#fLog.write("INFO: Logging to %s"%dConf['LOG_PATH'])
+		#fLog.write("INFO: log to %s"%dConf['LOG_PATH'])
 	else:
 		fLog = U.webio.DasLogFile()
 
@@ -539,18 +538,18 @@ async def HandleAny(request):
 	c_dClient.set({'ip':ws.remote.address,'port': ws.remote.port,'url':ws.remote.url})
 
 	try:
-		async with trio.open_nursery() as nursery:
+		async with T.open_nursery() as nursery:
 			fLog.write("Running pipeline")
 			fLog.write("   %s"%sCmd)
 
 			# start a subprocessing task
-			proc = await nursery.start(delegate(trio.run_process, 
+			proc = await nursery.start(delegate(T.run_process, 
 				sCmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
 				#,check=False # Or it throws ExceptionGroups which are unusable!
 			))
 
-			done = trio.Event()
-			closed = trio.Event()
+			done = T.Event()
+			closed = T.Event()
 
 			nursery.start_soon(delegate(SendStdOut, fLog, proc.stdout, ws, done, closed))
 			nursery.start_soon(delegate(LogStdErr, fLog, proc.stderr))
@@ -574,7 +573,7 @@ async def HandleAny(request):
 # Main # 
 
 def main(argv):
-	global U, g_dConfCache, g_pyLog
+	global U, T, TWS, CV, g_dConfCache, g_log
 
 	psr = argparse.ArgumentParser(description='''DasFlex Websocket Server
 This is a companion program for the main HTTP GET server that provides 
@@ -625,8 +624,6 @@ as data discovery are handled by the main server.
 
 	# If we intend to daemonize, point the standard python logger at some file
 	# under the log area
-
-	bFuss = False
 	nLevel = logging.INFO
 	sLvl = opts.sLevel.lower()
 	if sLvl == "error":  nLevel = logging.ERROR
@@ -634,14 +631,12 @@ as data discovery are handled by the main server.
 	elif sLvl == "info": nLevel = logging.INFO
 	elif sLvl == "debug": nLevel = logging.DEBUG
 	else:
-		bFuss = True
-
-	logging.basicConfig(level=nLevel)
-	g_pyLog = logging.getLogger()  # Used initially
-	if bFuss:
-		g_pyLog.error("Unknown logging level: %s"%sLvl)
+		logging.error("Unknown logging level: %s"%sLvl)
 		return 7
 
+	logging.basicConfig(level=nLevel)
+	g_log = logging.getLogger()
+	
 	# Load the config file once instead of once per connection
 	# SideEffect: g_dConfCache[None] has the server config
 	loadConf(opts.sConfFile)
@@ -651,26 +646,40 @@ as data discovery are handled by the main server.
 	# if we're going to be a daemon
 	if opts.sPidFile:
 		if 'LOG_PATH' not in dConf:
-			g_pyLog.error("Set the value LOG_PATH in %s"%dConf['__file__'])
+			g_log.error("Set the value LOG_PATH in %s"%dConf['__file__'])
 			return 7
 
-		sLogPath = pjoin(dConf["LOG_PATH"], 'dasflex_websoc.log')
-		logging.basicConfig(filename=sLogPath, level=logging.INFO)
-		g_pyLog.info("dasflex websoc server defined by %s"%dConf['__file__'])
+		sLogPath = pjoin(dConf["LOG_PATH"], 'dasflex_websocd.log')
+		g_log.info("Sending server log messages to %s"%sLogPath)
+		logging.basicConfig(
+			filename=sLogPath, filemode='a', level=nLevel,
+			force=True, # Really python?
+			format="%(asctime)s %(levelname)s: %(message)s"
+		)
+		g_log = logging.getLogger('dasws')
+		g_log.propgate = False
 
 	if not setModulePath(dConf):
 		return 7
 
-	# Load the webutil module
+	# Load moduels that might not be available until we set the MODULE_PATH
+	# using our config file
 	try:
 		mTmp = __import__('dasflex', globals(), locals(), ['webutil'], 0)
 	except ImportError as e:
-		g_pyLog.error("Error importing module dasflex\r\n: %s\n"%(str(e)))
+		g_log.error("Error importing module dasflex\r\n: %s\n"%(str(e)))
 		return 7
 	try:
 		U = mTmp.webutil
 	except AttributeError:
-		g_pyLog.error('No module named dasflex.webutil under %s\n'%dConf['MODULE_PATH'])
+		g_log.error('No module named dasflex.webutil under %s\n'%dConf['MODULE_PATH'])
+		return 7
+
+	try:
+		T   = __import__('trio', globals(), locals(), [], 0)
+		TWS = __import__('trio_websocket', globals(), locals(), [], 0)
+	except ImportError as e:
+		g_log.error("Error importing module\r\n: %s\n"%(str(e)))
 		return 7
 
 	U.misc.envPathMunge("PATH", dConf['BIN_PATH'])
@@ -679,13 +688,13 @@ as data discovery are handled by the main server.
 	if opts.ssl:
 		ctxSsl = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
 		try:
-			#g_pyLog.info("Loading certificate chain using %s"%opts.sCertFile)
+			#g_log.info("Loading certificate chain using %s"%opts.sCertFile)
 			#ctxSsl.load_cert_chain(opts.sCertFile)
 			ctxSsl.load_cert_chain('/etc/ssl/certs/oberon.cer','/etc/ssl/private/oberon.key')
 			#ctxSsl.load_cert_chain('/etc/ssl/private/oberon.key')
 			#ctxSsl.load_cert_chain(opts.sCertFile)
 		except FileNotFoundError as e:
-			g_pyLog.error(
+			g_log.error(
 				"Did not find file please specifiy an \"HTTPS\" certificate: %s"%repr(e)
 			)
 			return 7
@@ -696,23 +705,23 @@ as data discovery are handled by the main server.
 
 	# At this point we'd become a daemon...
 	if opts.sPidFile:
-		# daemonize uses g_pyLog, which MUST be pointed at a file, not the console
+		# daemonize uses logging, which MUST be pointed at a file, not the console
 		nRet = daemonize(opts.sPidFile)
 		if nRet != 0:
 			return nRet
 
 	
-	g_pyLog.info('dasflex websocket server startup complete')
+	g_log.info('dasflex websocket server startup complete')
 	
 	try:
 		#trio.run(delegate(serve_websocket, HandleAny, sHost, opts.port, ctxSsl))
-		trio.run(serve_websocket, HandleAny, sHost, opts.port, ctxSsl)
+		T.run(TWS.serve_websocket, HandleAny, sHost, opts.port, ctxSsl)
 	except BaseException as e:
 		# Ah yes, ExceptionGroups, the new hotness. "I really like looping
 		# over all contained exceptions!"" ...said no one.
 		for subex in e.exceptions:
 			if isinstance(subex, KeyboardInterrupt):
-				g_pyLog.info('SIGINT received, shutting down')
+				g_log.info('SIGINT received, shutting down')
 				return 0
 
 		raise e

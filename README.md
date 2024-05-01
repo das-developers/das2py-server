@@ -234,7 +234,7 @@ $ sudo systemctl restart httpd.service
 $ sudo systemctl status httpd.service
 ```
 
-## Configure Apache - WebSocket
+## Configure Apache + WebSocket
 
 The dasFlex server includes a websocket daemon for communicating with real-time
 data sources.  This is not needed for standard server functionality, but it is
@@ -272,6 +272,23 @@ python3 dasflex/test/ws_test_client.py \
    read.time.min=1979-03-01T12:26:11 \
    read.time.max=1979-03-01T12:29:24 \
    format.serial=text
+```
+
+The websock server should run as the same user as the regular CGI server.  This
+is critical because the log to the same files.  That bears reapeating:
+
+> **NOTE** Run dasflex_websocd as the apache user on your system.
+
+To do this the following command will work work on Debian and derivitives:
+```bash
+sudo su -s /usr/bin/bash -c "/path/to/dasflex_websocd 127.0.0.1 52242 -D /path/to/log/websock.pid" www-data
+```
+The user account on Rocky Linux is different, but otherwise the command is the 
+same.  A system-d unit file will be created as time permits.
+
+To stop your server send **SIGINT** to the runing daemon
+```bash
+sudo kill -INT $(cat /path/to/log/websock.pid)
 ```
 
 ## Test the server
