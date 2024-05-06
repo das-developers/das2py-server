@@ -8,7 +8,8 @@ ifeq ($(INST_ETC),)
 	INST_ETC:=$(PREFIX)/etc
 endif
 
-ifeq ($(N_ARCH),)  # Default to no sub-dir for architecture dependent files
+# Default to no sub-dir for architecture dependent files
+ifeq ($(N_ARCH),)
 	N_ARCH:=/   
 endif
 

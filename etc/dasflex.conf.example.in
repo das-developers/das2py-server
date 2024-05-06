@@ -18,31 +18,6 @@ DATASRC_ROOT = "%(PREFIX)s/catalog"
 #  Note: Re-run dasflex_sdef on your source definitions if this is changed
 SERVER_URL = "http://localhost/das/server"
 
-# This server can send das streams over websocket frames.  To enable this
-# functionality set the value of the WEBSOCKET_URI below to the *external*
-# address of your websocket server.  For example:
-# 
-#   wss://jupiter.physics.uiowa.edu/dasws/juno/wav/survey 
-#
-# The das2 websocket will typically sit behind a more secure webserver
-# such as apache.  To do this first enable the apache2 proxy_wstunnel
-# module:
-#
-#  sudo a2enmod proxy_wstunnel
-#
-# Then name the path on your server to map to the das2 websocket server in
-# your apache2 configuration:
-#
-#  <Location "/dasws/">
-#     RewriteEngine On
-#     ProxyPreserveHost on
-#     ProxyPass "ws://localhost:52242/dasws/"
-#     ProxyPassReverse "ws://localhost:52242/dasws/"
-#  </Location>
-#
-# This assumes the web-socket server is running on port 52242
-WEBSOCKET_URI = ws://localhost:52242/dasws/
-
 # Set a different stylesheet for your site
 STYLE_SHEET = dasflex.css
 
@@ -116,6 +91,60 @@ RESOURCE_PATH = "%(PREFIX)s/static"
 # Provide links to other das2 servers you run, or use (or just know
 # about :)
 PEERS_FILE = "%(INST_ETC)s/das2peers.ini"
+
+
+# This server can send das streams over websocket frames.  To enable this
+# functionality set the value of the WEBSOCKET_URI below to the *external*
+# address of your websocket server.  For example:
+# 
+#   wss://jupiter.physics.uiowa.edu/dasws/juno/wav/survey 
+#
+# The das2 websocket will typically sit behind a more secure webserver
+# such as apache.  To do this first enable the apache2 proxy_wstunnel
+# module:
+#
+#  sudo a2enmod proxy_wstunnel
+#
+# Then name the path on your server to map to the das2 websocket server in
+# your apache2 configuration:
+#
+#  <Location "/dasws/">
+#     RewriteEngine On
+#     ProxyPreserveHost on
+#     ProxyPass "ws://localhost:52242/dasws/"
+#     ProxyPassReverse "ws://localhost:52242/dasws/"
+#  </Location>
+#
+# This assumes the web-socket server is running on port 52242
+WEBSOCKET_URI = ws://localhost:52242/dasws/
+
+# You can directly expose the websocket server to the internet (not
+# recommened) or have Apache proxy websocket connections.  For direct 
+# connections you need to set SSL to true and configure the certificate file
+# and server key file below.  If you're using Apach as the proxy server, it
+# can communicate to the websocket server over ordinary sockets and comunicate
+# with client over HTTPS.
+WEBSOCKET_SSL = false
+
+# The private key file for standalone das websocket servers.  This is similar
+# to a private key file for user accounts, and shouldn't be readable by users
+# other then the web server user.
+WEBSOCKET_KEY = "%(INST_ETC)s/server.key"
+
+# The public certificate file.  This contains the public key, but the public
+# key has been signed by a certificate authority.  Presumably it's a
+# certificate authority that the client trusts.
+WEBSOCKET_CERT = "%(INST_ETC)s/server.cert"
+
+# The interface to listen on for web-socket connections.  Defaults to local
+# host only.  If left empty, all interfaces are bound.  To listen to all
+# IPv4 addreses use 0.0.0.0, for all IPv6 use '::' or provide a specific
+# addresss
+WEBSOCKET_IFACE = localhost
+
+# The port to listen on, defaults to the U. Iowa campus zip code
+WEBSOCKET_PORT = 52242
+
 
 # Program used to upconvert das1 streams.  Only used by the U. Iowa group
 DAS1_TO_DAS2 = "das2_from_das1"

@@ -338,7 +338,7 @@ lDataFiles = [
 	(g_sEtc, [
 		'etc/dasflex.conf.example.in','etc/das2peers.ini.example.in',
 		'etc/group', 'etc/passwd', 'etc/ReadMe-Passwords.txt.in',
-		'etc/mime.json.example'
+		'etc/mime.json.example', 'etc/dasflex.service.example.in'
 	]),
 	
 	# the resource files

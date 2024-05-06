@@ -1,0 +1,19 @@
+[Unit]
+Description=The dasFlex websocket dataset server
+After=network.target
+Documentation=https://github.com/das-developers/das2py-server/blob/dasflex/README.md
+
+[Service]
+Type=forking
+
+# Note: This location is different in Rocky Linux
+PIDFile=/run/das/dasflex_websocd.pid
+ExecStart=%(PREFIX)s/bin/%(N_ARCH)s/dasflex_websocd -d /run/das/dasflex_websocd.pid
+
+# Note: The apache user and group names are different in Rocky Linux
+User=www-data
+Group=www-data
+KillSignal=SIGINT
+
+[Install]
+WantedBy=multi-user.target

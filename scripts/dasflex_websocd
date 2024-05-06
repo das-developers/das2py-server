@@ -141,6 +141,27 @@ def loadConf(sConfPath = None):
 
 	return g_dConfCache[None]
 
+# ########################################################################## #
+# Read from command line if give, otherwise read from config
+def _optOrConf(optItem, invalidItem, dConf, sKey, sType='str'):
+
+	if optItem != invalidItem:
+		return optItem
+
+	"""Assume a value is false, unless it's in the given dictionary"""
+	if sKey not in dConf: 
+		return None
+
+	sVal = dConf[sKey]
+
+	if sType == 'int': 
+		return int(sVal, 10)
+		
+	elif sType == 'bool':
+		return (sVal == "1") or (sVal.lower() == "true") or (sVal.lower() == "yes")
+
+	return sVal
+
 ##############################################################################
 # Update sys.path, boiler plate code that has to be re-included in each script
 # since config file can change module path
@@ -582,43 +603,43 @@ as data discovery are handled by the main server.
 ''')
 
 	psr.add_argument(
-		'-s', '--ssl', action='store_true', help='Comminicate within an SSL contex.'+\
-		"  This option essentially makes this a 'wss' (Web Secure Socket) server "+\
-		"instead of just 'ws'.  Server certificate and key file locations are "+\
-		"taken from dasflex.conf"
-	)
-	#sDef = '/etc/ssl/certs/ssl-cert-snakeoil.pem'
-	sDef = "%s/server.pem"%dname(g_sConfPath)
-	psr.add_argument(
-		'-p', '--pem', metavar='PEM_FILE', dest="sCertFile", default=sDef,
-		help="Certificate file used to validate SSL connections to the server."+\
-		"  Defaults to "+sDef+"."
-	)
-	psr.add_argument(
 		'-l', '--level', metavar='LEVEL', dest="sLevel", default="info",
 		help="Setting the central server logging level.  One of 'error',"+\
 		"'warning','info','debug' in order of increasing verbosity"
 	)
-	#sDef = "%s/.ssh/ssl-cert-snakeoil.key"%os.environ['HOME']
-	#psr.add_argument(
-	#	'-k', '--key', metavar='KEY_FILE', dest="sKeyFile", default=sDef,
-	#	help="Key file used to read the PEM file, defaults to "+sDef+"."
-	#)
 	psr.add_argument(
 		'-c', '--config', metavar="FILE", dest="sConfFile", default=g_sConfPath,
 		help="Use a custom configuration file instead of %s ."%g_sConfPath
 	)
 	psr.add_argument(
-		'-D', '--daemon', dest='sPidFile', metavar="PID_FILE", default=None, 
+		'-s', '--ssl', action='store_true', help='Comminicate over SSL.  This option'+\
+		"Makes this a 'wss' (Web Secure Socket) server.  By default server certificate "+\
+		'and private key file locations are taken from dasflex.conf but can be set via '+\
+		'command line options below.', default=False, dest="bSsl"
+	)
+	#'/etc/ssl/certs/oberon.cer','/etc/ssl/private/oberon.key'
+	psr.add_argument(
+		'-r', '--cert', metavar='PEM_FILE', dest="sCertFile", default=None,
+		help="If using SSL, override certificate the file location found in the "+\
+		" configuration file, dasflex.conf."
+	)
+	psr.add_argument(
+		'-k', '--key', metavar='KEY_FILE', dest="sKeyFile", default=None,
+		help="If using SSL, override privite key file location found in the "+\
+		"configuration file, dasflex.conf"
+	)
+	psr.add_argument(
+		'-d', '--daemon', dest='sPidFile', metavar="PID_FILE", default=None, 
 		help='Detach from the controlling terminal and became a system daemon, '+\
 		'writing the process ID to the given PID_FILE.'
 	)
 	psr.add_argument(
-		'host', help='Host interface to bind. If omitted, then bind all interfaces.', 
-		nargs='?'
+		'-i', '--interface', dest='sInterface', metavar="HOST", default=None,
+		help='Override the interface to bind to specified in dasflex.conf'
 	)
 	psr.add_argument(
-		'port', type=int, help='Port to bind, for WSS port 443 is recommended.'
+		'-p','--port', type=int, metavar="INT", help='Override the network port '+\
+		'specified in dasflex.conf', default=0, dest="nPort"
 	)
 	opts = psr.parse_args()
 
@@ -641,6 +662,16 @@ as data discovery are handled by the main server.
 	# SideEffect: g_dConfCache[None] has the server config
 	loadConf(opts.sConfFile)
 	dConf = g_dConfCache[None]
+
+	# Load items from config file, override if present on command line
+	bSsl = _optOrConf(opts.bSsl, False, dConf, 'WEBSOCKET_SSL', 'bool')
+	sCertificate = _optOrConf(opts.sCertFile, None, dConf, 'WEBSOCKET_CERT')
+	sPrivateKey = _optOrConf(opts.sKeyFile, None, dConf, 'WEBSOCKET_KEY')
+	sInterface = _optOrConf(opts.sInterface, None, dConf, 'WEBSOCKET_IFACE')
+	nPort = _optOrConf(opts.nPort, 0, dConf, "WEBSOCKET_PORT", 'int')
+	if nPort == None:
+		g_log.error("Network port not specified on command line or in dasflex.conf")
+		return 7
 
 	# Now that we have the config, we know our log path, change the log setup
 	# if we're going to be a daemon
@@ -685,14 +716,12 @@ as data discovery are handled by the main server.
 	U.misc.envPathMunge("PATH", dConf['BIN_PATH'])
 	U.misc.envPathMunge("LD_LIBRARY_PATH", dConf['LIB_PATH'])
 
-	if opts.ssl:
+	if bSsl:
 		ctxSsl = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
 		try:
-			#g_log.info("Loading certificate chain using %s"%opts.sCertFile)
-			#ctxSsl.load_cert_chain(opts.sCertFile)
-			ctxSsl.load_cert_chain('/etc/ssl/certs/oberon.cer','/etc/ssl/private/oberon.key')
-			#ctxSsl.load_cert_chain('/etc/ssl/private/oberon.key')
-			#ctxSsl.load_cert_chain(opts.sCertFile)
+
+			g_log.info("Loading certificate and private key")
+			ctxSsl.load_cert_chain(sCertificate, sPrivateKey)
 		except FileNotFoundError as e:
 			g_log.error(
 				"Did not find file please specifiy an \"HTTPS\" certificate: %s"%repr(e)
@@ -701,8 +730,6 @@ as data discovery are handled by the main server.
 	else:
 		ctxSsl = None
 
-	sHost = None if opts.host == '*' else opts.host
-
 	# At this point we'd become a daemon...
 	if opts.sPidFile:
 		# daemonize uses logging, which MUST be pointed at a file, not the console
@@ -710,12 +737,13 @@ as data discovery are handled by the main server.
 		if nRet != 0:
 			return nRet
 
-	
-	g_log.info('dasflex websocket server startup complete')
+	g_log.info('dasflex websocket server set to listen on %s, port %d'%(
+		sInterface, nPort
+	))
 	
 	try:
 		#trio.run(delegate(serve_websocket, HandleAny, sHost, opts.port, ctxSsl))
-		T.run(TWS.serve_websocket, HandleAny, sHost, opts.port, ctxSsl)
+		T.run(TWS.serve_websocket, HandleAny, sInterface, nPort, ctxSsl)
 	except BaseException as e:
 		# Ah yes, ExceptionGroups, the new hotness. "I really like looping
 		# over all contained exceptions!"" ...said no one.
