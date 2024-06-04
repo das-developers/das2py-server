@@ -1,14 +1,15 @@
 # Das Catolog: HttpStreamSrc version 0.7
 
 In the federated dat3 catalog system, an HttpStreamSrc objects defines a
-sources which 
+source which:
 1. May be contacted via an HTTP GET message
-2. Responds to a single request
-3. Then closes the connection
+2. Is optionally supplied option via query parameters in the URL
+3. Responds to a single request
+4. Then closes the connection
 
-This page descripts the HttpStreamSrc object type but it is not a normative definition.
-That is provided by the associated JSON schema (in work).  If this narrative contradicts
-the associated schema, the schema is authoritative.
+This page descripts the HttpStreamSrc object type but is not a normative definition.
+That is provided by the associated JSON schema (in work).  If anything in this 
+contradicts the associated JSON schema (once released) the schema is authoritative.
 
 For reference, the top levels of an HttpStreamSrc are represented below.  This
 example is for the uncalibratiod Electron Particle Distibution data (EPD) from
@@ -38,13 +39,14 @@ the Advanced Cusp Electrons (ACE) detector on TRACERS:
 | protocol | object[objects] | yes | Defines the GET API for interacting with this data source  |
 
 The simple elements: `type`, `version`, `label`, `title`, and `description` are common to all
-catalog objects.  Of the other values, `contacts` is rather straight forward.  Thus the focus
-here will be to describe the purpose and usage of the `protocol` and `interface` sections.
+catalog objects.  Of the other sub-objects, `contacts` is rather straight forward.  Thus the focus
+here will be to describe the purpose and usage of the `protocol` and `interface` objects.
 
 ## The Protocol Object
 
 The protocol object defines the HTTP GET method query keys understood by this data source.
-For reference the upper sections of the protocol object for ACE IPD continues below.
+For reference the upper sections of the protocol object for ACE instrument IPD data source
+continues below.
 ```json5
 {
   "method" : "GET",
@@ -55,9 +57,10 @@ For reference the upper sections of the protocol object for ACE IPD continues be
   "httpParams" : {
     "read.time.min" :   { "required":true,  "type":"isotime" },
     "read.time.max" :   { "required":true,  "type":"isotime" },
+    "bin.time.max"  :   { "required":false, "type":"real",    "units":"s" },
     "read.apid" :       { "required":false, "type":"enum",    "enum":["x2a2", "x2a3", "x2af", "x2b2", "x2b3" ] },
-    "format.version" :  { "required":false, "type":"string" },
-    "format.sigdigit" : { "required":false, "type":"integer", "range":[2, 17] }
+    "format.sigdigit" : { "required":false, "type":"integer", "range":[2, 17] },
+    "format.delim" :    { "required":false, "type":"string" }
     // other HTTP GET keys defined here
   }
 }
@@ -70,25 +73,34 @@ Protocol objects have the following top-level sub-items.
 |method | `GET` | yes | Merely documents that HTTP GET requests are expected |
 |baseUrls | list[string] | yes | provides 1-N *fully qualified* access URLs for this data source. |
 |authorization | object | yes | provides the HTTP Auth Realm if authorization is required for the data source |
-|httpParams | list[object] | maybe | If this data source has query parameters these are listed here. |
+|httpParams | list[object] | maybe | If this data source supports query parameters they are listed here. |
 
 ### httpParams
 
 For each HTTP GET parameter there is a key in the httpParams object that has same name
 as the associated GET parameter.  Each value under http params is an object defining:
-1. If a parameter is required
-2. The data type of the parameter's value
+1. If the query parameter required
+2. The data type of the query parameter's value
 3. Extended information based on the data type.
 
-*TODO: List all value types here*
+The possible data types for httpParams.`KEY`.type are detailed below:
+| Type  | Description | Usage Example |
+|-------|-------------|---------------|
+|string |arbitrary input | `format.delim=,` |
+|isotime|ISO-8601 String, UTC assumed | `read.time.min=2024-01-01T14:03` |
+|integer|An integer, optionally signed | `format.sigdigit=4` |
+|enum   |One of a list of strings | `read.apid=x2a3` |
+|FlagSet|1-N strings combined via a separator | `read.data=mcp_hv,reg_33dv` |
 
+FlagSet types are commonly used for enabling and 1-N parameters (or variables in CDF) 
+from housekeeping data sources that can output many different parameters.
 
 ## Interface object
 
 At the protocol level HTTP parameters have no particular meaning.  They are just 
 a list of permissible values and formats.  Interface objects provide the end-user
 presentation layer overtop of the direct server protocol, and most importantly
-**tie protocol params to dataset coordinates**.   
+*tie protocol params to dataset coordinates*.   
 
 For reference the upper sections of the example ACE IPD interface object are
 given below.
@@ -96,48 +108,38 @@ given below.
 ```json5
 {
   "coords":{
+    // This is the coordinates option category.  Any option that affects
+    // a particular coordinate may be placed here.  The most common case
+    // is sub-setting data streams in a "time" coordinate.
     "time":{
-      // Provides information on the "time" coordinate group and associated options
-      "props":{
-        "min":{
-          "label" : "Minimum"
-          // ...More keys follow for interface property "coords/time/min"
-        },
-        "max":{
-           "label": "Maximum"
-           // ...More keys follow for interface property "coords/time/max"
-        },
-        "res" : {
-          "label" : "Resolution"
-          // ...More keys follow for interface property "coords/time/res"
-        }
-      },
-      "validRange" : [
-        // ..optional valid range for this coordinate
-      ]
+      // This option group is associated with the "time" coordinate in the associate data stream
+    },
+    "energy":{
+      // This option group is associated with the "energy" coordinate in the associated data stream
     }
   },
   "data" : {
     "flux" : {
-      "label" : "counts",
-      "props" : {
-        "enabled" : {
-        	// ... more information on property "data/flux/enabled" 
-        }
-      }
+      // This option group is for "flux" data values in the associated data stream
     }
   },
-  "options" : {
-    "label" : "Options",
-    "props" : {
-      "filter" : {
-        "label" : "AppID Filter",
-        "title" : "Filter output data by CCSDS AppID",
-        // ... more information on general property 'options/filter'
-      }  
+  "formats" : {
+    // There is one option group here for each format type that can be emitted.
+    // There are no pre-ordained output formats.  Any type may be listed.
+    // It's the client's job to ignore user controls for formats that the can
+    // not use.
+    "das" : {
+      // Option group for das stream formatted output 
+    },
+    "ccsds" : {
+      // Option group for CCSDS packet stream formatted output
     }
   },
   "examples" : [
+    // The examples list provides named presets of other options.  Every datas
+    // source is required to provide at least one example.  The example below
+    // provides min and max time coordinate properties, and a label for the
+    // end user.
     {
       "settings" : {
         "coords/time/props/min" : "2024-05-23T23:05",
@@ -146,27 +148,9 @@ given below.
       "label" : "Most Recent 10 minutes"
     }
   ],
-  "formats" : {
-  	 // There is one object here for each format type that can be emitted
-    "das" : {
-      "label" : "das stream",
-      "title" : "Streaming format for plots",
-      "mimeTypes" : [
-        "application/vnd.das2.das2stream",
-        "application/vnd.das.stream",
-        "text/vnd.das2.das2stream"
-      ],
-      "props" : {
-        "enabled" : {
-          // More information on the formats/das/enabled property
-          }
-        },
-        "version" : {
-          "label" : "Stream Version",
-          // more information on the formats/das/version property
-        }
-      }
-    }
+  "options" : {
+    // An extra option group to allow for interface controls that aren't
+    // tied to a particular coordinate, data parameter, or output format
   }
 }
 ```
@@ -175,36 +159,36 @@ The top level sub-objects of interface and thier purpose are:
 
 |Key | Value | Required | Purpose  |
 |----|-------|----------|----------|
-|coords | object | maybe | Ties protocol parameters to returned dataset coordinates.  Required if HTTP params can alter the coordinates or coordinate range of output dataset |
-|data | object | maybe | Ties protocol parameters to the returned primary data values.  Required if HTTP params can alter the primary data (not coordinate) values |
-|formats | object | yes | Defines the service output format and relates HTTP parameters to selectable output formats |
-|examples | object | yes | Provides a pre-set selections for the coordinates, data and formats that are know to produce valid data |
+|coords | object | maybe | Ties protocol query parameters to returned dataset coordinates.  Required if HTTP params can alter the coordinates or  coordinate range of output dataset |
+|data | object | maybe | Ties protocol query parameters to the returned primary data values.  Required if HTTP params can alter the primary data (not coordinate) values |
+|formats | object | yes | Defines the available output formats and relates protocol query parameters to an output format |
+|examples | object | yes | Provides a pre-set selections for the coordinates, data and formats that are known to produce valid data |
 |options | object | no | This is a catch-all for other end-user options that don't fall into the other categories. |
 
-### Displaying Property Groups
+### Interface Option Groups
 
-Interface options are grouped together to control multiple properties of a single 
-output item.  This varies by section as listed below:
+Interface options are grouped together to control multiple options for 
+as single output item or aspect.  The exact item type varies by section
+as listed below:
 
-| Interface Section | Affects | Example|
-|-------------------|---------|--------|
-| coords | Properties of one output coordinate | time/min, time/max, time/res, angle/sum |
-| data   | Properties of one output data variable | flux/enable | 
-| formats | Properties of one output format | das/serial |
-| options | Non-grouped properties, no meaning except to human user | filter/apid |
-
+| Interface Section | Affects | Examples |
+|-------------------|---------|----------|
+| coords | One group per output coordinate | time/min, time/max, time/res, angle/sum |
+| data   | One group per output data varaiable | flux/enable | 
+| formats | One group per output format | das/serial |
+| options | Non-grouped properties, no meaning except as provided in labels | filter/apid |
 
 When presenting options to the end user it is good to preserve the grouping. 
-For example the minimum, maximum and resolution groups from time could be presented
-in a single line as follows:
+For example the minimum, maximum and resolution options from a "time" coordinate
+group could be presented in a single line as follows:
 
 ```
-               +----------+           +----------+              +----------+
-Time   Minimum |          |   Maximum |          |   Resolution |          |
-               +----------+           +----------+              +----------+
+                +----------+           +----------+              +----------+
+Time:   Minimum |          |   Maximum |          |   Resolution |          |
+                +----------+           +----------+              +----------+
 ```
 
-### Interface Properties
+### Individual Interface Options
 
 Two example user interface properties from the ACE EPD datasouce follow for reference.
 
