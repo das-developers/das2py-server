@@ -173,7 +173,7 @@ given below.
     }
   ],
   "options" : {
-    // An extra option group to allow for interface controls that aren't
+    // An extra property group to allow for interface controls that aren't
     // tied to a particular coordinate, data parameter, or output format
   }
 }
@@ -261,7 +261,7 @@ Individual properties have the following top level entries:
 |-----|------------|----------|---------|
 | label | string | yes | Provide a short string for the property, typically used on a GUI form |
 | title | string | no  | Provide a longer name for the property, typically used on a mouse tool-tip |
-| type | string | no | Identifies formation rules for the property value, the default is `string` which has no constraints. The supported property types are: `string`, `bool`, `isotime`, `integer`, `real` and `enum` |
+| type | string | no | Identifies formation rules for the property value, the default is `string` which has no constraints. The supported property types are: `string`, `boolean`, `isotime`, `integer`, `real` and `enum` |
 | value | string or null | yes | The default value of the property.  The JSON value `null` indicates no default value |
 | set   | object | no  | Makes this a settable property and ties the setting to the `protocol` section |
 
@@ -272,8 +272,8 @@ as they see best.  The following GUI controls are merely suggestions.  As always
 the client developer knows thier audiance best and can implement any interface as
 they see fit.
 
-* `bool` - Provide a single check-box for the end user
-* `isotime` - Provide a text entry field that validate input as ISO-8601 style strings
+* `boolean` - Provide a single check-box for the end user
+* `isotime` - Provide a text entry field that validates input as ISO-8601 style strings
    with UTC timezone assumed (examples: 2024-06-05, 2024-06-05T18:05, 20204-06-05T18:05:33.456 )
 * `integer` - Provide a text entry field, possibly with constraints if the `range` constraint is given
 * `real` - A text entry field, possibly with constraints as above
@@ -284,10 +284,75 @@ As a secondard consideration, if most of the properties for an entire section,
 such as `data` are just simple booleans, putting a group indicator around the 
 entire section is reasonable.
 
+### Set Objects, the Interface to Protocol Gateway
 
+Once the user has selected all values from the GUI, those selections must be communicated
+to the server to produce the desired output.  The front-end Interface may be quite different
+from the back-end protocol.  The objects that tie interface choices to protocol parameters
+lives under the key named `set`.  Any property with a `set` sub-object is a "settable".  Set
+object can have the following keys:
 
+| Key   |  Required | Purpose |
+|-------|----------|----------|
+| param | yes | The Protocol HTTP parameter that communicates the new value to the server |
+| flag  | maybe | If the Protocol HTTP parameter is a `FlagSet` then the particular flag entry is provided here | 
+| value | no  | This provides the new interface property value if set. It replaces the default property value |
+| pval  | no  | The actual value to send to the server, which may be different from `value` | 
+| enum  | no  | Can be used in place of `value` above.  This provides an enumerated list of `value` and `pval` pairs. |
 
+The following exmaple uses the Microchannel Plate Current housekeeping parameter from the
+ACE analog housekeeing data source.  The relavent Protocol and Interface section of the 
+catalog file are reproduced below:
+```json5
+{
+  "interface":{
+    "data":{
+      "mcp_i":{
+        "label":"MCP I", "title":"Micro-channel Plate, Current",
+        "props":{
+           "enabled":{
+             "type":"boolean",
+             "value":false,
+             "set":{ "value":true, "param":"read.data", "flag":"mcp_i" }
+           }
+         }
+      },
+      "stack_hv": {
+        "label": "STACK V", "title": "Stack High Voltage"
+        "props": {
+          "enabled": {
+            "type": "boolean",
+            "value": false,
+            "set": { "value": true, "param": "read.data", "flag": "stack_hv"  }
+          }
+        }   
+      },
+      // ...other data property groups follow
+    }
+  },
+  "protocol":{
+    "read.data": {
+      "type": "FlagSet",
+      "required": false,
+      "flagSep": ",",
+      "flags": {
+        "mcp_i": {     "value": "mcp_i" },      
+        "stack_hv": {  "value": "stack_hv" }
+        // ...other flags follow
+      }
+    }    
+  }
+}
+```
+If the user were to select a couple checkbox indicating that micro-channel plate currents are
+desired.  Then the client would:
+1. Look up the indicated parameter `read.data` in the Protocol section.
+2. Find the entry for the flag named `mcp_i`.
+3. See that setting this flag requires that the string `mcp_i` be emitted for the parameter
+   value.  Since only on flag was set, the `flagSep` string is not needed.
+4. Add the following string to the HTTP GET request:
+   `read.data=mcp_i`
 
-
-
+As you can see in the JSON snippit above, multiple UI options may map down to a single
+backend protocol parameter.
 
