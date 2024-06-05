@@ -284,7 +284,7 @@ As a secondard consideration, if most of the properties for an entire section,
 such as `data` are just simple booleans, putting a group indicator around the 
 entire section is reasonable.
 
-### Set Objects, the Interface to Protocol Gateway
+### Set Objects: Interface Properties to Protocol Parameters
 
 Once the user has selected all values from the GUI, those selections must be communicated
 to the server to produce the desired output.  The front-end Interface may be quite different
