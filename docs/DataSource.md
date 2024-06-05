@@ -25,7 +25,7 @@ JSON files.
 |Example Name | Node File | Rendered GUI |
 |-------------|-----------|--------------|
 | Housekeeping | [ex01_node_hsk-analog.json](example_nodes/ex01_node_hsk-analog.json) | [ex01_node_hsk-analog.png](example_nodes/ex01_node_hsk-analog.png) |
-| Particle Distribution | [ex01_node_sci-epd.json](example_nodes/ex01_node_sci-epd.json) | [ex01_node_sci-epd.png](example_nodes/ex01_node_sci-epd.png) |
+| Particle Distribution | [ex02_node_sci-epd.json](example_nodes/ex02_node_sci-epd.json) | [ex02_node_sci-epd.png](example_nodes/ex02_node_sci-epd.png) |
 
 ## HttpStreamSrc Root-Level Objects
 
