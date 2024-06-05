@@ -1,31 +1,35 @@
 # Das Catolog: HttpStreamSrc version 0.7
 
-In the federated dat3 catalog system, an HttpStreamSrc objects defines a
+The most common das3 end-point is a streaming data service that accessed
+using the GET method of the HTTP protocol.  The details of each streaming
+service is defined by an HttpStreamSrc node in the das3 federated catalog
+system.  This nodes information is formatted in JSON and it defines a
 source which:
+
 1. May be contacted via an HTTP GET message
 2. Is optionally supplied option via query parameters in the URL
 3. Responds to a single request
 4. Then closes the connection
 
-This page descripts the HttpStreamSrc object type but is not a normative definition.
-That is provided by the associated JSON schema (in work).  If anything in this 
-contradicts the associated JSON schema (once released) the schema is authoritative.
+This page descripts the HttpStreamSrc object type, version 0.7 but it is not
+a normative definition.  That is provided by the associated JSON schema (in work).
+If anything in this description contradicts the associated JSON schema (once
+released) the schema is authoritative.
 
-For reference, the top levels of an HttpStreamSrc are represented below.  This
-example is for the uncalibratiod Electron Particle Distibution data (EPD) from
-the Advanced Cusp Electrons (ACE) detector on TRACERS:
-```json5
-{
-  "type" : "HttpStreamSrc",
-  "version" : "0.7",
-  "label" : "ACE_fm1_EPD",
-  "title" : "ACE FM-1: Electron Distribution Level 1",
-  "contacts" :  [   ],  
-  "protocol" :  {   },  // Value described in the Protocol section below
-  "interface" : {   }   // Value described in the Interface section below
-}
-```
-**HttpStreamSrc** objects have the following top level elements.
+Overviews and individual snippets of JSON files are described here.  To help
+put everything in context two example node files are include along with 
+screenshots of GUIs generated from the nodes.  It may be helpful to refer to
+them while reading each section.  Firefox is recommended for viewing example
+JSON files.
+
+|Example Name | Node File | Rendered GUI |
+|-------------|-----------|--------------|
+| Housekeeping | [ex01_node_hsk-analog.json](example_nodes/ex01_node_hsk-analog.json) | [ex01_node_hsk-analog.png](example_nodes/ex01_node_hsk-analog.png) |
+| Particle Distribution | [ex01_node_sci-epd.json](example_nodes/ex01_node_sci-epd.json) | [ex01_node_sci-epd.png](example_nodes/ex01_node_sci-epd.png) |
+
+## HttpStreamSrc Root-Level Objects
+
+**HttpStreamSrc** objects have the following top level items.
 
 | Key | Value  | Required | Purpose |
 |-----|--------|---------|-----------
@@ -38,9 +42,25 @@ the Advanced Cusp Electrons (ACE) detector on TRACERS:
 | interface | object[objects] | yes | Defines recommended user interface for interacting with this data source |
 | protocol | object[objects] | yes | Defines the GET API for interacting with this data source  |
 
-The simple elements: `type`, `version`, `label`, `title`, and `description` are common to all
-catalog objects.  Of the other sub-objects, `contacts` is rather straight forward.  Thus the focus
-here will be to describe the purpose and usage of the `protocol` and `interface` objects.
+To put this in a more familiar form, heres the top levels of the HttpStreamSrc
+for the uncalibratiod Electron Particle Distibution data (EPD) from the Advanced
+Cusp Electrons (ACE) detector on TRACERS:
+```json5
+{
+  "type" : "HttpStreamSrc",
+  "version" : "0.7",
+  "label" : "ACE_fm1_EPD",
+  "title" : "ACE FM-1: Electron Distribution Level 1",
+  "contacts" :  [   ],  
+  "protocol" :  {   },  // Value described in the Protocol section below
+  "interface" : {   }   // Value described in the Interface section below
+}
+```
+
+The simple elements: `type`, `version`, `label`, `title`, and `description` are common 
+to all catalog objects.  Of the other sub-objects, `contacts` is rather straight forward.
+Thus the focus here will be to describe the purpose and usage of the `protocol` and 
+`interface` objects.
 
 ## The Protocol Object
 
@@ -75,7 +95,7 @@ Protocol objects have the following top-level sub-items.
 |authorization | object | yes | provides the HTTP Auth Realm if authorization is required for the data source |
 |httpParams | list[object] | maybe | If this data source supports query parameters they are listed here. |
 
-### httpParams
+### HTTP GET Parameters
 
 For each HTTP GET parameter there is a key in the httpParams object that has same name
 as the associated GET parameter.  Each value under http params is an object defining:
@@ -95,7 +115,7 @@ The possible data types for httpParams.`KEY`.type are detailed below:
 FlagSet types are commonly used for enabling and 1-N parameters (or variables in CDF) 
 from housekeeping data sources that can output many different parameters.
 
-## Interface object
+## The Interface Object
 
 At the protocol level HTTP parameters have no particular meaning.  They are just 
 a list of permissible values and formats.  Interface objects provide the end-user
