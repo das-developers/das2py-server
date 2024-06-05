@@ -353,6 +353,6 @@ desired.  Then the client would:
 4. Add the following string to the HTTP GET request:
    `read.data=mcp_i`
 
-As you can see in the JSON snippit above, multiple UI options may map down to a single
+As you can see in the JSON snippet above, multiple UI options may map down to a single
 backend protocol parameter.
 
