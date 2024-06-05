@@ -112,17 +112,21 @@ The possible data types for httpParams.`KEY`.type are detailed below:
 |enum   |One of a list of strings | `read.apid=x2a3` |
 |FlagSet|1-N strings combined via a separator | `read.data=mcp_hv,reg_33dv` |
 
-FlagSet types are commonly used for enabling and 1-N parameters (or variables in CDF) 
-from housekeeping data sources that can output many different parameters.
+The FlagSet type is commonly used for enabling 1-N parameters (called variables in CDF) 
+from data sources that provide many individual output channels.
 
 ## The Interface Object
 
 At the protocol level HTTP parameters have no particular meaning.  They are just 
 a list of permissible values and formats.  Interface objects provide the end-user
 presentation layer overtop of the direct server protocol, and most importantly
-*tie protocol params to dataset coordinates*.   
+*tie protocol params to dataset coordinates*.
 
-For reference the upper sections of the example ACE IPD interface object are
+The interface object defines a set of source *properties*.  Most properties are
+listed because they are changable, though it is possible to list properties 
+merely as documentation of the output data stream.
+
+For reference, the upper sections of the example ACE IPD interface object are
 given below.
 
 ```json5
@@ -175,7 +179,7 @@ given below.
 }
 ```
 
-The top level sub-objects of interface and thier purpose are:
+The top level sub-objects of `interface` and thier purposes are:
 
 |Key | Value | Required | Purpose  |
 |----|-------|----------|----------|
@@ -185,13 +189,13 @@ The top level sub-objects of interface and thier purpose are:
 |examples | object | yes | Provides a pre-set selections for the coordinates, data and formats that are known to produce valid data |
 |options | object | no | This is a catch-all for other end-user options that don't fall into the other categories. |
 
-### Interface Option Groups
+### Interface Property Groups
 
-Interface options are grouped together to control multiple options for 
-as single output item or aspect.  The exact item type varies by section
-as listed below:
+Interface properties are grouped together to control multiple aspects of
+as single output item.  *What* is being controlled varies by section as
+listed below:
 
-| Interface Section | Affects | Examples |
+| Interface Section | Contains | Examples |
 |-------------------|---------|----------|
 | coords | One group per output coordinate | time/min, time/max, time/res, angle/sum |
 | data   | One group per output data varaiable | flux/enable | 
@@ -199,20 +203,21 @@ as listed below:
 | options | Non-grouped properties, no meaning except as provided in labels | filter/apid |
 
 When presenting options to the end user it is good to preserve the grouping. 
-For example the minimum, maximum and resolution options from a "time" coordinate
+For example the minimum, maximum and resolution properties from a "time" coordinate
 group could be presented in a single line as follows:
-
 ```
                 +----------+           +----------+              +----------+
 Time:   Minimum |          |   Maximum |          |   Resolution |          |
                 +----------+           +----------+              +----------+
 ```
+Preservation of a coordinate property groups can be seen in the
+[ex02_node_sci-epd](example_nodes/ex02_node_sci-epd.png) example.
 
-### Individual Interface Options
+### Individual Interface Properties
 
 Two example user interface properties from the ACE EPD datasouce follow for reference.
 
-First the `coords/time/min` property.
+First the `coords/time/min` option.
 ```json
 "min" : {
    "label" : "Minimum",
@@ -221,7 +226,7 @@ First the `coords/time/min` property.
    "set" : { "param" : "read.time.min"}
 }
 ```
-and the `format/das/version` property.
+and the `format/das/version` option.
 ```json
 "version" : {
   "label" : "Stream Version",
@@ -238,9 +243,10 @@ and the `format/das/version` property.
 ```
 From the definition of the interface property, `coords/time/min` we can see that:
 1. Has no default value because `value` is null.
-2. The `value` is changable because the property contains a `set` entry
-3. The query parameter used to change this property on the server is `read.time.min`
-4. There is no further information in `set` so the user entered value is passed through as the HTTP GET parameter value.
+2. The `value` is changable because it contains a `set` entry.
+3. The query parameter used to change this option on the server is `read.time.min`
+4. There is no further information in `set` so the user entered value is passed through
+   as the HTTP GET parameter value.
 
 From the definition of the interface property, `format/das/version` we can see that:
 1. The default value is `das3`
@@ -249,29 +255,34 @@ From the definition of the interface property, `format/das/version` we can see t
 4. Only an enumerated set of values are allow for this parameter, `das3` and `das2'.
 5. We change our value to `das2` by giving the value `2` in the HTTP GET parameter `format.version`.
 
-Properties have the following top level entries:
+Individual properties have the following top level entries:
 
 | Key | Value Type | Required | Purpose |
 |-----|------------|----------|---------|
 | label | string | yes | Provide a short string for the property, typically used on a GUI form |
 | title | string | no  | Provide a longer name for the property, typically used on a mouse tool-tip |
-| type | string | no | Defaults to `string` if not specified.  The supported property types are: `string`,`bool`,`isotime`,`numeric` |
+| type | string | no | Defaults to `string` if not specified.  The supported property types are: `string`,`bool`,`isotime`,`integer`,`real` |
 | value | string | yes | The default value of the property.  The JSON value `null` indicates no default value |
 | set  | object | Makes this a settable property and ties the setting to the `protocol` section |
 
-### Recommended GUI controls
+### Recommended GUI controls by Value Type
 
-In general interface value GUI input is an unconstrained string. Thus text boxes will often
-suffice.  
+Clients are of course free to interpret the intent of an HttpStreamSrc catalog node
+as they see best.  The following GUI controls are merely suggestions.  As always,
+the client developer knows thier audiance best and can implement any interface as
+they see fit.
 
-Constraints on the input type can be imposed by the data type:
-* `bool` - A 
+* `bool` - Provide a single check-box for the end user
+* `isotime` - Provide a text entry field that validate input as ISO-8601 style strings
+   with UTC timezone assumed (examples: 2024-06-05, 2024-06-05T18:05, 20204-06-05T18:05:33.456 )
+* `integer` - Provide a text entry field, possibly with constraints if the `range` constraint is given
+* `real` - A text entry field, possibly with constraints as above
+* `enum` - A drop list of selectable items, with more then one level if there many items are in the enumeration
+* `string` - A text box with no validation.
 
-The `set` member of a property may impose further constraints.  Currently defined 
-constraints are:
-* `enum` - Provides a fixed list of values and can be displayed as a list box
-* `range` - Provides at bounding range for a value where the mininmum value is *inclusive* and the upper bound is *exclusive*.
-
+As a secondard consideration, if most of the properties for an entire section,
+such as `data` are just simple booleans, putting a group indicator around the 
+entire section is reasonable.
 
 
 
