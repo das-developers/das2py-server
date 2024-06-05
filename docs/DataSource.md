@@ -261,9 +261,9 @@ Individual properties have the following top level entries:
 |-----|------------|----------|---------|
 | label | string | yes | Provide a short string for the property, typically used on a GUI form |
 | title | string | no  | Provide a longer name for the property, typically used on a mouse tool-tip |
-| type | string | no | Defaults to `string` if not specified.  The supported property types are: `string`,`bool`,`isotime`,`integer`,`real`,`enum` |
-| value | string | yes | The default value of the property.  The JSON value `null` indicates no default value |
-| set  | object | Makes this a settable property and ties the setting to the `protocol` section |
+| type | string | no | Identifies formation rules for the property value, the default is `string` which has no constraints. The supported property types are: `string`, `bool`, `isotime`, `integer`, `real` and `enum` |
+| value | string or null | yes | The default value of the property.  The JSON value `null` indicates no default value |
+| set   | object | no  | Makes this a settable property and ties the setting to the `protocol` section |
 
 ### Recommended GUI controls by Value Type
 
