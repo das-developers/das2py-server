@@ -1,0 +1,286 @@
+{
+  "label": "EPD",
+  "name": "ACE_fm2_EPD",
+  "title": "ACE FM-2: Electron Distribution Level 1",
+  "type": "HttpStreamSrc",
+  "version": "0.7",
+  "protocol": {
+    "method": "GET",
+    "convention": "HTTP/1.1",
+    "baseUrls": [
+      "https://server.someplace.edu/stream/source/preflight/l1/ace/fm-2/epd/flex"
+    ],
+    "authorization": {
+      "required": false
+    },
+    "httpParams": {
+      "read.time.min": {
+        "required": true,
+        "type": "isotime"
+      },
+      "read.time.max": {
+        "required": true,
+        "type": "isotime"
+      },
+      "bin.time.max": {
+        "required": false,
+        "type": "real",
+        "units": "s"
+      },
+      "read.data": {
+        "type": "FlagSet",
+        "required": false,
+        "flagSep": ",",
+        "flags": {
+          "flux": {
+            "value": "flux"
+          }
+        }
+      },
+      "read.apid": {
+        "type": "enum",
+        "required": false,
+        "enum": [
+          "x2a2",
+          "x2a3",
+          "x2af",
+          "x2b2",
+          "x2b3"
+        ]
+      },
+      "format.type": {
+        "required": false,
+        "type": "enum",
+        "enum": [
+          "das",
+          "ccsds"
+        ]
+      },
+      "format.secfrac": {
+        "required": false,
+        "type": "integer",
+        "range": [
+          0,
+          9
+        ]
+      },
+      "format.sigdigit": {
+        "required": false,
+        "type": "integer",
+        "range": [
+          2,
+          17
+        ]
+      },
+      "format.delim": {
+        "required": false,
+        "type": "string"
+      },
+      "format.serial": {
+        "label": "Serialization",
+        "required": false,
+        "type": "enum",
+        "enum": [
+          "text",
+          "binary"
+        ]
+      },
+      "format.version": {
+        "required": false,
+        "type": "string"
+      }
+    }
+  },
+  "contacts": [
+    {
+      "type": "engineering",
+      "name": "Antonio Washington",
+      "email": "antonio-washington@uiowa.edu"
+    },
+    {
+      "type": "scientific",
+      "name": "Jasper Halekas",
+      "email": "jasper-halekas@uiowa.edu"
+    },
+    {
+      "type": "maintainer",
+      "name": "Chris Piker",
+      "email": "chris-piker@uiowa.edu"
+    }
+  ],
+  "interface": {
+    "coords": {
+      "time": {
+        "label": "Time",
+        "props": {
+          "min": {
+            "label": "Minimum",
+            "value": null,
+            "title": "Minimum time value to stream",
+            "set": {
+              "param": "read.time.min",
+              "required": true
+            }
+          },
+          "max": {
+            "label": "Maximum",
+            "value": null,
+            "title": "Maximum time value to stream",
+            "set": {
+              "param": "read.time.max",
+              "required": true
+            }
+          },
+          "units": {
+            "value": "UTC"
+          },
+          "res": {
+            "label": "Resolution",
+            "value": null,
+            "units": "s",
+            "title": "The maximum time bin width for bin-reduced data in seconds",
+            "set": {
+              "param": "bin.time.max",
+              "required": false
+            }
+          }
+        },
+        "validRange": [
+          "2023-08-17T20:22",
+          "2024-05-21T21:24"
+        ]
+      }
+    },
+    "options": {
+      "label": "Options",
+      "title": "Optional properties for this data source",
+      "props": {
+        "filter": {
+          "label": "AppID Filter",
+          "title": "Filter output data by CCSDS AppID",
+          "type": "enum",
+          "value": null,
+          "set": {
+            "enum": [
+              {
+                "value": "x2a2",
+                "label": "x2a2 - Science data"
+              },
+              {
+                "value": "x2a3",
+                "label": "x2a2 - Science data, twice"
+              },
+              {
+                "value": "x2af",
+                "label": "x2af - Raw Frames at 1000 Hz"
+              },
+              {
+                "value": "x2b2",
+                "label": "x2b2 - Science data comp."
+              },
+              {
+                "value": "x2b3",
+                "label": "x2b3 - Science data comp., twice (flight)"
+              }
+            ],
+            "param": "read.apid"
+          }
+        }
+      }
+    },
+    "examples": [
+      {
+        "settings": {
+          "coords/time/props/min": "2024-05-21T21:13",
+          "coords/time/props/max": "2024-05-21T21:24"
+        },
+        "label": "Most Recent 10 minutes"
+      }
+    ],
+    "formats": {
+      "das": {
+        "label": "das stream",
+        "title": "Streaming format for plots",
+        "mimeTypes": [
+          "application/vnd.das2.das2stream",
+          "application/vnd.das.stream",
+          "text/vnd.das2.das2stream"
+        ],
+        "props": {
+          "enabled": {
+            "type": "boolean",
+            "xorGroup": "format",
+            "value": true,
+            "set": {
+              "value": true,
+              "param": "format.type",
+              "pval": "das"
+            }
+          },
+          "version": {
+            "label": "Stream Version",
+            "value": "das3",
+            "type": "enum",
+            "set": {
+              "param": "format.version",
+              "enum": [
+                {
+                  "value": "das3",
+                  "pval": "3"
+                },
+                {
+                  "value": "das2",
+                  "pval": "2"
+                }
+              ]
+            }
+          },
+          "serial": {
+            "label": "Serialization",
+            "value": "binary",
+            "set": {
+              "param": "format.serial",
+              "enum": [
+                {
+                  "value": "text"
+                },
+                {
+                  "value": "binary"
+                }
+              ]
+            }
+          },
+          "fracSecs": {
+            "label": "Factional Seconds",
+            "title": "Number of fractional seconds digits in text streams",
+            "value": 3,
+            "set": {
+              "param": "format.secfrac"
+            }
+          },
+          "sigDigits": {
+            "label": "Significant Digits",
+            "title": "General significant digits for values in text streams",
+            "value": 5,
+            "set": {
+              "param": "format.sigdigit"
+            }
+          }
+        },
+        "order": [
+          "enabled",
+          "version",
+          "serial",
+          "sigDigits",
+          "fracSecs"
+        ]
+      }
+    },
+    "data": {
+      "flux": {
+        "label": "counts",
+        "props": {}
+      }
+    }
+  }
+}
