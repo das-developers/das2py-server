@@ -37,7 +37,7 @@ JSON files.
 |version | string | yes | Identifies the version of the type definition, highest is currently 0.7 as of 2024-05-30 |
 |label   | string | no | A token or short description, typically less then 20 chars |
 |title   | string | no | A longer description typically less then 50 chars |
-|description | list[string] or string | no | A short narrative about this data source. May be a simple string or a list of strings if the description is multiple paragraphs long | 
+|summary | list[string] or string | no | A sentence or maybe two about this data source, longer then a title, no more then a short paragraph | 
 | contacts | list[objects] | no | The contact list for this data source.  May be used by GUIs to send messages to the maintainer |
 | interface | object[objects] | yes | Defines recommended user interface for interacting with this data source |
 | protocol | object[objects] | yes | Defines the GET API for interacting with this data source  |
