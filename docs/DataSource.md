@@ -57,7 +57,7 @@ Cusp Electrons (ACE) detector on TRACERS:
 }
 ```
 
-The simple elements: `type`, `version`, `label`, `title`, and `description` are common 
+The simple elements: `type`, `version`, `label`, `title`, and `summary` are common 
 to all catalog objects.  Of the other sub-objects, `contacts` is rather straight forward.
 Thus the focus here will be to describe the purpose and usage of the `protocol` and 
 `interface` objects.
