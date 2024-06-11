@@ -24,7 +24,7 @@ g_sStdIntern = 'internal.json'
 # ########################################################################## #
 # Helpers #
 
-def _errResponse(U, fLog, lHdrs, sReponse):
+def _errResponse(U, fLog, lHdrs, sResponse):
 	U.webio.pout("%s\r\n\r\n"%("\r\r".join(lHdrs)))
 	if sResponse:
 		U.webio.pout(sResponse)
@@ -97,7 +97,7 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	]
 	
 	if 'DATASRC_ROOT' not in dConf:
-		return errResponse(lSrvErr, "DATASRC_ROOT not set in %s"%dConf['__file__'])
+		return _errResponse(U, fLog, lSrvErr, "DATASRC_ROOT not set in %s"%dConf['__file__'])
 		
 	#lOut = [] 
 	#tData = ("%s/root/"%dConf['DATASRC_ROOT'], lOut, fLog)
@@ -106,14 +106,14 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 	if sWebPath == '/source': sWebPath = '/source/'
 	
 	if not sWebPath.startswith('/source/'):
-		return _errResponse(lNotFound, sNotFound)
+		return _errResponse(U, fLog, lNotFound, sNotFound)
 	else:
 		sDirPath = pjoin(dConf['DATASRC_ROOT'], 'root', 
 			sWebPath[len('/source/'):].replace('/', os.sep)
 		)
 	
 	if not os.path.isdir(sDirPath):
-		return _errResponse(lNotFound, sNotFound)
+		return _errResponse(U, fLog, lNotFound, sNotFound)
 
 	lOut = [
 		"<!DOCTYPE html>","<html>","<head>","<title>Index of %s</title>"%sWebPath,

@@ -1115,6 +1115,7 @@ def prnOptGroupForm(
 			'Vaild range is: &nbsp; %s &nbsp; to &nbsp; %s%s</span>'%(lRng[0], lRng[1], sUnits)
 		)
 
+	sout(fOut, '&nbsp; <span class="minor"><i>[%s]</i></span>'%sGroup)
 	sout(fOut, "</p>")
 
 	# Emitt a little group enable, disable javascript if needed
