@@ -957,8 +957,6 @@ def prnOptGroupForm(
 		else:
 			dTargParam = dParams[ dSet['param'] ]
 
-		fLog.write("   DEBUG: Target Param for control %s/%s is %s"%(sGroup, sProp, dTargParam))
-
 		if 'label' in dProp: sName = dProp['label']
 		else: sName = sProp[0].upper() + sProp[1:]
 
@@ -1026,6 +1024,9 @@ def prnOptGroupForm(
 			
 			# Save off the control information
 			_addInCtrlId(dTargParam, sCtrlId)
+
+			fLog.write("   DEBUG: Target Param for control %s/%s is %s"%(sGroup, sProp, dTargParam))
+
 
 			# If I'm a boolean option
 			
@@ -1549,7 +1550,7 @@ def prnHttpSource(U, fLog, dConf, dSrc, fOut):
 		sout(fOut, """
 <script>
 function %s(sActionUrl) {
-	const dParams = %s;
+   const dParams = %s;
 	
 	// Strip this from outgoing control id's, to get the output control
 	// name.  It was added to keep out controls from different forms separate.
@@ -1621,7 +1622,7 @@ function %s(sActionUrl) {
 						} 
 					}
 					
-					break;
+					// break; Why was this here?
 				}
 			}
 			
@@ -1674,7 +1675,7 @@ function %s(sActionUrl) {
 					}
 				}
 				
-				break;
+				// break; Why was this here?
 			}
 		}
 	}

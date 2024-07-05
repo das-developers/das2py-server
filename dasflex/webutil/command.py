@@ -533,6 +533,8 @@ def filename(fLog, dConf, dParams, lTranslate, dTarg):
 	(sMime, sExt, sTitle) = mime.get(dMimes, sType, sVer, sVar)
 	sName = "%s.%s"%(sName,sExt)
 
+	fLog.write("Output MIME is: %s"%sMime)
+
 	if sMime.startswith('text/') and (not sMime.startswith('text/csv')):
 		sDisp = 'inline'
 	else:

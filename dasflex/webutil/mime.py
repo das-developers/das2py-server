@@ -119,9 +119,10 @@ def get(dMimes, sType, sVersion, sSerial):
 	if webio.isBrowser():
 		sFront = sMime.split()[0]
 		if sFront.startswith('text/'):
-			for sSubMime in ('/csv', '/xml'):
-				if not sMime.endswith(sSubMime):
-					sMime = 'text/plain; charset=utf-8'
+			if (not sMime.endswith('/csv')) and (not sMime.endswith('/xml')):
+				sMime = 'text/plain; charset=utf-8'
+			else:
+				sMime += "; charset=utf-8"
 
 	return (sMime, sExt, sTitle)
 
