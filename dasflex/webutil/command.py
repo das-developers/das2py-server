@@ -6,6 +6,7 @@ import select
 import fcntl
 import os
 import re
+from copy import deepcopy
 
 import das2
 
@@ -33,21 +34,22 @@ def _sameType(paramVal, trigVal):
 	return (_retParam, _retTrig)
 
 
-def cmdTriggered(fLog, dCmd, dParams):
+def cmdTriggered(fLog, sCmd, dCmd, dParams):
 	"""Determine if a particular command has been triggered by the given
 	http parms.  If the command does not have a 'trigger' section the default
 	is to auto-trigger.
 	Args:
 		fLog (file-like) - A logger object with a .write method
+		sCmd (str) - The name of the command
 		dCmd (dict) - A command object
 		dParams (dict) - A key value dictionaly, presumably from a form submission
 	"""
 
-	if 'triggers' not in dCmd:
+	if 'activation' not in dCmd:
 		fLog.write("   INFO: Command %s always runs"%dCmd['label'])
 		return True
 
-	lTriggers = dCmd['triggers']
+	lTriggers = dCmd['activation']
 
 	# Using implicit AND for now, so all triggers must be tripped
 
@@ -55,7 +57,7 @@ def cmdTriggered(fLog, dCmd, dParams):
 	nTripped = 0
 	for dTrig in lTriggers:
 		if 'key' not in dTrig:
-			fLog.write("   ERROR: 'key' missing from command object trigger")
+			fLog.write("   ERROR: 'key' missing from command object activation")
 			continue
 
 		if dTrig['key'] not in dParams: continue
@@ -87,14 +89,14 @@ def cmdTriggered(fLog, dCmd, dParams):
 					if value != trigger:
 						nTripped += 1
 				else:
-					fLog.write("   INFO: Command trigger comparison '%s' is unknown"%dTrig['compare'])
+					fLog.write("   INFO: Command activation comparison '%s' is unknown"%dTrig['compare'])
 
 	sStatus = "does not run."
 	if (nTripped == nRequired):
 		sStatus = "added to pipeline."
 
 	fLog.write("   INFO: %d of %d conditions met for command %s, %s"%(
-		nTripped, nRequired, dCmd['label'], sStatus
+		nTripped, nRequired, sCmd, sStatus
 	))
 
 	return (nTripped == nRequired)
@@ -129,12 +131,12 @@ def triggered(fLog, dSrc, dParams):
 	if 'commands' not in dSrc:
 		raise E.ServerError("No command section present in source definition.")
 
-	lCmds = dSrc['commands']
+	dCmds = dSrc['commands']
 
 	# First check that at least one of the commands does not contain in input
 	# (aka it's a true data source)
 	bHaveSrc = False
-	for dCmd in lCmds:
+	for dCmd in dCmds:
 		if 'input' not in dCmd:
 			bHaveSrc = True
 			break
@@ -143,20 +145,61 @@ def triggered(fLog, dSrc, dParams):
 		raise E.ServerError("No upstream data source (aka reader) present in source definition")
 
 	# Each item is a list, keys are the order.  To be valid, the first command
-	# to run must not require an input, and there must be no more then one
-	# command by order.
-	dTrig = {}  
-
-	for dCmd in lCmds:
+	# to run must not require an input, and there must be no more then one command 
+	# by order.
+	dTrig = {}
+	
+	# Set up the list of possible commands by order
+	dOrder = {}
+	for sCmd in dCmds:
+		dCmd = dCmds[sCmd]
 		if 'order' not in dCmd:
 			raise E.ServerError("'order' parameter missing in command definition")
 
-		if cmdTriggered(fLog, dCmd, dParams):
-			nOrder = int(dCmd['order'])
-			if nOrder in dTrig: dTrig[nOrder].append(dCmd)
-			else:               dTrig[nOrder] = [dCmd]
+		nOrder = int(dCmd['order'])
+		if nOrder not in dOrder:
+			dOrder[nOrder] = {}
 
-	# Check uniqueness
+		dOrder[nOrder][sCmd] = dCmd
+
+	lOrder = list(dOrder.keys())
+	lOrder.sort()
+	lOrder.reverse()
+
+	# Going in backwards order, activate commands.  Later commands can change
+	# the parameters via "set".
+
+	_dParams = deepcopy(dParams) # Higher level can set params for lower levels
+
+	for nOrder in lOrder:  # Reversed above
+		dCmdLvl = dOrder[nOrder]
+
+		# First pass at this level, activate anything here
+		for sCmd in dCmdLvl:
+			if cmdTriggered(fLog, sCmd, dCmdLvl[sCmd], _dParams):
+				if nOrder in dTrig: dTrig[nOrder].append(dCmdLvl[sCmd])
+				else:               dTrig[nOrder] = [dCmdLvl[sCmd]]
+
+		# Second pass at this level, set any params for lower levels
+		if nOrder in dTrig:
+			for dCmd in dTrig[nOrder]:
+				if "set" in dCmd:
+					for dSet in dCmd["set"]:
+						if "key" in dSet:
+							if "value" in dSet: 
+								_dParams[dSet["key"]] = dSet["value"]
+							else:
+								_dParams[dSet["key"]] = True
+							fLog.write("   INFO: %s sets %s=%s for level %d and lower commands"%(
+								dCmd['label'],dSet["key"],_dParams[dSet["key"]], nOrder - 1
+							))
+
+	# If nothing triggered, we have a problem
+	if len(dTrig) == 0:
+		raise E.QueryError("Query parameters did not cause any data sources to run")
+
+	# Write a list of triggered items, making sure each level is unique
+	lTrig = []
 	lOrder = list(dTrig.keys())
 	lOrder.sort()
 	for nOrder in lOrder:
@@ -165,6 +208,12 @@ def triggered(fLog, dSrc, dParams):
 				"Query did not resolve to a unique pipeline. "+\
 				"Multiple commands at order %d."%nOrder
 			)
+		else:
+			lTrig.append(dTrig[nOrder])
+
+	# Now make sure the first item dosen't have an input mime type.
+	if 'input' in lTrig[0]:
+		raise E.ServerError("No upstream data source readers were activated by this query")
 
 	lOut = [ dTrig[nOrder][0] for nOrder in lOrder]
 
