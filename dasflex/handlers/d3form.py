@@ -631,10 +631,10 @@ def _inputItemEnum(fLog, fOut, dParams, dItem, sMsg, sCtrlId, sDisabled):
 
 	"""
 
-	if 'label' in dItem:
-		fLog.write("   DEBUG: Making enum input ctrl for %s"%dItem['label'])
-	else:
-		fLog.write("   DEBUG: Making enum input ctrl for unknown item")
+	#if 'label' in dItem:
+	#	fLog.write("   DEBUG: Making enum input ctrl for %s"%dItem['label'])
+	#else:
+	#	fLog.write("   DEBUG: Making enum input ctrl for unknown item")
 
 	if 'set' not in dItem: return 0
 	dSet = dItem['set']
@@ -974,9 +974,9 @@ def prnOptGroupForm(
 		elif sDataType == 'enum':  sCtrlType = 'select'
 		else: sCtrlType = 'text'
 
-		fLog.write("   DEBUG: Prop: %s.%s data_type: %s control_type: %s"%(
-			sGroup, sProp, sDataType, sCtrlType
-		))
+		#fLog.write("   DEBUG: Prop: %s.%s data_type: %s control_type: %s"%(
+		#	sGroup, sProp, sDataType, sCtrlType
+		#))
 
 		if sCtrlType == 'bool':
 
@@ -1025,7 +1025,7 @@ def prnOptGroupForm(
 			# Save off the control information
 			_addInCtrlId(dTargParam, sCtrlId)
 
-			fLog.write("   DEBUG: Target Param for control %s/%s is %s"%(sGroup, sProp, dTargParam))
+			#fLog.write("   DEBUG: Target Param for control %s/%s is %s"%(sGroup, sProp, dTargParam))
 
 
 			# If I'm a boolean option
