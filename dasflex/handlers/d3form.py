@@ -1555,7 +1555,7 @@ function %s(sActionUrl) {
 	// name.  It was added to keep out controls from different forms separate.
 	let sNamePre = "%s";
 	let lKeep = [];
-	lKeep.push("flex_format")
+	lKeep.push(sNamePre+"format")
 	   
 	for(let sParam in dParams){
 		let dParam = dParams[sParam]
@@ -1709,9 +1709,9 @@ function %s(sActionUrl) {
 			))
 		sout(fOut, '</div>')
 
-	sAjaxForm = """
+	sFetchForm = """
 <script>
-  document.getElementById('flex_download').addEventListener('submit', function(event) {
+  document.getElementById('%s').addEventListener('submit', function(event) {
     event.preventDefault(); // Prevent default form submission
 
     // Prepare form data
@@ -1722,7 +1722,7 @@ function %s(sActionUrl) {
     let count = 0;
     let entries = {};
     for (var pair of formData.entries()) {
-      if(pair[0] === "flex_format"){
+      if(pair[0] === "%sformat"){
         continue;
       }
       
@@ -1754,8 +1754,8 @@ function %s(sActionUrl) {
     
   });
 </script>
-"""
-	sout(fOut, sAjaxForm)
+"""%(sFormId, sNamePrefix)
+	sout(fOut, sFetchForm)
 
 	sout(fOut, '</form>\n<br>')
 
