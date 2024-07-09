@@ -1714,11 +1714,8 @@ function %s(sActionUrl) {
   document.getElementById('flex_download').addEventListener('submit', function(event) {
     event.preventDefault(); // Prevent default form submission
 
-    console.log(event.target.action)
-
     // Prepare form data
     let formData = new FormData(this);
-    console.log(formData)
     let urlBuilder = event.target.action+"?";
     let components = event.target.action.split("/");
     let expectedResponseName = `tr-${components[5].slice(0,3)}_${components[6]}_${components[7]}-${components[8].replace("-","")}_${components[9].replace("_","-")}`;
@@ -1729,7 +1726,6 @@ function %s(sActionUrl) {
         continue;
       }
       
-
       urlBuilder += `${count===0?"":"&"}${pair[0]}=${pair[1]}`;
       count++;
       if(pair[0] === "read.apid" || pair[0].includes("read.time") || pair[0] ==="format.type"){
@@ -1737,24 +1733,17 @@ function %s(sActionUrl) {
       }
     }
     expectedResponseName += `-${entries["read.apid"]}_${entries["read.time.min"]}_${entries["read.time.max"]}.${entries["format.type"]}`;
-    console.log(urlBuilder)
-
-
 
     // Fetch API to send the form data
     fetch(urlBuilder, {
       method: 'GET',
     })
-    .then(response => {
-      console.log(response.headers);
-      
+    .then(response => {      
       return response.blob()}) // Convert response to Blob
     .then(blob => {
-      console.log(blob)
       // Create a temporary link element
       const tempLink = document.createElement('a');
       tempLink.href = window.URL.createObjectURL(blob);
-      console.log(tempLink)
       tempLink.setAttribute('download', expectedResponseName); // Set the file name
       tempLink.style.display = 'none';
       document.body.appendChild(tempLink);
@@ -1767,7 +1756,7 @@ function %s(sActionUrl) {
 </script>
 """
 	sout(fOut, sAjaxForm)
-	
+
 	sout(fOut, '</form>\n<br>')
 
 	sout(fOut, '<div class="identifers">')
