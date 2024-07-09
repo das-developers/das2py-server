@@ -1332,7 +1332,6 @@ def prnHttpSource(U, fLog, dConf, dSrc, fOut):
 
 	# Leave the form action blank, we'll set it depending on which submit
 	# button is used.
-
 	sBaseUri = bname(dSrc['_url']).replace('.json','')
 	sFormId = "%s_download"%sBaseUri
 	sout(fOut, '<form id="%s">'%sFormId)
@@ -1556,7 +1555,8 @@ function %s(sActionUrl) {
 	// name.  It was added to keep out controls from different forms separate.
 	let sNamePre = "%s";
 	let lKeep = [];
-
+	lKeep.push("flex_format")
+	   
 	for(let sParam in dParams){
 		let dParam = dParams[sParam]
 		
@@ -1709,6 +1709,65 @@ function %s(sActionUrl) {
 			))
 		sout(fOut, '</div>')
 
+	sAjaxForm = """
+<script>
+  document.getElementById('flex_download').addEventListener('submit', function(event) {
+    event.preventDefault(); // Prevent default form submission
+
+    console.log(event.target.action)
+
+    // Prepare form data
+    let formData = new FormData(this);
+    console.log(formData)
+    let urlBuilder = event.target.action+"?";
+    let components = event.target.action.split("/");
+    let expectedResponseName = `tr-${components[5].slice(0,3)}_${components[6]}_${components[7]}-${components[8].replace("-","")}_${components[9].replace("_","-")}`;
+    let count = 0;
+    let entries = {};
+    for (var pair of formData.entries()) {
+      if(pair[0] === "flex_format"){
+        continue;
+      }
+      
+
+      urlBuilder += `${count===0?"":"&"}${pair[0]}=${pair[1]}`;
+      count++;
+      if(pair[0] === "read.apid" || pair[0].includes("read.time") || pair[0] ==="format.type"){
+        entries[pair[0]] = pair[1];
+      }
+    }
+    expectedResponseName += `-${entries["read.apid"]}_${entries["read.time.min"]}_${entries["read.time.max"]}.${entries["format.type"]}`;
+    console.log(urlBuilder)
+
+
+
+    // Fetch API to send the form data
+    fetch(urlBuilder, {
+      method: 'GET',
+    })
+    .then(response => {
+      console.log(response.headers);
+      
+      return response.blob()}) // Convert response to Blob
+    .then(blob => {
+      console.log(blob)
+      // Create a temporary link element
+      const tempLink = document.createElement('a');
+      tempLink.href = window.URL.createObjectURL(blob);
+      console.log(tempLink)
+      tempLink.setAttribute('download', expectedResponseName); // Set the file name
+      tempLink.style.display = 'none';
+      document.body.appendChild(tempLink);
+      tempLink.click(); // Programmatically click the link to trigger the download
+      document.body.removeChild(tempLink); // Clean up
+    })
+    .catch(error => console.error('Error:', error));
+    
+  });
+</script>
+"""
+	sout(fOut, sAjaxForm)
+	
 	sout(fOut, '</form>\n<br>')
 
 	sout(fOut, '<div class="identifers">')
