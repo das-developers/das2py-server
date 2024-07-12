@@ -1564,7 +1564,7 @@ def prnHttpSource(U, fLog, dConf, dSrc, fOut):
 		sFuncName = "%s_onSubmit"%sBaseUri
 		sJson = json.dumps(dParams, ensure_ascii=False, indent=2, sort_keys=True)
 		sNamePrefix = "%s_"%sBaseUri
-		sXorGroupName =   sNamePrefix + _searchNestedDict("xorGroup")
+		sXorGroupName =   sNamePrefix+_searchNestedDict(fLog, dParams, 'xorGroup')
 		sout(fOut, """
 <script>
 function %s(sActionUrl) {
@@ -1779,7 +1779,7 @@ function %s(sActionUrl) {
     
   });
 </script>
-"""%(sFormId, sNamePrefix+_searchNestedDict(fLog, dParams, 'xorGroup'))
+"""%(sFormId, sXorGroupName)
 	sout(fOut, sFetchForm)
 
 	sout(fOut, '</form>\n<br>')
