@@ -1562,9 +1562,9 @@ def prnHttpSource(U, fLog, dConf, dSrc, fOut):
 
 		# Stage 5, write the javascript that will be used on submit
 		sFuncName = "%s_onSubmit"%sBaseUri
-		sXorGroupName =   sNamePrefix + _searchNestedDict("xorGroup")
 		sJson = json.dumps(dParams, ensure_ascii=False, indent=2, sort_keys=True)
 		sNamePrefix = "%s_"%sBaseUri
+		sXorGroupName =   sNamePrefix + _searchNestedDict("xorGroup")
 		sout(fOut, """
 <script>
 function %s(sActionUrl) {
