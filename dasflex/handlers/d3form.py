@@ -138,20 +138,25 @@ def _getPropDataType(dProp, dParams):
 
 # Primarily for finding xorGroup names 
 def _searchNestedDict(fLog, d, l):
-    """
+	"""
     Searches for a key in a nested dictionary.
     
     :param d: The dictionary to search.
     :param l: The key to search for.
     :return: element of key if the key is found, None otherwise.
     """
-    if _hasElement(d, l):
-        return _getElement(fLog, d, l)
-    for value in d.values():
-        if isinstance(value, dict):
-            return _searchNestedDict(fLog, value, l)
-                
-    return None
+	if hasattr(d,'items'): # hasattr(var,'items') for python 3
+		for k, v in d.items(): # var.items() for python 3
+			if k == l:
+				yield v
+			if isinstance(v, dict):
+				for result in _searchNestedDict(fLog, v, l):
+					yield result
+			elif isinstance(v, list):
+				for di in v:
+					for result in _searchNestedDict(fLog, di, l):
+						yield result
+
 
 # ########################################################################## #
 
@@ -1564,7 +1569,17 @@ def prnHttpSource(U, fLog, dConf, dSrc, fOut):
 		sFuncName = "%s_onSubmit"%sBaseUri
 		sJson = json.dumps(dParams, ensure_ascii=False, indent=2, sort_keys=True)
 		sNamePrefix = "%s_"%sBaseUri
-		sXorGroupName =   sNamePrefix+_searchNestedDict(fLog, dParams, 'xorGroup')
+
+		gGroup = _searchNestedDict(fLog, dSrc, 'xorGroup')
+		sXorGroupName = ''
+		try:
+			for sResult in gGroup:
+				sXorGroupName += 'lKeep.push("%s%s");\n'%(sNamePrefix,sResult)
+		except Exception as ex:
+			sXorGroupName += ""
+		finally:
+			gGroup.close()
+
 		sout(fOut, """
 <script>
 function %s(sActionUrl) {
@@ -1574,8 +1589,7 @@ function %s(sActionUrl) {
 	// name.  It was added to keep out controls from different forms separate.
 	let sNamePre = "%s";
 	let lKeep = [];
-	lKeep.push(%s);
-	   
+	%s
 	for(let sParam in dParams){
 		let dParam = dParams[sParam]
 		
@@ -1740,10 +1754,11 @@ function %s(sActionUrl) {
     let expectedResponseName = `tr-${components[5].slice(0,3)}_${components[6]}_${components[7]}-${components[8].replace("-","")}_${components[9].replace("_","-")}`;
     let count = 0;
     let entries = {};
-	
+	let lKeep = [];
+	%s
 	// Iterate over form data and append to URL
     for (var pair of formData.entries()) {
-      if(pair[0] === "%s"){
+      if(lKeep.includes(pair[0])){
         continue;
       }
       
