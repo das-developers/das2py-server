@@ -136,8 +136,25 @@ def _getPropDataType(dProp, dParams):
 			dFlag = dParams[sParam]['flags'][sFlag]
 			if 'type' in dFlag: return dFlag['type']
 
+# Primarily for finding xorGroup names 
+def _searchNestedDict(fLog, d, l):
+    """
+    Searches for a key in a nested dictionary.
+    
+    :param d: The dictionary to search.
+    :param l: The key to search for.
+    :return: element of key if the key is found, None otherwise.
+    """
+    if _hasElement(d, l):
+        return _getElement(fLog, d, l)
+    for value in d.values():
+        if isinstance(value, dict):
+            return _searchNestedDict(fLog, value, l)
+                
+    return None
 
 # ########################################################################## #
+
 def prnCatalog(U, fLog, dConf, sRelPath, dNode, fOut):
 	"""Given a catalog node, print the sub items.  
 	Args:
@@ -863,6 +880,7 @@ def prnOptGroupForm(
 	"""
 	nCtrls = 0
 
+
 	#sout(fOut, "<pre>debug opt group: %s</pre>"%sGroup)
 	
 	dProps = dGroup['props']
@@ -1544,6 +1562,7 @@ def prnHttpSource(U, fLog, dConf, dSrc, fOut):
 
 		# Stage 5, write the javascript that will be used on submit
 		sFuncName = "%s_onSubmit"%sBaseUri
+		sXorGroupName =   sNamePrefix + _searchNestedDict("xorGroup")
 		sJson = json.dumps(dParams, ensure_ascii=False, indent=2, sort_keys=True)
 		sNamePrefix = "%s_"%sBaseUri
 		sout(fOut, """
@@ -1555,7 +1574,7 @@ function %s(sActionUrl) {
 	// name.  It was added to keep out controls from different forms separate.
 	let sNamePre = "%s";
 	let lKeep = [];
-	lKeep.push(sNamePre+"format")
+	lKeep.push(%s);
 	   
 	for(let sParam in dParams){
 		let dParam = dParams[sParam]
@@ -1692,7 +1711,7 @@ function %s(sActionUrl) {
 	elForm.action = sActionUrl;
 }
 </script>
-		"""%(sFuncName, sJson, sNamePrefix, sFormId))
+		"""%(sFuncName, sJson, sNamePrefix, sXorGroupName, sFormId))
 		
 		# Make one submit function per base url that starts with https
 		sout(fOut, '<div class="center">')
@@ -1721,17 +1740,23 @@ function %s(sActionUrl) {
     let expectedResponseName = `tr-${components[5].slice(0,3)}_${components[6]}_${components[7]}-${components[8].replace("-","")}_${components[9].replace("_","-")}`;
     let count = 0;
     let entries = {};
+	
+	// Iterate over form data and append to URL
     for (var pair of formData.entries()) {
-      if(pair[0] === "%sformat"){
+      if(pair[0] === "%s"){
         continue;
       }
       
       urlBuilder += `${count===0?"":"&"}${pair[0]}=${pair[1]}`;
       count++;
+
+	  // Save the entries for the file name
       if(pair[0] === "read.apid" || pair[0].includes("read.time") || pair[0] ==="format.type"){
         entries[pair[0]] = pair[1];
       }
     }
+
+	// Append the format type to the URL
     expectedResponseName += `-${entries["read.apid"]}_${entries["read.time.min"]}_${entries["read.time.max"]}.${entries["format.type"]}`;
 
     // Fetch API to send the form data
@@ -1754,7 +1779,7 @@ function %s(sActionUrl) {
     
   });
 </script>
-"""%(sFormId, sNamePrefix)
+"""%(sFormId, sNamePrefix+_searchNestedDict(fLog, dParams, 'xorGroup'))
 	sout(fOut, sFetchForm)
 
 	sout(fOut, '</form>\n<br>')
