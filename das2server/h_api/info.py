@@ -41,7 +41,8 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		return 9
 	
 	sId = form.getfirst('id', '')
-	U.dsdf.checkParam(fLog, 'id', sId)   # Check for shell injection attack stuff
+	if not U.dsdf.checkParam(fLog, 'id', sId):   # Check for shell injection attack stuff
+		return 17
 	lId = sId.split(',')
 	
 	sDsdf = lId[0]
@@ -51,7 +52,8 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		sSubKey = None
 	
 	sHapiParam = form.getfirst('parameters','')
-	U.dsdf.checkParam(fLog, 'parameters', sHapiParam)
+	if not U.dsdf.checkParam(fLog, 'parameters', sHapiParam):
+		return 17
 	
 	sScript = U.webio.getScriptUrl()
 	

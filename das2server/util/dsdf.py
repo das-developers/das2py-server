@@ -1496,10 +1496,18 @@ def normalizeParams(sParams):
 
 ##############################################################################
 def checkParam(fLog, sKey, sValue):
-	"""Check the parameter values for obvious shell injection stuff such as
-	pipes, redirects, ../ directories, etc"""
+	"""Refuse values that could reach shell syntax.  Values are accepted or
+	refused, never altered: readers see params exactly as sent.
 
-	for sTest in [';', '|','../','..\\', ':\\', '>', '&']:
+	Reader commands run with shell=True and params goes in unquoted, so
+	anything the shell acts on outside quotes is refused.  None of these
+	ever reached a reader as text, the shell consumed them first, so no
+	working query loses anything.  Quotes are refused too: time values
+	sit inside '...' and a quote would end that early.
+	"""
+
+	for sTest in [';', '|', '&', '<', '>', '(', ')', '$', '`', '\n', '\r',
+	              "'", '"', '../', '..\\', ':\\']:
 		if sValue.find(sTest) != -1:
 			webio.queryError(
 				fLog,

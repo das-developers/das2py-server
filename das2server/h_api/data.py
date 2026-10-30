@@ -71,7 +71,8 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 		bHeader = True
 	
 	sHapiParam = form.getfirst('parameters','')
-	U.dsdf.checkParam(fLog, 'parameters', sHapiParam)
+	if not U.dsdf.checkParam(fLog, 'parameters', sHapiParam):
+		return 17
 	
 	sScript = U.webio.getScriptUrl()
 	

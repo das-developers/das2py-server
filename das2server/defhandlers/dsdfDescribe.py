@@ -22,7 +22,7 @@ def _dsdfToStreamHdr(dsdf):
 	fOut = StringIO()
 	
 	fOut.write(u"<stream>\r\n")
-	fOut.write(u"  <properties")
+	fOut.write(u"  <properties\r\n")
 	
 	for uKey in dsdf.keys():
 	
@@ -50,7 +50,7 @@ def _dsdfToStreamHdr(dsdf):
 				
 		uValue = u"".join(lNewValue)
 		
-		fOut.write( u' %s="%s"'%(uKey, uValue.strip("'")))
+		fOut.write( u'    %s="%s"\r\n'%(uKey, uValue.strip("'")))
 	
 	fOut.write(u" />\r\n")
 	fOut.write(u"</stream>")

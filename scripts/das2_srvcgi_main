@@ -486,6 +486,18 @@ def main(form):
 ##############################################################################
 # Stub main for cgi
 
+# CORS preflight.  Browsers send OPTIONS before a cross-origin request
+# carrying an Authorization header.  Answer it here: cgi.FieldStorage
+# doesn't parse OPTIONS requests, so form.getfirst() in main() raises and
+# Apache sends a bare 500.
+if os.getenv('REQUEST_METHOD') == 'OPTIONS':
+	pout('Status: 204 No Content\r\n')
+	pout('Access-Control-Allow-Origin: *\r\n')
+	pout('Access-Control-Allow-Methods: GET, OPTIONS\r\n')
+	pout('Access-Control-Allow-Headers: Authorization, Content-Type\r\n')
+	pout('Access-Control-Max-Age: 86400\r\n\r\n')
+	sys.exit(0)
+
 form = cgi.FieldStorage()
 
 # Return values don't matter in CGI programming.  That's unfortunate

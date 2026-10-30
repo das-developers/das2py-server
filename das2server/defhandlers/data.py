@@ -366,7 +366,11 @@ def handleReq(U, sReqType, dConf, fLog, form, sPathInfo):
 			
 		elif nRet == U.auth.AUTH_FAIL:
 			sys.stdout.write("Status: 401 Authorization Required\r\n")
-			sys.stdout.write('WWW-Authenticate: Basic realm="%s"\r\n\r\n'%dsdf['_realm'])
+			sys.stdout.write('WWW-Authenticate: Basic realm="%s"\r\n'%dsdf['_realm'])
+			# Browsers hide a cross-origin reply without this; expose lets
+			# page scripts read the realm for a login prompt
+			sys.stdout.write("Access-Control-Allow-Origin: *\r\n")
+			sys.stdout.write("Access-Control-Expose-Headers: WWW-Authenticate\r\n\r\n")
 			return 0
 
 		# Only other status out of auth is AUTH_SUCCESS, which means we proceed

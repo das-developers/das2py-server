@@ -241,7 +241,7 @@ def dasExcept(sType, uOut, fLog=None, bHdrSent=False):
 		pout("[00]%06d"%len(sOut))
 		pout(sOut)
 	
-	#sys.stdout.flush()
+	sys.stdout.flush()
 
 ##############################################################################
 # Error types
